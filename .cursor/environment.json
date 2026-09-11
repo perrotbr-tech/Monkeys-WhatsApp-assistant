@@ -1,0 +1,12 @@
+{
+  "name": "Monkeys WhatsApp Assistant",
+  "install": "if [ -f package-lock.json ]; then npm ci; elif [ -f package.json ]; then npm install; else echo \"Bootstrap repository - dependencies will be installed after project initialization\"; fi",
+  "start": "if [ -f package.json ]; then echo \"package.json present; assistant server starts from terminals\"; else echo \"Bootstrap repository - no package.json yet, skipping start\"; fi",
+  "terminals": [
+    {
+      "name": "assistant-server",
+      "command": "if [ -f package.json ]; then npm start; else echo \"Bootstrap repository - no package.json yet, skipping start\"; exec sleep infinity; fi"
+    }
+  ],
+  "ports": [3000]
+}

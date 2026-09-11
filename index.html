@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>MONKEYS · Fitness Community</title>
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <div class="banner">Prototipo demostrativo · datos ficticios</div>
+  <header class="topbar">
+    <div class="brand-mini">
+      <span class="brand-mini-title">MONKEYS</span>
+      <span class="brand-mini-sub">FITNESS COMMUNITY</span>
+    </div>
+    <nav class="nav">
+      <a href="#asistente" id="nav-asistente" class="nav-link is-active">ASISTENTE</a>
+      <a href="#dashboard" id="nav-dashboard" class="nav-link">DASHBOARD</a>
+    </nav>
+  </header>
+
+  <main id="view-asistente" class="layout">
+    <section class="hero" aria-hidden="false">
+      <p class="wordmark">MONKEYS</p>
+      <p class="wordmark-sub">FITNESS COMMUNITY</p>
+      <h1>ENTRENA. MUÉVETE. SÉ PARTE DE LA COMUNIDAD.</h1>
+      <p class="lead">Clases, reservas y atención en un solo lugar.</p>
+      <div class="shapes" aria-hidden="true">
+        <span class="shape shape-bar"></span>
+        <span class="shape shape-ring"></span>
+        <span class="shape shape-slash"></span>
+        <span class="shape shape-block"></span>
+      </div>
+    </section>
+
+    <section class="chat" id="chat-panel">
+      <header class="chat-header">
+        <div>
+          <strong>MONKEYS</strong>
+          <span class="chat-sub">Fitness Community</span>
+        </div>
+        <div class="chat-status">
+          <span class="dot" aria-hidden="true"></span>
+          Asistente disponible
+        </div>
+        <span class="badge">AI + Automatización</span>
+      </header>
+      <div class="chat-log" id="chat-log"></div>
+      <div class="chat-input-row">
+        <input id="chat-input" type="text" maxlength="500" autocomplete="off" placeholder="Escribe un mensaje" />
+        <button id="chat-send" type="button">Enviar</button>
+      </div>
+    </section>
+  </main>
+
+  <section id="view-dashboard" class="dashboard hidden">
+    <h1>MONKEYS · PANEL DE GESTIÓN</h1>
+    <div class="cards" id="dash-cards"></div>
+    <div class="filters" id="dash-filters"></div>
+    <section class="auto-box">
+      <h2>AUTOMATIZACIÓN</h2>
+      <p>Agente IA — Activo (Demo)</p>
+      <p>Motor de reservas — Activo</p>
+      <p>WhatsApp — Modo simulación</p>
+    </section>
+    <div class="tables" id="dash-tables"></div>
+    <div class="reset-box">
+      <button type="button" id="btn-reset">Restaurar demo</button>
+      <div id="reset-confirm" class="hidden reset-confirm">
+        <p>¿Restaurar los datos originales de la demo?</p>
+        <button type="button" id="btn-reset-yes">Confirmar</button>
+        <button type="button" id="btn-reset-no" class="ghost">Cancelar</button>
+      </div>
+    </div>
+  </section>
+
+  <footer class="foot">Desarrollado por Perrot Tech</footer>
+  <script type="module" src="./app.js"></script>
+</body>
+</html>
