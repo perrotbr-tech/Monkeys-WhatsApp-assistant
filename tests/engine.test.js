@@ -138,3 +138,14 @@ test('reset restaura datos', () => {
   assert.equal(engine.listarReservas().length, 2);
   assert.equal(engine.listarReservas()[0].codigo, 'GYM-2026-0001');
 });
+
+test('ver planes muestra los tres valores oficiales', () => {
+  const engine = limpio();
+  const { conversacion } = engine.iniciar();
+  engine.procesar(conversacion.id, 'Félix García');
+  const r = engine.procesar(conversacion.id, '4');
+  assert.match(r.mensajes[0].texto, /\$69\.990 CLP/);
+  assert.match(r.mensajes[0].texto, /\$189\.990 CLP/);
+  assert.match(r.mensajes[0].texto, /\$649\.990 CLP/);
+  assert.match(r.mensajes[0].texto, /Valores demostrativos para este prototipo/);
+});

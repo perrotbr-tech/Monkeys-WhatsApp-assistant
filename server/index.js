@@ -4,6 +4,8 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { clonarDemo } from '../data/demo.js';
 import { crearEngine } from '../engine/conversation.js';
+import { crearAutomation } from '../engine/automation.js';
+import { FECHA_DEMO } from '../engine/dates.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, '..');
@@ -21,11 +23,13 @@ function loadState() {
   return JSON.parse(readFileSync(DATA_FILE, 'utf8'));
 }
 
-function saveState(engine) {
-  writeFileSync(DATA_FILE, JSON.stringify(engine.exportar(), null, 2));
+function saveState() {
+  writeFileSync(DATA_FILE, JSON.stringify({ ...engine.exportar(), ...auto.exportar() }, null, 2));
 }
 
-const engine = crearEngine(loadState());
+const initial = loadState();
+const engine = crearEngine(initial);
+const auto = crearAutomation(initial);
 const app = express();
 app.use(express.json());
 
@@ -35,14 +39,14 @@ app.get('/api/health', (_req, res) => {
 
 app.post('/api/conversations', (_req, res) => {
   const result = engine.iniciar();
-  saveState(engine);
+  saveState();
   res.json(result);
 });
 
 app.post('/api/conversations/:id/messages', (req, res) => {
   const text = req.body && req.body.text;
   const result = engine.procesar(req.params.id, text);
-  saveState(engine);
+  saveState();
   res.json(result);
 });
 
@@ -70,7 +74,42 @@ app.post('/api/demo/reset', (_req, res) => {
   const seed = clonarDemo();
   writeFileSync(DATA_FILE, JSON.stringify(seed, null, 2));
   engine.hidratar(seed);
-  res.json({ ok: true, state: engine.exportar() });
+  auto.hidratar(seed);
+  res.json({ ok: true, state: { ...engine.exportar(), ...auto.exportar() } });
+});
+
+app.post('/api/automation/run', (req, res) => {
+  const fecha = (req.body && req.body.fecha) || FECHA_DEMO;
+  const campania = auto.ejecutarCiclo(fecha);
+  saveState();
+  res.json({ ok: true, campania, summary: auto.summary(fecha) });
+});
+
+app.get('/api/automation/summary', (_req, res) => {
+  res.json(auto.summary(FECHA_DEMO));
+});
+
+app.get('/api/automation/actions', (req, res) => {
+  res.json({
+    actions: auto.listarAcciones({
+      agente: req.query.agente,
+      sede: req.query.sede,
+      estado: req.query.estado,
+    }),
+  });
+});
+
+app.post('/api/automation/actions/:id/estado', (req, res) => {
+  const acc = auto.setEstado(req.params.id, req.body && req.body.estado);
+  if (!acc) return res.status(404).json({ error: 'not found' });
+  saveState();
+  res.json({ action: acc });
+});
+
+app.post('/api/automation/agentes/:id/activo', (req, res) => {
+  const activos = auto.setAgenteActivo(req.params.id, req.body && req.body.activo);
+  saveState();
+  res.json({ agentesActivos: activos });
 });
 
 app.use(express.static(ROOT));
@@ -83,4 +122,4 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   });
 }
 
-export { app, engine };
+export { app, engine, auto };

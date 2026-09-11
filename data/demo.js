@@ -1,5 +1,9 @@
 /** Datos demostrativos. Horarios, cupos y precios son ficticios. */
 
+import { crearDatosRetencion } from './socios.js';
+
+const retencion = crearDatosRetencion();
+
 export const demo = {
   nextBookingSeq: 3,
   nextLeadSeq: 3,
@@ -47,9 +51,9 @@ export const demo = {
     },
   ],
   plans: [
-    { id: 'mensual', nombre: 'PLAN MENSUAL', precio: '$29.990 CLP' },
-    { id: 'trimestral', nombre: 'PLAN TRIMESTRAL', precio: '$79.990 CLP' },
-    { id: 'anual', nombre: 'PLAN ANUAL', precio: '$249.990 CLP' },
+    { id: 'mensual', nombre: 'PLAN MENSUAL', precio: '$69.990 CLP' },
+    { id: 'trimestral', nombre: 'PLAN TRIMESTRAL', precio: '$189.990 CLP' },
+    { id: 'anual', nombre: 'PLAN ANUAL', precio: '$649.990 CLP' },
   ],
   bookings: [
     {
@@ -121,6 +125,7 @@ export const demo = {
       messages: [],
     },
   ],
+  ...retencion,
 };
 
 export function clonarDemo() {
