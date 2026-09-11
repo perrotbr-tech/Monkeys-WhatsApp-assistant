@@ -1,13 +1,13 @@
 {
   "name": "monkeys-whatsapp-assistant",
-  "version": "0.1.0",
-  "description": "Hybrid gym assistant: deterministic operations + local NLU intent layer (no external LLM).",
-  "main": "src/server.js",
+  "version": "0.2.0",
+  "private": true,
+  "type": "module",
+  "description": "MONKEYS Fitness Community — prototipo híbrido IA + bot determinístico.",
+  "main": "server/index.js",
   "scripts": {
-    "start": "node src/server.js",
-    "dev": "node --watch src/server.js",
-    "test": "node --test",
-    "demo": "node scripts/demo-conversation.js"
+    "start": "node server/index.js",
+    "test": "node --test tests/engine.test.js"
   },
   "engines": {
     "node": ">=20"
@@ -15,8 +15,5 @@
   "license": "MIT",
   "dependencies": {
     "express": "^4.21.2"
-  },
-  "devDependencies": {
-    "supertest": "^7.0.0"
   }
 }
