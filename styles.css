@@ -336,4 +336,7 @@ h3 { letter-spacing: 0.08em; font-size: 14px; }
   }
   .cards { grid-template-columns: 1fr 1fr; }
   .brand-mini-sub { display: none; }
+  .topbar { flex-wrap: wrap; }
+  .nav { width: 100%; justify-content: flex-start; flex-wrap: wrap; }
+  .nav-link { padding: 10px 10px; font-size: 12px; }
 }
