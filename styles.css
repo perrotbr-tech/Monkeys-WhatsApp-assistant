@@ -317,7 +317,14 @@ h3 { letter-spacing: 0.08em; font-size: 14px; }
   z-index: 20;
   overflow-y: auto;
 }
-#msg-body { white-space: pre-wrap; font-family: system-ui, Arial, sans-serif; font-weight: 500; }
+.msg-panel h2,
+#msg-meta,
+#msg-body {
+  color: var(--blanco);
+}
+#msg-meta { color: var(--gris-texto); font-size: 13px; }
+#msg-body { white-space: pre-wrap; font-family: system-ui, Arial, sans-serif; font-weight: 500; line-height: 1.45; }
+#auto-table td:last-child { white-space: nowrap; }
 
 @media (max-width: 768px) {
   .layout { grid-template-columns: 1fr; min-height: calc(100vh - 110px); }

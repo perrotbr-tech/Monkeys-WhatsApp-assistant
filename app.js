@@ -446,7 +446,6 @@ async function main() {
   await bootChat();
   dashTimer = setInterval(() => {
     if (!(viewDash.classList.contains('hidden'))) renderDashboard();
-    if (!(viewAuto.classList.contains('hidden'))) renderAutomations();
   }, 3000);
 }
 
