@@ -7,7 +7,7 @@
   "main": "server/index.js",
   "scripts": {
     "start": "node server/index.js",
-    "test": "node --test tests/engine.test.js"
+    "test": "node --test tests/engine.test.js tests/automation.test.js"
   },
   "engines": {
     "node": ">=20"

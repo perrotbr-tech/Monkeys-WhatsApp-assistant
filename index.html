@@ -16,6 +16,7 @@
     <nav class="nav">
       <a href="#asistente" id="nav-asistente" class="nav-link is-active">ASISTENTE</a>
       <a href="#dashboard" id="nav-dashboard" class="nav-link">DASHBOARD</a>
+      <a href="#automatizaciones" id="nav-auto" class="nav-link">AUTOMATIZACIONES</a>
     </nav>
   </header>
 
@@ -73,6 +74,40 @@
       </div>
     </div>
   </section>
+
+  <section id="view-auto" class="dashboard hidden">
+    <h1>MONKEYS · AUTOMATIZACIONES</h1>
+    <div class="agent-cards" id="auto-cards"></div>
+    <div class="auto-actions-bar">
+      <button type="button" id="btn-run-cycle">Ejecutar ciclo mensual (demo)</button>
+    </div>
+    <div class="filters" id="auto-filters"></div>
+    <div class="table-wrap">
+      <h3>ACCIONES</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Agente</th>
+            <th>Socio</th>
+            <th>Sede</th>
+            <th>Tipo</th>
+            <th>Prioridad</th>
+            <th>Estado</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="auto-table"></tbody>
+      </table>
+    </div>
+    <p class="note-foot">Datos de asistencia y pagos demostrativos. En producción se conectan al sistema de control de acceso y a la pasarela de pagos del gimnasio.</p>
+  </section>
+
+  <aside id="msg-panel" class="msg-panel hidden" aria-label="Mensaje">
+    <button type="button" id="msg-close" class="ghost">Cerrar</button>
+    <h2>Mensaje</h2>
+    <p id="msg-meta"></p>
+    <p id="msg-body"></p>
+  </aside>
 
   <footer class="foot">Desarrollado por Perrot Tech</footer>
   <script type="module" src="./app.js"></script>
