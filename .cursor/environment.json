@@ -1,0 +1,11 @@
+{
+  "name": "Monkeys WhatsApp Assistant",
+  "install": "npm ci",
+  "terminals": [
+    {
+      "name": "assistant-server",
+      "command": "npm start"
+    }
+  ],
+  "ports": [3000]
+}
