@@ -89,6 +89,7 @@ function createConversationEngine(deps = {}) {
         reply: 'Tu consulta ya está con el equipo. Escribí *menu* para volver al asistente.',
         source: 'deterministic',
         session,
+        flow: 'human_handoff',
         handoff: true,
       });
     }

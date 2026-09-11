@@ -80,6 +80,7 @@ test('quiero hablar con alguien → human handoff ticket, bot stops critical ops
 
   const follow = await say(engine, 'reservar spinning');
   assert.equal(follow.handoff, true);
+  assert.equal(follow.intent, INTENTS.HUMAN_HANDOFF);
   assert.match(follow.reply, /equipo/);
   assert.equal(engine.gym._bookings.length, 0);
 });
