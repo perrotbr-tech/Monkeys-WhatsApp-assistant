@@ -87,7 +87,7 @@ export function crearEngine(datosIniciales) {
   function continuar(conv, texto, cmd) {
     switch (conv.paso) {
       case 'pick_sede':
-        return pickSede(conv, cmd);
+        return pickSede(conv, texto, cmd);
       case 'menu':
         return desdeMenu(conv, texto, cmd);
       case 'reserve_pick_class':
@@ -123,11 +123,23 @@ export function crearEngine(datosIniciales) {
     }
   }
 
-  function pickSede(conv, cmd) {
+  function pickSede(conv, texto, cmd) {
     const sede = matchSede(cmd);
-    if (!sede) return [botMsg('Elige una sede para continuar.', sedesOps())];
+    if (!sede) {
+      const det = intent.detectar(texto);
+      if (det.intencion !== INTENCIONES.DESCONOCIDA && det.confianza >= 0.8) {
+        conv.data.pending = det;
+        return [botMsg('Primero elige una sede para continuar.', sedesOps())];
+      }
+      return [botMsg('Elige una sede para continuar.', sedesOps())];
+    }
     conv.sede = sede;
     conv.paso = 'menu';
+    if (conv.data && conv.data.pending) {
+      const det = conv.data.pending;
+      conv.data.pending = null;
+      return aplicarIntencion(conv, det, true);
+    }
     return [botMsg(`Sede ${sede}. ¿Qué quieres hacer hoy?`, MENU_OPS)];
   }
 
