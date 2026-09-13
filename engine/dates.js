@@ -27,7 +27,14 @@ export function daysAgo(visitISO, fechaRef) {
   return Math.round((e - v) / 86400000);
 }
 
-/** Ventana (fechaRef - days, fechaRef], en días calendario. */
+export function weekdayEs(ref) {
+  const d = parseFecha(ref);
+  return ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'][d.getUTCDay()];
+}
+
+export function dayNum(ref) {
+  return parseFecha(ref).getUTCDate();
+}
 export function enVentana(visitISO, fechaRef, days) {
   const ago = daysAgo(visitISO, fechaRef);
   return ago >= 0 && ago < days;

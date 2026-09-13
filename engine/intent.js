@@ -43,6 +43,8 @@ export function crearIntentService() {
       if (clase) entidades.clase = clase;
       const hora = extraerHora(t);
       if (hora) entidades.hora = hora;
+      const dia = extraerDia(t);
+      if (dia) entidades.dia = dia;
 
       if (!t) return pack(INTENCIONES.DESCONOCIDA, entidades, 0);
 
@@ -51,7 +53,7 @@ export function crearIntentService() {
       if (esLookup(t)) return pack(INTENCIONES.LOOKUP, entidades, 0.9);
       if (esReserva(t)) return pack(INTENCIONES.RESERVA, entidades, 0.92);
       if (esPlanes(t)) return pack(INTENCIONES.PLANES, entidades, 0.9);
-      if (esClases(t)) return pack(INTENCIONES.CLASES, entidades, 0.88);
+      if (esClases(t) || (clase && dia)) return pack(INTENCIONES.CLASES, entidades, 0.88);
       if (t === 'menu' || t === 'menú' || t === 'inicio') return pack(INTENCIONES.MENU, entidades, 1);
       if (t === 'ayuda' || t === 'help') return pack(INTENCIONES.AYUDA, entidades, 0.8);
 
@@ -154,4 +156,13 @@ function extraerClase(t) {
 function extraerHora(t) {
   const m = String(t || '').match(/(\d{1,2}:\d{2})/);
   return m ? m[1] : undefined;
+}
+
+function extraerDia(t) {
+  if (/(^|\s)hoy(\s|$)/.test(t)) return 'hoy';
+  if (t.includes('manana')) return 'mañana';
+  for (const d of ['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado']) {
+    if (t.includes(d)) return d;
+  }
+  return undefined;
 }

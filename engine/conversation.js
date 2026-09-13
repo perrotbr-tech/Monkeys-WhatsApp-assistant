@@ -11,6 +11,11 @@ import { TENANT_DEFAULT } from '../data/tenants.js';
 import { i18n } from '../data/i18n.js';
 import { crearIntentService, INTENCIONES, normalizar } from './intent.js';
 import { crearMemoria, clonar, normalizarTelefono, nombreValido } from './store.js';
+import { FECHA_DEMO, addDays, weekdayEs } from './dates.js';
+import {
+  extraerRelDia, extraerDisciplina, disciplinasDe, filtrarClases, lineaHorario,
+  paginar, agruparPlanes, etiquetaDia, diaSemanaDeRel,
+} from './catalogo.js';
 
 const OBJETIVOS = [
   'Bajar de peso',
@@ -86,6 +91,18 @@ export function crearEngine(datosIniciales, tenantId = TENANT_DEFAULT) {
   }
 
   function procesar(conversacionId, textoCrudo) {
+    try {
+      return procesarSeguro(conversacionId, textoCrudo);
+    } catch {
+      const conv = memoria.getConversacion(tid, conversacionId);
+      return {
+        conversacion: conv ? publicConv(conv) : null,
+        mensajes: [botMsg('No te seguí del todo. Elige una opción o escríbela.', menuOps())],
+      };
+    }
+  }
+
+  function procesarSeguro(conversacionId, textoCrudo) {
     const conv = memoria.getConversacion(tid, conversacionId);
     if (!conv) {
       return {
@@ -94,7 +111,7 @@ export function crearEngine(datosIniciales, tenantId = TENANT_DEFAULT) {
       };
     }
 
-    const texto = String(textoCrudo || '').slice(0, 500).trim();
+    const texto = String(textoCrudo || '').slice(0, 2000).trim();
     conv.messages.push({ autor: 'user', texto, opciones: [], ia: false, hora: ahora() });
     const cmd = normalizar(texto);
 
@@ -125,6 +142,18 @@ export function crearEngine(datosIniciales, tenantId = TENANT_DEFAULT) {
         return pickSede(conv, texto, cmd);
       case 'menu':
         return desdeMenu(conv, texto, cmd);
+      case 'clases_dia':
+        return clasesDia(conv, texto, cmd);
+      case 'clases_disciplina':
+        return clasesDisciplina(conv, texto, cmd);
+      case 'clases_lista':
+        return clasesLista(conv, texto, cmd);
+      case 'planes_lista':
+        return planesLista(conv, texto, cmd);
+      case 'espera_name':
+        return esperaName(conv, texto);
+      case 'espera_phone':
+        return esperaPhone(conv, texto);
       case 'reserve_pick_class':
         return reservePickClass(conv, texto, cmd);
       case 'reserve_name':
@@ -185,7 +214,7 @@ export function crearEngine(datosIniciales, tenantId = TENANT_DEFAULT) {
       return [botMsg('Con gusto. ¿Cuál es tu nombre?')];
     }
     const n = menuNumero(cmd, texto);
-    if (n === 1 || cmd.includes('ver clases')) return verClases(conv, false);
+    if (n === 1 || cmd.includes('ver clases')) return iniciarClases(conv, false, texto);
     if (n === 2 || cmd.includes('reservar mi cupo')) return iniciarReserva(conv, false, null);
     if (n === 3 || cmd.includes('probar') || cmd.includes('gratis')) return iniciarTrial(conv, false);
     if (n === 4 || cmd.includes('ver planes')) return verPlanes(conv, false);
@@ -194,13 +223,17 @@ export function crearEngine(datosIniciales, tenantId = TENANT_DEFAULT) {
 
     const det = intent.detectar(texto);
     if (det.intencion === INTENCIONES.DESCONOCIDA) {
+      const clases = memoria.listarClases(tid, conv.sede);
+      if (extraerRelDia(texto) || extraerDisciplina(texto, clases)) {
+        return iniciarClases(conv, false, texto);
+      }
       return [botMsg('No te seguí del todo. Elige una opción o escríbela.', menuOps())];
     }
-    return aplicarIntencion(conv, det, true);
+    return aplicarIntencion(conv, det, true, texto);
   }
 
-  function aplicarIntencion(conv, det, marcarIa) {
-    if (det.intencion === INTENCIONES.CLASES) return verClases(conv, marcarIa);
+  function aplicarIntencion(conv, det, marcarIa, texto) {
+    if (det.intencion === INTENCIONES.CLASES) return iniciarClases(conv, marcarIa, texto || '');
     if (det.intencion === INTENCIONES.RESERVA) return iniciarReserva(conv, marcarIa, det.entidades.clase, det.entidades.hora);
     if (det.intencion === INTENCIONES.TRIAL) return iniciarTrial(conv, marcarIa);
     if (det.intencion === INTENCIONES.PLANES) return verPlanes(conv, marcarIa);
@@ -211,15 +244,138 @@ export function crearEngine(datosIniciales, tenantId = TENANT_DEFAULT) {
     return [botMsg('No te seguí del todo. Elige una opción.', menuOps())];
   }
 
-  function verClases(conv, ia) {
-    conv.paso = 'menu';
-    const lineas = memoria.listarClases(tid, conv.sede).map(formatClase).join('\n');
-    return maybeIa(ia, INTENCIONES.CLASES, [
-      botMsg(`${lineas}\n\nPuedes reservar un cupo o volver al menú.`, [
-        { etiqueta: tid === 'soma' ? 'Reservar' : '📅 Reservar', valor: '2' },
-        { etiqueta: 'Menú', valor: 'menu' },
-      ]),
-    ]);
+  function iniciarClases(conv, ia, texto) {
+    conv.data = { ...(conv.data || {}), clasesOffset: 0 };
+    const clases = memoria.listarClases(tid, conv.sede);
+    const disc = extraerDisciplina(texto, clases);
+    const rel = extraerRelDia(texto);
+    if (disc) conv.data.disciplina = disc;
+    if (rel) conv.data.relDia = rel;
+    return seguirClases(conv, ia);
+  }
+
+  function seguirClases(conv, ia) {
+    if (!conv.data.relDia) {
+      conv.paso = 'clases_dia';
+      return maybeIa(ia, INTENCIONES.CLASES, [botMsg('¿Para qué día?', [
+        { etiqueta: 'Hoy', valor: 'hoy' },
+        { etiqueta: 'Mañana', valor: 'mañana' },
+        { etiqueta: 'Otro día', valor: 'otro dia' },
+      ])]);
+    }
+    if (conv.data.relDia === 'otro') {
+      conv.paso = 'clases_dia';
+      const hoy = weekdayEs(FECHA_DEMO);
+      const man = weekdayEs(addDays(FECHA_DEMO, 1));
+      const ops = DIAS.filter((d) => d !== hoy && d !== man).map((d) => ({ etiqueta: d, valor: d }));
+      return [botMsg('¿Qué día?', ops)];
+    }
+    conv.data.dia = diaSemanaDeRel(conv.data.relDia, FECHA_DEMO) || conv.data.relDia;
+    const clases = memoria.listarClases(tid, conv.sede);
+    const discs = disciplinasDe(clases);
+    if (!conv.data.disciplina && discs.length > 1) {
+      conv.paso = 'clases_disciplina';
+      return [botMsg('¿Qué disciplina?', discs.map((d) => ({ etiqueta: d, valor: d })))];
+    }
+    if (!conv.data.disciplina && discs.length === 1) conv.data.disciplina = discs[0];
+    return emitirClases(conv, ia);
+  }
+
+  function clasesDia(conv, texto, cmd) {
+    if (cmd.includes('otro')) {
+      conv.data.relDia = 'otro';
+      return seguirClases(conv, false);
+    }
+    const rel = extraerRelDia(texto) || extraerRelDia(cmd);
+    if (!rel || rel === 'otro') {
+      return [botMsg('¿Para qué día?', [
+        { etiqueta: 'Hoy', valor: 'hoy' },
+        { etiqueta: 'Mañana', valor: 'mañana' },
+        { etiqueta: 'Otro día', valor: 'otro dia' },
+      ])];
+    }
+    conv.data.relDia = rel;
+    const disc = extraerDisciplina(texto, memoria.listarClases(tid, conv.sede));
+    if (disc) conv.data.disciplina = disc;
+    return seguirClases(conv, false);
+  }
+
+  function clasesDisciplina(conv, texto) {
+    const clases = memoria.listarClases(tid, conv.sede);
+    const disc = extraerDisciplina(texto, clases);
+    if (!disc) {
+      const discs = disciplinasDe(clases);
+      return [botMsg('¿Qué disciplina?', discs.map((d) => ({ etiqueta: d, valor: d })))];
+    }
+    conv.data.disciplina = disc;
+    return emitirClases(conv, false);
+  }
+
+  function emitirClases(conv, ia) {
+    const disc = conv.data.disciplina;
+    if (disc && /kinesiolog/i.test(normalizar(disc))) return responderKine(conv);
+    if (disc && /musculacion/i.test(normalizar(disc))) return responderMusculacion(conv);
+
+    const rows = filtrarClases(memoria.listarClases(tid, conv.sede), {
+      sede: conv.sede,
+      dia: conv.data.dia,
+      disciplina: disc,
+    }).filter((c) => c.reservable !== false)
+      .sort((a, b) => String(a.hora).localeCompare(String(b.hora)));
+
+    conv.paso = 'clases_lista';
+    const offset = conv.data.clasesOffset || 0;
+    const { slice, hayMas, next } = paginar(rows, offset, 6);
+    conv.data.clasesNext = next;
+    const titulo = `${disc || 'Clases'} · ${etiquetaDia(conv.data.relDia, FECHA_DEMO)}`;
+    const lineas = slice.map(lineaHorario);
+    let cuerpo = [titulo, ...lineas].join('\n');
+    while (cuerpo.length > 400 && lineas.length > 1) {
+      lineas.pop();
+      cuerpo = [titulo, ...lineas].join('\n');
+    }
+    const ops = [];
+    if (slice.some((c) => !c.agotada && c.reservable !== false)) {
+      ops.push({ etiqueta: tid === 'soma' ? 'Reservar' : '📅 Reservar', valor: '2' });
+    }
+    if (slice.some((c) => c.agotada)) {
+      ops.push({ etiqueta: 'Lista de espera', valor: 'lista de espera' });
+    }
+    if (hayMas) ops.push({ etiqueta: 'Ver más', valor: 'ver mas' });
+    ops.push({ etiqueta: 'Menú', valor: 'menu' });
+    if (!slice.length) {
+      conv.paso = 'menu';
+      return maybeIa(ia, INTENCIONES.CLASES, [botMsg(`No hay ${disc || 'clases'} ese día.`, menuOps())]);
+    }
+    return maybeIa(ia, INTENCIONES.CLASES, [botMsg(cuerpo, ops)]);
+  }
+
+  function clasesLista(conv, texto, cmd) {
+    if (cmd.includes('ver mas') || cmd === 'mas') {
+      conv.data.clasesOffset = conv.data.clasesNext || 6;
+      return emitirClases(conv, false);
+    }
+    if (cmd.includes('lista de espera')) return iniciarEspera(conv);
+    if (cmd === '2' || cmd.includes('reservar')) return iniciarReserva(conv, false, conv.data.disciplina);
+    const disc = extraerDisciplina(texto, memoria.listarClases(tid, conv.sede));
+    if (disc) {
+      conv.data.disciplina = disc;
+      conv.data.clasesOffset = 0;
+      return emitirClases(conv, false);
+    }
+    return desdeMenu(conv, texto, cmd);
+  }
+
+  function iniciarEspera(conv) {
+    conv.data.esperaClase = conv.data.disciplina;
+    conv.data.esperaDia = conv.data.dia;
+    if (conv.usuario) {
+      conv.data.nombre = conv.usuario;
+      conv.paso = 'espera_phone';
+      return [botMsg('¿Cuál es tu teléfono para la lista de espera?')];
+    }
+    conv.paso = 'espera_name';
+    return [botMsg('Para la lista de espera, ¿tu nombre?')];
   }
 
   function iniciarReserva(conv, ia, claseNombre, hora) {
@@ -404,14 +560,71 @@ export function crearEngine(datosIniciales, tenantId = TENANT_DEFAULT) {
   }
 
   function verPlanes(conv, ia) {
+    conv.data = { ...(conv.data || {}), planesOffset: 0 };
+    return emitirPlanes(conv, ia);
+  }
+
+  function emitirPlanes(conv, ia) {
+    const planes = memoria.listarPlanes(tid);
+    const grupos = agruparPlanes(planes);
+    const flat = grupos.flatMap((g) => g.items.map((p) => ({ ...p, familia: g.familia })));
+    conv.paso = 'planes_lista';
+    const offset = conv.data.planesOffset || 0;
+    const { slice, hayMas, next } = paginar(flat, offset, 4);
+    conv.data.planesNext = next;
+    const byFam = new Map();
+    for (const p of slice) {
+      if (!byFam.has(p.familia)) byFam.set(p.familia, []);
+      byFam.get(p.familia).push(p);
+    }
+    const partes = [];
+    for (const [fam, items] of byFam) {
+      if (byFam.size > 1) partes.push(fam);
+      for (const p of items) partes.push(`• ${p.nombre} · ${p.precio}`);
+    }
+    partes.push('');
+    partes.push(i18n.valoresDemo);
+    const ops = [{ etiqueta: 'QUIERO MÁS INFORMACIÓN', valor: 'quiero mas informacion' }];
+    if (hayMas) ops.push({ etiqueta: 'Ver más', valor: 'ver mas planes' });
+    ops.push({ etiqueta: 'Menú', valor: 'menu' });
+    return maybeIa(ia, INTENCIONES.PLANES, [botMsg(partes.join('\n'), ops)]);
+  }
+
+  function planesLista(conv, texto, cmd) {
+    if (cmd.includes('ver mas')) {
+      conv.data.planesOffset = conv.data.planesNext || 4;
+      return emitirPlanes(conv, false);
+    }
+    if (cmd.includes('quiero mas informacion') || cmd.includes('mas informacion')) {
+      conv.paso = 'plans_info_name';
+      conv.data = {};
+      return [botMsg('Con gusto. ¿Cuál es tu nombre?')];
+    }
+    return desdeMenu(conv, texto, cmd);
+  }
+
+  function esperaName(conv, texto) {
+    if (!nombreValido(texto)) return [botMsg('El nombre debe tener entre 2 y 60 caracteres.')];
+    conv.data.nombre = texto.trim();
+    conv.usuario = conv.data.nombre;
+    conv.paso = 'espera_phone';
+    return [botMsg('¿Tu teléfono?')];
+  }
+
+  function esperaPhone(conv, texto) {
+    const tel = normalizarTelefono(texto);
+    if (!tel) return [botMsg('Teléfono no válido. Usa +56 9 XXXX XXXX.')];
+    memoria.crearLead(tid, {
+      nombre: conv.data.nombre || conv.usuario || 'Lista de espera',
+      telefono: tel,
+      objetivo: 'Lista de espera',
+      clase: conv.data.esperaClase || conv.data.disciplina || '—',
+      dia: conv.data.esperaDia || conv.data.dia || '—',
+      sede: conv.sede,
+    });
     conv.paso = 'menu';
-    const planes = memoria.listarPlanes(tid).map((p) => `• ${p.nombre} · ${p.precio}`).join('\n');
-    return maybeIa(ia, INTENCIONES.PLANES, [
-      botMsg(`${planes}\n\n${i18n.valoresDemo}`, [
-        { etiqueta: 'QUIERO MÁS INFORMACIÓN', valor: 'quiero mas informacion' },
-        { etiqueta: 'Menú', valor: 'menu' },
-      ]),
-    ]);
+    conv.data = {};
+    return [botMsg('Quedaste en lista de espera. El equipo te avisa si se libera un cupo.', menuOps())];
   }
 
   function plansInfoName(conv, texto) {
