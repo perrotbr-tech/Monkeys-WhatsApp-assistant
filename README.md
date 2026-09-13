@@ -2,7 +2,7 @@
 
 Plataforma **FORKZA AI** (Perrot Tech) para gimnasios: asistente conversacional, reservas y automatizaciones.
 Primeros tenants demo: **MONKEYS** y **SOMA Gym** (Antofagasta, Chile).
-Datos, horarios y precios son **demostrativos**. No hay integración oficial activa.
+Datos y horarios son **demostrativos**. Los planes de SOMA usan valores publicados (sujetos a cambio). No hay integración oficial activa.
 
 ## Multi-gimnasio (demo)
 
@@ -12,7 +12,7 @@ El mismo despliegue sirve a dos gimnasios, sin mezclar datos.
 |---|---|---|
 | URL | `?t=monkeys` (default) | `?t=soma` |
 | Marca | negro / amarillo | taupe / madera |
-| Código de reserva | `GYM-2026-NNNN` | `SOMA-2026-NNNN` |
+| Código de reserva | `GYM-YYYY-NNNN` | `SOMA-YYYY-NNNN` |
 
 Usuarios demo del equipo (clave `demo1234`):
 
@@ -23,6 +23,10 @@ Usuarios demo del equipo (clave `demo1234`):
 El asistente (`#asistente`) es público. `#dashboard` y `#automatizaciones` piden login. En GitHub Pages el login es simulado (modo demostración).
 
 API: header `X-Tenant` (default `monkeys`). `GET /api/tenants/:slug/theme` entrega la marca.
+
+La fecha de referencia es la del día (zona `America/Santiago`). Para tests y capturas se puede fijar con `?fecha=YYYY-MM-DD`. “Hoy” y “Mañana” salen de esa fecha. Asistencias y campañas demo se generan sobre los últimos 60 días.
+
+Brand: `favicon`, sello del chat, símbolo FORKZA e iconos PWA salen de `/brand` (archivos oficiales). No se regeneran.
 
 ## Arquitectura híbrida
 
@@ -64,7 +68,8 @@ Abre http://localhost:3000 o http://localhost:3000?t=soma
 - **D** "quiero hablar con alguien" → atención pendiente
 - **E** Abrir `index.html` sin backend (`npx serve .`) → mismos flujos en localStorage, con `?t=monkeys` o `?t=soma`
 - **F** Login `dueno@soma.demo` → Dashboard → AUTOMATIZACIONES → Ejecutar ciclo mensual (demo) → acciones con nombres de SOMA
-- **G** SOMA: Ver clases pregunta día (Hoy · Mañana · Otro día) y disciplina; lista corto de ese cruce (máx. 6 líneas). Planes de a 4. Reservar Crosstraining 18:00 → `SOMA-2026-0001`; preguntar Kinesiología → deriva al equipo; Musculación → acceso libre sin reserva
+- **G** SOMA: Ver clases pregunta día (Hoy · Mañana · Otro día) y disciplina; lista corto de ese cruce (máx. 6 líneas). Ver planes agrupa por familia (CrossTraining · Small Group · HappyFLEX · Kids · Pases), de a 4, con el rótulo de valores publicados. Reservar Crosstraining 18:00 → `SOMA-YYYY-0001`; preguntar Kinesiología → deriva al equipo; Musculación → acceso libre sin reserva
+- **H** SOMA: socio con plan reserva y el bot dice “Te quedan X cupos este mes”. Si agotó el mes, rechaza y crea `tarea_equipo` (motivo cupos agotados), sin precios ni upgrade. “¿Cuántos cupos me quedan?” responde restantes y que se renuevan el 1 de cada mes. MONKEYS no aplica cupos por plan.
 
 ## Automatizaciones
 

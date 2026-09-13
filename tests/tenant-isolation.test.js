@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { crearMemoria } from '../engine/store.js';
 import { crearEngine } from '../engine/conversation.js';
-import { crearAutomation, FECHA_DEMO } from '../engine/automation.js';
+import { crearAutomation, fechaHoy } from '../engine/automation.js';
 import { clonarDemo, clonarMundo } from '../data/demo.js';
 import { textoValido } from '../data/templates.js';
 import { varsMarca, tenantActivo, buscarTenant } from '../data/tenants.js';
@@ -78,8 +78,8 @@ test('reserva en soma genera código correlativo independiente SOMA-2026-0001', 
 
 test('los 5 agentes producen acciones para soma sin placeholders sin resolver', () => {
   const auto = crearAutomation(clonarDemo('soma'), 'soma');
-  auto.ejecutarCiclo(FECHA_DEMO);
-  const acciones = auto.listarAcciones().filter((a) => a.fechaISO.slice(0, 10) === FECHA_DEMO);
+  auto.ejecutarCiclo(fechaHoy());
+  const acciones = auto.listarAcciones().filter((a) => a.fechaISO.slice(0, 10) === fechaHoy());
   const ids = new Set(acciones.map((a) => a.agente));
   for (const ag of ['retencion', 'cobranza', 'reactivacion', 'recordatorio', 'referidos']) {
     assert.equal(ids.has(ag), true, ag);
@@ -128,9 +128,9 @@ test('chat soma responde horarios y planes', () => {
   assert.equal(/Hyrox|Pilates/.test(cuerpo), false);
   engine.procesar(id, 'menu');
   const planes = engine.procesar(id, '4');
-  assert.match(planes.mensajes[0].texto, /69\.990/);
-  assert.match(planes.mensajes[0].texto, /Functional Kids/);
-  assert.match(planes.mensajes[0].texto, /Valores demostrativos/);
+  assert.match(planes.mensajes[0].texto, /59\.000/);
+  assert.match(planes.mensajes[0].texto, /CrossTraining|Funcional Kids|HappyFLEX|Small Group/);
+  assert.match(planes.mensajes[0].texto, /Valores según planes publicados/);
 });
 
 test('crosstraining mañana no repregunta día ni disciplina', () => {
