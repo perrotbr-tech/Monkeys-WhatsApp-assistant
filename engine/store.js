@@ -5,6 +5,35 @@ import { planSomaPorId } from '../data/planes-soma.js';
 
 export { clonar };
 
+/** Une slice del engine (cupos, tareas de reserva) con el de automatizaciones (ciclo). */
+export function combinarPersistencia(eng, aut) {
+  const e = eng || {};
+  const a = aut || {};
+  const accionesEng = (e.automation && e.automation.acciones) || [];
+  const accionesAut = (a.automation && a.automation.acciones) || [];
+  const byId = new Map();
+  for (const row of accionesAut) byId.set(row.id, row);
+  for (const row of accionesEng) {
+    if (!byId.has(row.id)) byId.set(row.id, row);
+  }
+  const autoBlock = a.automation || {};
+  const engBlock = e.automation || {};
+  return {
+    ...a,
+    ...e,
+    socios: e.socios || a.socios,
+    asistencias: a.asistencias || e.asistencias,
+    automation: {
+      ...engBlock,
+      ...autoBlock,
+      acciones: [...byId.values()],
+      campanias: autoBlock.campanias || engBlock.campanias || [],
+      agentesActivos: autoBlock.agentesActivos || engBlock.agentesActivos || {},
+      nextActionSeq: Math.max(autoBlock.nextActionSeq || 0, engBlock.nextActionSeq || 0),
+    },
+  };
+}
+
 function anioCodigo(fechaRef) {
   return anioDe(fechaRef || fechaHoy());
 }

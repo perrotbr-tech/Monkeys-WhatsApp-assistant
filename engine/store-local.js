@@ -3,6 +3,7 @@ import { crearAutomation } from './automation.js';
 import { clonarDemo } from '../data/demo.js';
 import { fechaHoy } from './dates.js';
 import { USUARIOS_DEMO, CLAVE_DEMO } from '../data/tenants.js';
+import { combinarPersistencia } from './store.js';
 
 export function claveEstado(tenantId) {
   return `forkza_demo_state_${tenantId}`;
@@ -26,7 +27,9 @@ export function crearStoreLocal(tenantId, storage, opts = {}) {
   const auto = crearAutomation(datos, tenantId);
 
   function persist() {
-    storage.setItem(KEY, JSON.stringify({ ...engine.exportar(), ...auto.exportar() }));
+    const merged = combinarPersistencia(engine.exportar(), auto.exportar());
+    storage.setItem(KEY, JSON.stringify(merged));
+    auto.hidratar(merged);
   }
 
   persist();

@@ -30,6 +30,32 @@ test('StoreLocal con localStorage simulado no cruza datos entre tenants', async 
   assert.equal((monRaw.bookings || []).some((b) => String(b.codigo).startsWith('SOMA-')), false);
 });
 
+test('StoreLocal conserva cuposUsadosMes y la tarea de cupos agotados al persistir', async () => {
+  const storage = crearStorageMemoria();
+  const store = crearStoreLocal('soma', storage, { fechaRef: '2026-09-14' });
+  const socio = store.engine.memoria.buscarSocioPorTelefono('soma', '+56962000001');
+  const plan = store.engine.listarPlanes().find((p) => p.id === socio.planId);
+  socio.cuposUsadosMes = plan.cuposMes;
+  const start = await store.iniciarConversacion();
+  const id = start.conversacion.id;
+  await store.enviarMensaje(id, 'reservar mi cupo');
+  await store.enviarMensaje(id, 'Crosstraining Lunes 18:00');
+  await store.enviarMensaje(id, socio.nombre);
+  await store.enviarMensaje(id, '962000001');
+  await store.enviarMensaje(id, 'omitir');
+  const done = await store.enviarMensaje(id, 'confirmar');
+  assert.match(done.mensajes[0].texto, /Ya usaste los/);
+  const raw = JSON.parse(storage.getItem(claveEstado('soma')));
+  const guardado = raw.socios.find((s) => s.id === socio.id);
+  assert.equal(guardado.cuposUsadosMes, plan.cuposMes);
+  assert.equal((raw.automation.acciones || []).some((a) => a.motivo === 'cupos agotados'), true);
+
+  const reloaded = crearStoreLocal('soma', storage, { fechaRef: '2026-09-14' });
+  const otra = reloaded.engine.memoria.buscarSocioPorTelefono('soma', '+56962000001');
+  assert.equal(otra.cuposUsadosMes, plan.cuposMes);
+  assert.equal(reloaded.engine.memoria.listarAcciones('soma').some((a) => a.motivo === 'cupos agotados'), true);
+});
+
 test('StoreLocal bloquea login tras 5 fallos aunque el 6º sea correcto', async () => {
   const storage = crearStorageMemoria();
   const store = crearStoreLocal('soma', storage);

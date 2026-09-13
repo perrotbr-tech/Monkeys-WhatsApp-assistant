@@ -6,7 +6,7 @@ import { clonarMundo, clonar } from '../data/demo.js';
 import { TENANT_DEFAULT, tenantActivo, varsMarca, USUARIOS_DEMO } from '../data/tenants.js';
 import { crearEngine } from '../engine/conversation.js';
 import { crearAutomation } from '../engine/automation.js';
-import { crearMemoria } from '../engine/store.js';
+import { crearMemoria, combinarPersistencia } from '../engine/store.js';
 import { fechaHoy, fechaDesdeQuery } from '../engine/dates.js';
 import {
   COOKIE, parseCookies, firmarSesion, leerSesion, cookieSesion, cookieLogout,
@@ -60,12 +60,10 @@ export function crearApp({ mundo = null, persist = true, sessionSecret = SESSION
   function saveState() {
     const snap = memoria.snapshot();
     for (const id of Object.keys(autos)) {
-      const a = autos[id].exportar();
-      if (snap.byTenant[id]) {
-        snap.byTenant[id].socios = a.socios;
-        snap.byTenant[id].asistencias = a.asistencias;
-        snap.byTenant[id].automation = a.automation;
-      }
+      if (!snap.byTenant[id]) continue;
+      const merged = combinarPersistencia(snap.byTenant[id], autos[id].exportar());
+      snap.byTenant[id] = merged;
+      autos[id].hidratar(merged);
     }
     state = snap;
     if (persist) {
