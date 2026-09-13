@@ -102,14 +102,17 @@ export function crearMemoria(datosIniciales) {
   function buscarClase(tenantId, sede, nombre) {
     const n = String(nombre || '').toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu, '');
     const hora = n.match(/(\d{1,2}:\d{2})/);
-    const clases = listarClases(tenantId, sede);
+    const dia = diaDesdeTexto(n);
+    let clases = listarClases(tenantId, sede);
+    if (dia) clases = clases.filter((c) => c.dia === dia);
+    const nom = (c) => c.nombre.toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu, '');
     const byHora = hora
-      ? clases.filter((c) => String(c.hora).includes(hora[1]) && n.includes(c.nombre.toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu, '')))
+      ? clases.filter((c) => String(c.hora).includes(hora[1]) && n.includes(nom(c)))
       : [];
     if (byHora.length) return byHora[0];
     return (
-      clases.find((c) => c.nombre.toLowerCase() === n || c.id === nombre)
-      || clases.find((c) => n.includes(c.nombre.toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu, '')))
+      clases.find((c) => nom(c) === n || c.id === nombre)
+      || clases.find((c) => n.includes(nom(c)))
       || null
     );
   }
@@ -391,4 +394,19 @@ export function normalizarTelefono(raw) {
 export function nombreValido(raw) {
   const n = String(raw || '').trim();
   return n.length >= 2 && n.length <= 60;
+}
+
+function diaDesdeTexto(n) {
+  const pares = [
+    ['miercoles', 'Miércoles'],
+    ['lunes', 'Lunes'],
+    ['martes', 'Martes'],
+    ['jueves', 'Jueves'],
+    ['viernes', 'Viernes'],
+    ['sabado', 'Sábado'],
+  ];
+  for (const [key, dia] of pares) {
+    if (n.includes(key)) return dia;
+  }
+  return null;
 }

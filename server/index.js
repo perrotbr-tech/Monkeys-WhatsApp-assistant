@@ -34,6 +34,12 @@ function loadState() {
     writeFileSync(DATA_FILE, JSON.stringify(seed, null, 2));
     return seed;
   }
+  const soma = parsed.byTenant.soma;
+  if (soma && soma.plans && soma.plans[0] && !('cuposMes' in soma.plans[0])) {
+    const seed = clonarMundo();
+    parsed.byTenant.soma = seed.byTenant.soma;
+    writeFileSync(DATA_FILE, JSON.stringify(parsed, null, 2));
+  }
   return parsed;
 }
 

@@ -163,6 +163,16 @@ test('ver planes agrupa por familia, de a 4, y ningún texto sugiere upgrade', (
   assert.equal(/plan más caro|plan mas caro/i.test(blob), false);
 });
 
+test('buscarClase respeta el día escrito y no toma el primer horario', () => {
+  const mem = crearMemoria(demoSoma());
+  const mar = mem.buscarClase('soma', 'SOMA Antofagasta', 'Crosstraining Martes 18:00');
+  assert.equal(mar.dia, 'Martes');
+  assert.equal(mar.hora, '18:00');
+  const lun = mem.buscarClase('soma', 'SOMA Antofagasta', 'Crosstraining Lunes 18:00');
+  assert.equal(lun.dia, 'Lunes');
+  assert.equal(lun.id, 'so-ct-lun-18');
+});
+
 test('monkeys sigue sin cupos por plan y con precios demo', () => {
   const d = clonarDemo('monkeys', FECHA);
   d.bookings = [];

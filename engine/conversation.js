@@ -805,6 +805,8 @@ export function crearEngine(datosIniciales, tenantId = TENANT_DEFAULT, opts = {}
   function pickClase(sede, texto, cmd, soloReservable) {
     let clases = memoria.listarClases(tid, sede);
     if (soloReservable) clases = clases.filter((c) => c.reservable !== false);
+    const exacta = clases.find((c) => normalizar(`${c.nombre} ${c.dia} ${c.hora}`) === cmd);
+    if (exacta) return exacta;
     const n = Number.parseInt(cmd, 10);
     if (Number.isInteger(n) && n >= 1 && n <= clases.length) return clases[n - 1];
     return (
