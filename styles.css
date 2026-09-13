@@ -325,6 +325,14 @@ h3 { letter-spacing: 0.08em; font-size: 14px; }
 .agent-card h2 { font-size: 14px; letter-spacing: 0.08em; margin: 0 0 10px; }
 .kpi { font-size: 28px; font-weight: 900; color: var(--color-acento); }
 .kpi-lbl { color: var(--color-texto-muted); font-size: 12px; margin-bottom: 8px; }
+.kpi-aviso {
+  color: var(--color-texto);
+  font-size: 13px;
+  line-height: 1.35;
+  margin: 0 0 12px;
+  max-height: 4.05em;
+  overflow: hidden;
+}
 .toggle {
   min-height: 44px;
   padding: 8px 12px;

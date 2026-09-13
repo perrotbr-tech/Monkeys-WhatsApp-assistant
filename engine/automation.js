@@ -119,11 +119,19 @@ export function crearAutomation(datosIniciales, tenantId = TENANT_DEFAULT) {
       porTipo[a.tipo] = (porTipo[a.tipo] || 0) + 1;
       porEstado[a.estado] = (porEstado[a.estado] || 0) + 1;
     }
+    const ultimo = [...(state.automation.campanias || [])].sort((a, b) => (a.fecha < b.fecha ? 1 : -1))[0];
+    const delCiclo = (ultimo && ultimo.acciones) || [];
     const indicadores = {};
     const ctx = contexto();
     const fecha = resolverFecha(fechaRef);
     for (const ag of AGENTES) {
-      indicadores[ag.id] = ag.indicadores ? ag.indicadores(ctx, fecha) : {};
+      const deAg = delCiclo.filter((x) => x.agente === ag.id);
+      const avisoAcc = deAg.find((x) => x.texto) || deAg.find((x) => x.motivo);
+      indicadores[ag.id] = {
+        ...(ag.indicadores ? ag.indicadores(ctx, fecha) : {}),
+        accionesUltimoCiclo: deAg.length,
+        aviso: avisoAcc ? (avisoAcc.texto || avisoAcc.motivo || '') : '',
+      };
     }
     return {
       porAgente,

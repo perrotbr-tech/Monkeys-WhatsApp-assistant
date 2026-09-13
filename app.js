@@ -1,13 +1,8 @@
-import { crearEngine } from './engine/conversation.js';
-import { crearAutomation } from './engine/automation.js';
-import { clonarDemo } from './data/demo.js';
 import { FECHA_DEMO } from './engine/dates.js';
 import { TENANT_DEFAULT, tenantActivo, varsMarca, USUARIOS_DEMO, CLAVE_DEMO } from './data/tenants.js';
+import { crearStoreLocal } from './engine/store-local.js';
 
 const TENANT_KEY = 'forkza_tenant';
-const SESSION_KEY = 'forkza_session';
-const LOCK_KEY = 'forkza_login_lock';
-const LOCK_MS = 10 * 60 * 1000;
 
 const logEl = document.getElementById('chat-log');
 const inputEl = document.getElementById('chat-input');
@@ -31,6 +26,10 @@ let sedeFiltro = 'Todas';
 let autoFiltro = { agente: '', sede: '', estado: '' };
 let session = null;
 let standalone = false;
+
+function apiUrl(path) {
+  return new URL(path, import.meta.url).href;
+}
 
 function timeoutFetch(url, ms, opts = {}) {
   const ctrl = new AbortController();
@@ -95,17 +94,13 @@ function headers(extra = {}) {
   return { 'X-Tenant': tenant.id, ...extra };
 }
 
-function storageKey() {
-  return `forkza_demo_state_${tenant.id}`;
-}
-
 class StoreApi {
   async iniciarConversacion() {
-    const res = await fetch('./api/conversations', { method: 'POST', headers: headers() });
+    const res = await fetch(apiUrl('./api/conversations'), { method: 'POST', headers: headers() });
     return res.json();
   }
   async enviarMensaje(id, text) {
-    const res = await fetch(`./api/conversations/${id}/messages`, {
+    const res = await fetch(apiUrl(`./api/conversations/${id}/messages`), {
       method: 'POST',
       headers: headers({ 'Content-Type': 'application/json' }),
       body: JSON.stringify({ text }),
@@ -113,34 +108,34 @@ class StoreApi {
     return res.json();
   }
   async listarClases() {
-    const res = await fetch('./api/classes', { headers: headers() });
+    const res = await fetch(apiUrl('./api/classes'), { headers: headers() });
     return (await res.json()).classes;
   }
   async listarPlanes() {
-    const res = await fetch('./api/plans', { headers: headers() });
+    const res = await fetch(apiUrl('./api/plans'), { headers: headers() });
     return (await res.json()).plans;
   }
   async listarReservas() {
-    const res = await fetch('./api/bookings', { headers: headers() });
+    const res = await fetch(apiUrl('./api/bookings'), { headers: headers() });
     if (res.status === 401) throw new Error('unauthorized');
     return (await res.json()).bookings;
   }
   async listarLeads() {
-    const res = await fetch('./api/leads', { headers: headers() });
+    const res = await fetch(apiUrl('./api/leads'), { headers: headers() });
     if (res.status === 401) throw new Error('unauthorized');
     return (await res.json()).leads;
   }
   async listarConversaciones() {
-    const res = await fetch('./api/conversations', { headers: headers() });
+    const res = await fetch(apiUrl('./api/conversations'), { headers: headers() });
     if (res.status === 401) throw new Error('unauthorized');
     return (await res.json()).conversations;
   }
   async reset() {
-    const res = await fetch('./api/demo/reset', { method: 'POST', headers: headers() });
+    const res = await fetch(apiUrl('./api/demo/reset'), { method: 'POST', headers: headers() });
     return res.json();
   }
   async runAutomation() {
-    const res = await fetch('./api/automation/run', {
+    const res = await fetch(apiUrl('./api/automation/run'), {
       method: 'POST',
       headers: headers({ 'Content-Type': 'application/json' }),
       body: JSON.stringify({ fecha: FECHA_DEMO }),
@@ -148,7 +143,7 @@ class StoreApi {
     return res.json();
   }
   async automationSummary() {
-    const res = await fetch('./api/automation/summary', { headers: headers() });
+    const res = await fetch(apiUrl('./api/automation/summary'), { headers: headers() });
     return res.json();
   }
   async automationActions(q = {}) {
@@ -156,11 +151,11 @@ class StoreApi {
     if (q.agente) p.set('agente', q.agente);
     if (q.sede) p.set('sede', q.sede);
     if (q.estado) p.set('estado', q.estado);
-    const res = await fetch(`./api/automation/actions?${p.toString()}`, { headers: headers() });
+    const res = await fetch(apiUrl(`./api/automation/actions?${p.toString()}`), { headers: headers() });
     return (await res.json()).actions;
   }
   async setActionEstado(id, estado) {
-    const res = await fetch(`./api/automation/actions/${id}/estado`, {
+    const res = await fetch(apiUrl(`./api/automation/actions/${id}/estado`), {
       method: 'POST',
       headers: headers({ 'Content-Type': 'application/json' }),
       body: JSON.stringify({ estado }),
@@ -168,7 +163,7 @@ class StoreApi {
     return res.json();
   }
   async setAgenteActivo(id, activo) {
-    const res = await fetch(`./api/automation/agentes/${id}/activo`, {
+    const res = await fetch(apiUrl(`./api/automation/agentes/${id}/activo`), {
       method: 'POST',
       headers: headers({ 'Content-Type': 'application/json' }),
       body: JSON.stringify({ activo }),
@@ -176,7 +171,7 @@ class StoreApi {
     return res.json();
   }
   async login(email, password) {
-    const res = await fetch('./api/login', {
+    const res = await fetch(apiUrl('./api/login'), {
       method: 'POST',
       headers: headers({ 'Content-Type': 'application/json' }),
       body: JSON.stringify({ email, password }),
@@ -186,101 +181,10 @@ class StoreApi {
     return data;
   }
   async me() {
-    const res = await fetch('./api/me', { headers: headers() });
+    const res = await fetch(apiUrl('./api/me'), { headers: headers() });
     if (!res.ok) return null;
     return (await res.json()).usuario;
   }
-}
-
-class StoreLocal {
-  constructor() {
-    let datos = clonarDemo(tenant.id);
-    try {
-      const raw = localStorage.getItem(storageKey()) || (tenant.id === 'monkeys' ? localStorage.getItem('monkeys_demo_state') : null);
-      if (raw) datos = JSON.parse(raw);
-    } catch {
-      datos = clonarDemo(tenant.id);
-    }
-    this.engine = crearEngine(datos, tenant.id);
-    this.auto = crearAutomation(datos, tenant.id);
-  }
-  persist() {
-    localStorage.setItem(storageKey(), JSON.stringify({ ...this.engine.exportar(), ...this.auto.exportar() }));
-  }
-  async iniciarConversacion() {
-    const r = this.engine.iniciar();
-    this.persist();
-    return r;
-  }
-  async enviarMensaje(id, text) {
-    const r = this.engine.procesar(id, text);
-    this.persist();
-    return r;
-  }
-  async listarClases() { return this.engine.listarClases(); }
-  async listarPlanes() { return this.engine.listarPlanes(); }
-  async listarReservas() { return this.engine.listarReservas(); }
-  async listarLeads() { return this.engine.listarLeads(); }
-  async listarConversaciones() { return this.engine.listarConversaciones(); }
-  async reset() {
-    this.engine.reset();
-    this.auto.reset();
-    this.persist();
-    return { ok: true };
-  }
-  async runAutomation() {
-    const campania = this.auto.ejecutarCiclo(FECHA_DEMO);
-    this.persist();
-    return { ok: true, campania, summary: this.auto.summary(FECHA_DEMO) };
-  }
-  async automationSummary() { return this.auto.summary(FECHA_DEMO); }
-  async automationActions(q = {}) { return this.auto.listarAcciones(q); }
-  async setActionEstado(id, estado) {
-    const action = this.auto.setEstado(id, estado);
-    this.persist();
-    return { action };
-  }
-  async setAgenteActivo(id, activo) {
-    const agentesActivos = this.auto.setAgenteActivo(id, activo);
-    this.persist();
-    return { agentesActivos };
-  }
-  async login(email, password) {
-    const lock = readLock();
-    const k = `${tenant.id}:${String(email || '').trim().toLowerCase()}`;
-    const row = lock[k] || { fallos: 0, lockedUntil: 0 };
-    if (row.lockedUntil && row.lockedUntil > Date.now()) return { ok: false, error: 'bloqueado', status: 429 };
-    const user = USUARIOS_DEMO.find((u) => u.tenantId === tenant.id && u.email.toLowerCase() === String(email || '').trim().toLowerCase());
-    if (!user || password !== CLAVE_DEMO) {
-      row.fallos += 1;
-      if (row.fallos >= 5) row.lockedUntil = Date.now() + LOCK_MS;
-      lock[k] = row;
-      writeLock(lock);
-      return { ok: false, error: row.fallos >= 5 ? 'bloqueado' : 'credenciales', status: row.fallos >= 5 ? 429 : 401 };
-    }
-    delete lock[k];
-    writeLock(lock);
-    const usuario = { email: user.email, nombre: user.nombre, rol: user.rol, tenantId: user.tenantId };
-    localStorage.setItem(SESSION_KEY, JSON.stringify(usuario));
-    return { ok: true, usuario };
-  }
-  async me() {
-    try {
-      const raw = localStorage.getItem(SESSION_KEY);
-      if (!raw) return null;
-      const u = JSON.parse(raw);
-      return u.tenantId === tenant.id ? u : null;
-    } catch {
-      return null;
-    }
-  }
-}
-
-function readLock() {
-  try { return JSON.parse(localStorage.getItem(LOCK_KEY) || '{}'); } catch { return {}; }
-}
-function writeLock(obj) {
-  localStorage.setItem(LOCK_KEY, JSON.stringify(obj));
 }
 
 function horaCorta(iso) {
@@ -515,6 +419,14 @@ const AGENT_LABEL = {
   referidos: 'REFERIDOS',
 };
 
+const AGENT_CARDS = [
+  { id: 'retencion', title: 'RETENCIÓN', kind: 'retencion' },
+  { id: 'cobranza', title: 'COBRANZA', kind: 'ciclo' },
+  { id: 'reactivacion', title: 'REACTIVACIÓN', kind: 'ciclo' },
+  { id: 'recordatorio', title: 'RECORDATORIO + LISTA DE ESPERA', kind: 'ciclo' },
+  { id: 'referidos', title: 'REFERIDOS', kind: 'ciclo' },
+];
+
 function pill(agente) {
   return el('span', `pill pill-${agente}`, AGENT_LABEL[agente] || agente);
 }
@@ -529,21 +441,29 @@ async function renderAutomations() {
   }
   const cards = document.getElementById('auto-cards');
   cards.replaceChildren();
-  const ind = (summary.indicadores && summary.indicadores.retencion) || {};
-  const cardEl = el('div', 'agent-card');
-  cardEl.appendChild(el('h2', null, 'RETENCIÓN'));
-  cardEl.appendChild(el('div', 'kpi', String(ind.sociosEnRiesgo || 0)));
-  cardEl.appendChild(el('div', 'kpi-lbl', 'Socios en riesgo'));
-  cardEl.appendChild(el('div', 'kpi', String(ind.recuperadosEsteMes || 0)));
-  cardEl.appendChild(el('div', 'kpi-lbl', 'Recuperados este mes'));
-  const on = summary.agentesActivos && summary.agentesActivos.retencion !== false;
-  const tog = el('button', `toggle${on ? ' is-on' : ''}`, on ? 'Activo' : 'Pausado');
-  tog.addEventListener('click', async () => {
-    await store.setAgenteActivo('retencion', !on);
-    renderAutomations();
-  });
-  cardEl.appendChild(tog);
-  cards.appendChild(cardEl);
+  for (const spec of AGENT_CARDS) {
+    const ind = (summary.indicadores && summary.indicadores[spec.id]) || {};
+    const cardEl = el('div', 'agent-card');
+    cardEl.appendChild(el('h2', null, spec.title));
+    if (spec.kind === 'retencion') {
+      cardEl.appendChild(el('div', 'kpi', String(ind.sociosEnRiesgo || 0)));
+      cardEl.appendChild(el('div', 'kpi-lbl', 'Socios en riesgo'));
+      cardEl.appendChild(el('div', 'kpi', String(ind.recuperadosEsteMes || 0)));
+      cardEl.appendChild(el('div', 'kpi-lbl', 'Recuperados este mes'));
+    } else {
+      cardEl.appendChild(el('div', 'kpi', String(ind.accionesUltimoCiclo || 0)));
+      cardEl.appendChild(el('div', 'kpi-lbl', 'Acciones último ciclo'));
+      cardEl.appendChild(el('p', 'kpi-aviso', ind.aviso || 'Sin avisos en el último ciclo'));
+    }
+    const on = summary.agentesActivos && summary.agentesActivos[spec.id] !== false;
+    const tog = el('button', `toggle${on ? ' is-on' : ''}`, on ? 'Activo' : 'Pausado');
+    tog.addEventListener('click', async () => {
+      await store.setAgenteActivo(spec.id, !on);
+      renderAutomations();
+    });
+    cardEl.appendChild(tog);
+    cards.appendChild(cardEl);
+  }
 
   const filters = document.getElementById('auto-filters');
   filters.replaceChildren();
@@ -603,7 +523,7 @@ function openMsg(a) {
 
 async function resolveTheme(slug) {
   try {
-    const res = await timeoutFetch(`./api/tenants/${slug}/theme`, 1500);
+    const res = await timeoutFetch(apiUrl(`./api/tenants/${slug}/theme`), 1500);
     if (res.ok) return res.json();
     if (res.status === 400) return null;
   } catch { /* standalone */ }
@@ -626,16 +546,16 @@ async function main() {
   paintTenant(tenant);
 
   try {
-    const health = await timeoutFetch('./api/health', 1500);
+    const health = await timeoutFetch(apiUrl('./api/health'), 1500);
     if (health.ok) {
       store = new StoreApi();
       standalone = false;
     } else {
-      store = new StoreLocal();
+      store = crearStoreLocal(tenant.id, localStorage);
       standalone = true;
     }
   } catch {
-    store = new StoreLocal();
+    store = crearStoreLocal(tenant.id, localStorage);
     standalone = true;
   }
 
