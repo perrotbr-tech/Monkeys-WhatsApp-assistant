@@ -1,4 +1,4 @@
-import { FECHA_DEMO } from './engine/dates.js';
+import { fechaHoy, fechaDesdeQuery } from './engine/dates.js';
 import { TENANT_DEFAULT, tenantActivo, varsMarca, USUARIOS_DEMO, CLAVE_DEMO } from './data/tenants.js';
 import { crearStoreLocal } from './engine/store-local.js';
 
@@ -28,7 +28,14 @@ let session = null;
 let standalone = false;
 
 function apiUrl(path) {
-  return new URL(path, import.meta.url).href;
+  const u = new URL(path, import.meta.url);
+  const f = fechaDesdeQuery(location.search);
+  if (f) u.searchParams.set('fecha', f);
+  return u.href;
+}
+
+function fechaActiva() {
+  return fechaDesdeQuery(location.search) || fechaHoy(tenant && tenant.zonaHoraria);
 }
 
 function timeoutFetch(url, ms, opts = {}) {
@@ -138,7 +145,7 @@ class StoreApi {
     const res = await fetch(apiUrl('./api/automation/run'), {
       method: 'POST',
       headers: headers({ 'Content-Type': 'application/json' }),
-      body: JSON.stringify({ fecha: FECHA_DEMO }),
+      body: JSON.stringify({ fecha: fechaActiva() }),
     });
     return res.json();
   }
@@ -551,11 +558,11 @@ async function main() {
       store = new StoreApi();
       standalone = false;
     } else {
-      store = crearStoreLocal(tenant.id, localStorage);
+      store = crearStoreLocal(tenant.id, localStorage, { fechaRef: fechaActiva() });
       standalone = true;
     }
   } catch {
-    store = crearStoreLocal(tenant.id, localStorage);
+    store = crearStoreLocal(tenant.id, localStorage, { fechaRef: fechaActiva() });
     standalone = true;
   }
 

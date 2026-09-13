@@ -11,7 +11,7 @@ import { TENANT_DEFAULT } from '../data/tenants.js';
 import { i18n } from '../data/i18n.js';
 import { crearIntentService, INTENCIONES, normalizar } from './intent.js';
 import { crearMemoria, clonar, normalizarTelefono, nombreValido } from './store.js';
-import { FECHA_DEMO, addDays, weekdayEs } from './dates.js';
+import { fechaHoy, addDays, weekdayEs } from './dates.js';
 import {
   extraerRelDia, extraerDisciplina, disciplinasDe, filtrarClases, lineaHorario,
   paginar, agruparPlanes, etiquetaDia, diaSemanaDeRel,
@@ -55,12 +55,21 @@ const IA_LINEA = {
   [INTENCIONES.AYUDA]: 'Entendí que necesitas orientación.',
 };
 
-export function crearEngine(datosIniciales, tenantId = TENANT_DEFAULT) {
+export function crearEngine(datosIniciales, tenantId = TENANT_DEFAULT, opts = {}) {
   const memoria = datosIniciales && datosIniciales.memoria
     ? datosIniciales.memoria
-    : crearMemoria(datosIniciales || clonarDemo(tenantId));
+    : crearMemoria(datosIniciales || clonarDemo(tenantId, opts.fechaRef));
   const tid = tenantId;
   const intent = crearIntentService();
+  let fechaRef = opts.fechaRef || fechaHoy((memoria.getTenant(tid) || {}).zonaHoraria);
+
+  function fecha() {
+    return fechaRef;
+  }
+
+  function setFechaRef(f) {
+    if (f) fechaRef = f;
+  }
 
   function tenant() {
     return memoria.getTenant(tid) || { id: tid, sedes: [], textosBot: {}, marca: {} };
@@ -123,6 +132,9 @@ export function crearEngine(datosIniciales, tenantId = TENANT_DEFAULT) {
     } else if (cmd === 'volver') out = irMenu(conv, false);
     else if (cmd === 'humano') out = iniciarHumano(conv, false);
     else if (cmd === 'ayuda') out = ayuda(conv);
+    else if (esConsultaCupos(cmd) && conv.paso !== 'reserve_name' && conv.paso !== 'trial_name') {
+      out = responderCupos(conv, texto);
+    }
     else if (esKine(cmd) && conv.paso !== 'reserve_name' && conv.paso !== 'trial_name') {
       out = responderKine(conv);
     } else if (esMusculacion(cmd) && conv.paso !== 'reserve_name' && conv.paso !== 'trial_name') {
@@ -178,6 +190,10 @@ export function crearEngine(datosIniciales, tenantId = TENANT_DEFAULT) {
         return humanReason(conv, texto);
       case 'lookup_code':
         return lookupCode(conv, texto);
+      case 'lookup_done':
+        return lookupDone(conv, cmd);
+      case 'cupos_phone':
+        return cuposPhone(conv, texto);
       case 'plans_info_name':
         return plansInfoName(conv, texto);
       case 'plans_info_phone':
@@ -238,6 +254,7 @@ export function crearEngine(datosIniciales, tenantId = TENANT_DEFAULT) {
     if (det.intencion === INTENCIONES.TRIAL) return iniciarTrial(conv, marcarIa);
     if (det.intencion === INTENCIONES.PLANES) return verPlanes(conv, marcarIa);
     if (det.intencion === INTENCIONES.HUMANO) return iniciarHumano(conv, marcarIa);
+    if (det.intencion === INTENCIONES.CUPOS) return responderCupos(conv, texto || '');
     if (det.intencion === INTENCIONES.LOOKUP) return iniciarLookup(conv, marcarIa);
     if (det.intencion === INTENCIONES.MENU) return irMenu(conv, marcarIa);
     if (det.intencion === INTENCIONES.AYUDA) return ayuda(conv, marcarIa);
@@ -265,12 +282,12 @@ export function crearEngine(datosIniciales, tenantId = TENANT_DEFAULT) {
     }
     if (conv.data.relDia === 'otro') {
       conv.paso = 'clases_dia';
-      const hoy = weekdayEs(FECHA_DEMO);
-      const man = weekdayEs(addDays(FECHA_DEMO, 1));
+      const hoy = weekdayEs(fecha());
+      const man = weekdayEs(addDays(fecha(), 1));
       const ops = DIAS.filter((d) => d !== hoy && d !== man).map((d) => ({ etiqueta: d, valor: d }));
       return [botMsg('¿Qué día?', ops)];
     }
-    conv.data.dia = diaSemanaDeRel(conv.data.relDia, FECHA_DEMO) || conv.data.relDia;
+    conv.data.dia = diaSemanaDeRel(conv.data.relDia, fecha()) || conv.data.relDia;
     const clases = memoria.listarClases(tid, conv.sede);
     const discs = disciplinasDe(clases);
     if (!conv.data.disciplina && discs.length > 1) {
@@ -327,7 +344,7 @@ export function crearEngine(datosIniciales, tenantId = TENANT_DEFAULT) {
     const offset = conv.data.clasesOffset || 0;
     const { slice, hayMas, next } = paginar(rows, offset, 6);
     conv.data.clasesNext = next;
-    const titulo = `${disc || 'Clases'} · ${etiquetaDia(conv.data.relDia, FECHA_DEMO)}`;
+    const titulo = `${disc || 'Clases'} · ${etiquetaDia(conv.data.relDia, fecha())}`;
     const lineas = slice.map(lineaHorario);
     let cuerpo = [titulo, ...lineas].join('\n');
     while (cuerpo.length > 400 && lineas.length > 1) {
@@ -492,7 +509,11 @@ export function crearEngine(datosIniciales, tenantId = TENANT_DEFAULT) {
     conv.data = {};
     if (!result.ok) return [botMsg(result.error, menuOps())];
     const fuego = tid === 'soma' ? '' : '🔥 ';
-    return [botMsg(`${fuego}¡LISTO! TU CUPO ESTÁ RESERVADO.\nCódigo ${result.booking.codigo}`, menuOps())];
+    let texto = `${fuego}¡LISTO! TU CUPO ESTÁ RESERVADO.\nCódigo ${result.booking.codigo}`;
+    if (result.cuposRestantes != null) {
+      texto += `\nTe quedan ${result.cuposRestantes} cupos este mes.`;
+    }
+    return [botMsg(texto, menuOps())];
   }
 
   function iniciarTrial(conv, ia) {
@@ -579,11 +600,11 @@ export function crearEngine(datosIniciales, tenantId = TENANT_DEFAULT) {
     }
     const partes = [];
     for (const [fam, items] of byFam) {
-      if (byFam.size > 1) partes.push(fam);
-      for (const p of items) partes.push(`• ${p.nombre} · ${p.precio}`);
+      partes.push(fam);
+      for (const p of items) partes.push(lineaPlan(p));
     }
     partes.push('');
-    partes.push(i18n.valoresDemo);
+    partes.push((tenant().textosBot && tenant().textosBot.valoresPlanes) || i18n.valoresDemo);
     const ops = [{ etiqueta: 'QUIERO MÁS INFORMACIÓN', valor: 'quiero mas informacion' }];
     if (hayMas) ops.push({ etiqueta: 'Ver más', valor: 'ver mas planes' });
     ops.push({ etiqueta: 'Menú', valor: 'menu' });
@@ -670,9 +691,60 @@ export function crearEngine(datosIniciales, tenantId = TENANT_DEFAULT) {
 
   function lookupCode(conv, texto) {
     const b = memoria.buscarReserva(tid, texto);
+    if (!b) {
+      conv.paso = 'menu';
+      return [botMsg('No encontramos una reserva con ese código.', menuOps())];
+    }
+    conv.data.codigoCancel = b.codigo;
+    conv.paso = 'lookup_done';
+    const ops = b.estado === 'confirmada'
+      ? [{ etiqueta: 'Cancelar reserva', valor: 'cancelar reserva' }, { etiqueta: 'Menú', valor: 'menu' }]
+      : menuOps();
+    return [botMsg(`Código ${b.codigo}\n• ${b.clase} — ${b.sede}\n• ${b.dia} ${b.hora}\n• Estado: ${b.estado}`, ops)];
+  }
+
+  function lookupDone(conv, cmd) {
+    if (cmd.includes('cancelar reserva') || cmd === 'cancelar reserva') {
+      const r = memoria.cancelarReserva(tid, conv.data.codigoCancel);
+      conv.paso = 'menu';
+      conv.data = {};
+      if (!r.ok) return [botMsg(r.error, menuOps())];
+      return [botMsg('Cancelé la reserva y devolví el cupo del plan.', menuOps())];
+    }
+    return irMenu(conv, false);
+  }
+
+  function responderCupos(conv) {
+    const tel = conv.telefono;
+    if (!tel) {
+      conv.paso = 'cupos_phone';
+      return [botMsg('¿Cuál es tu teléfono para revisar tus cupos?')];
+    }
+    return informarCupos(conv, tel);
+  }
+
+  function cuposPhone(conv, texto) {
+    const tel = normalizarTelefono(texto);
+    if (!tel) return [botMsg('Teléfono no válido. Usa +56 9 XXXX XXXX.')];
+    conv.telefono = tel;
+    return informarCupos(conv, tel);
+  }
+
+  function informarCupos(conv, tel) {
     conv.paso = 'menu';
-    if (!b) return [botMsg('No encontramos una reserva con ese código.', menuOps())];
-    return [botMsg(`Código ${b.codigo}\n• ${b.clase} — ${b.sede}\n• ${b.dia} ${b.hora}\n• Estado: ${b.estado}`, menuOps())];
+    const socio = memoria.buscarSocioPorTelefono(tid, tel);
+    if (!socio || socio.estado === 'baja') {
+      return [botMsg('No encontramos un plan asociado a ese teléfono.', menuOps())];
+    }
+    const plan = (memoria.listarPlanes(tid) || []).find((p) => p.id === socio.planId);
+    if (!plan || plan.cuposMes == null) {
+      return [botMsg('Tu plan no limita cupos mensuales. Se renuevan el 1 de cada mes.', menuOps())];
+    }
+    const quedan = Math.max(0, plan.cuposMes - (socio.cuposUsadosMes || 0));
+    return [botMsg(
+      `Te quedan ${quedan} de ${plan.cuposMes} cupos este mes. Se renuevan el 1 de cada mes.`,
+      menuOps(),
+    )];
   }
 
   function ayuda(conv, ia = false) {
@@ -796,11 +868,14 @@ export function crearEngine(datosIniciales, tenantId = TENANT_DEFAULT) {
     listarSedes: () => memoria.listarSedes(tid),
     getTenant: () => tenant(),
     reset() {
-      if (memoria.hidratarTenant) memoria.hidratarTenant(tid, clonarDemo(tid));
-      else memoria.hidratar(clonarDemo(tid));
+      if (memoria.hidratarTenant) memoria.hidratarTenant(tid, clonarDemo(tid, fechaRef));
+      else memoria.hidratar(clonarDemo(tid, fechaRef));
     },
     exportar() { return memoria.sliceExport(tid); },
     hidratar(datos) { memoria.hidratar(datos); },
+    setFechaRef,
+    fecha,
+    cancelarReserva: (codigo) => memoria.cancelarReserva(tid, codigo),
     memoria,
     intent,
   };
@@ -844,6 +919,16 @@ function esKine(cmd) {
 
 function esMusculacion(cmd) {
   return cmd.includes('musculacion') || cmd.includes('musculación');
+}
+
+function esConsultaCupos(cmd) {
+  return cmd.includes('cuantos cupos') || cmd.includes('cupos me quedan') || cmd.includes('mis cupos') || cmd.includes('cupos del plan');
+}
+
+function lineaPlan(p) {
+  const bits = [p.nombre, p.precio];
+  if (p.cuposMes) bits.push(`${p.cuposMes} cupos/mes`);
+  return `• ${bits.join(' · ')}`;
 }
 
 function ahora() {

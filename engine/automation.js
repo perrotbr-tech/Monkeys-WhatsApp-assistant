@@ -20,7 +20,7 @@
 
 import { clonar } from './store.js';
 import { clonarDemo } from '../data/demo.js';
-import { FECHA_DEMO, dayKey, parseFecha } from './dates.js';
+import { fechaHoy, dayKey, parseFecha } from './dates.js';
 import { crearAgenteRetencion, clasificarSocios } from './agents/retencion.js';
 import { crearAgenteCobranza } from './agents/cobranza.js';
 import { crearAgenteReactivacion } from './agents/reactivacion.js';
@@ -56,10 +56,10 @@ export function crearAutomation(datosIniciales, tenantId = TENANT_DEFAULT) {
     if (fechaRef && typeof fechaRef === 'object' && !(fechaRef instanceof Date) && fechaRef.fechaRef) {
       return parseFecha(fechaRef.fechaRef);
     }
-    return parseFecha(fechaRef || FECHA_DEMO);
+    return parseFecha(fechaRef || fechaHoy());
   }
 
-  function ejecutarCiclo(fechaRef = FECHA_DEMO, agentesFiltro = null) {
+  function ejecutarCiclo(fechaRef = fechaHoy(), agentesFiltro = null) {
     const fecha = resolverFecha(fechaRef);
     const dia = dayKey(fecha);
     const ctx = contexto();
@@ -110,7 +110,7 @@ export function crearAutomation(datosIniciales, tenantId = TENANT_DEFAULT) {
     return clonar(campania);
   }
 
-  function summary(fechaRef = FECHA_DEMO) {
+  function summary(fechaRef = fechaHoy()) {
     const porAgente = {};
     const porTipo = { mensaje: 0, tarea_equipo: 0 };
     const porEstado = { pendiente: 0, enviado: 0, hecho: 0 };
@@ -177,11 +177,11 @@ export function crearAutomation(datosIniciales, tenantId = TENANT_DEFAULT) {
     return state.socios.find((s) => s.id === id) || null;
   }
 
-  function clasificar(fechaRef = FECHA_DEMO) {
+  function clasificar(fechaRef = fechaHoy()) {
     return clasificarSocios(state.socios, state.asistencias, resolverFecha(fechaRef));
   }
 
-  function resumen(fechaRef = FECHA_DEMO) {
+  function resumen(fechaRef = fechaHoy()) {
     const s = summary(fechaRef);
     return {
       ...s,
@@ -244,4 +244,4 @@ function extraer(datos, tenantId = TENANT_DEFAULT) {
   };
 }
 
-export { AGENTES, FECHA_DEMO };
+export { AGENTES, fechaHoy };

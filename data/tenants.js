@@ -73,6 +73,7 @@ export const tenants = [
       despedida: 'Gracias. Te esperamos en SOMA Antofagasta.',
       disclaimer: 'Prototipo demostrativo · datos ficticios',
       lookupEjemplo: 'SOMA-2026-0001',
+      valoresPlanes: 'Valores según planes publicados · sujetos a cambio',
     },
     sedes: [
       {

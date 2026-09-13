@@ -1,9 +1,9 @@
-import { FECHA_DEMO, addDays, weekdayEs, dayNum, parseFecha } from './dates.js';
+import { fechaHoy, addDays, weekdayEs, dayNum, parseFecha } from './dates.js';
 import { normalizar } from './intent.js';
 
 const DIAS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
 
-export function etiquetaDia(rel, fechaRef = FECHA_DEMO) {
+export function etiquetaDia(rel, fechaRef = fechaHoy()) {
   const fecha = fechaDeRel(rel, fechaRef);
   const wd = weekdayEs(fecha).toLowerCase();
   const n = dayNum(fecha);
@@ -12,7 +12,7 @@ export function etiquetaDia(rel, fechaRef = FECHA_DEMO) {
   return `${wd} ${n}`;
 }
 
-export function fechaDeRel(rel, fechaRef = FECHA_DEMO) {
+export function fechaDeRel(rel, fechaRef = fechaHoy()) {
   if (rel === 'hoy') return parseFecha(fechaRef);
   if (rel === 'mañana' || rel === 'manana') return addDays(fechaRef, 1);
   const idx = DIAS.findIndex((d) => normalizar(d) === normalizar(rel));
@@ -25,7 +25,7 @@ export function fechaDeRel(rel, fechaRef = FECHA_DEMO) {
   return addDays(fechaRef, delta);
 }
 
-export function diaSemanaDeRel(rel, fechaRef = FECHA_DEMO) {
+export function diaSemanaDeRel(rel, fechaRef = fechaHoy()) {
   if (rel === 'hoy') return weekdayEs(fechaRef);
   if (rel === 'mañana' || rel === 'manana') return weekdayEs(addDays(fechaRef, 1));
   const hit = DIAS.find((d) => normalizar(d) === normalizar(rel));
@@ -85,22 +85,24 @@ export function paginar(items, offset = 0, size = 6) {
   return { slice, hayMas: offset + size < items.length, next: offset + size };
 }
 
+const FAMILIAS = ['CrossTraining', 'Small Group', 'HappyFLEX', 'Kids', 'Pases', 'Planes'];
+
 export function agruparPlanes(planes) {
   const fam = (p) => {
+    if (p.familia) return p.familia;
     const id = String(p.id || p.nombre || '').toLowerCase();
     if (id.includes('kid')) return 'Kids';
+    if (id.startsWith('ct-') || id.includes('crosstraining') || id.includes('cross training')) return 'CrossTraining';
+    if (id.startsWith('sg-') || id.includes('small group')) return 'Small Group';
+    if (id.startsWith('hf-') || id.includes('happyflex')) return 'HappyFLEX';
+    if (id.includes('pase')) return 'Pases';
     return 'Planes';
   };
-  const groups = [];
   const map = new Map();
   for (const p of planes || []) {
     const k = fam(p);
-    if (!map.has(k)) {
-      const g = { familia: k, items: [] };
-      map.set(k, g);
-      groups.push(g);
-    }
+    if (!map.has(k)) map.set(k, { familia: k, items: [] });
     map.get(k).items.push(p);
   }
-  return groups;
+  return FAMILIAS.filter((k) => map.has(k)).map((k) => map.get(k));
 }

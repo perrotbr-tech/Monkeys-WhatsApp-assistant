@@ -21,6 +21,7 @@ export const i18n = {
   gymNoEncontradoTexto: 'Ese enlace no corresponde a un gimnasio activo. Elige un demo:',
   verComo: 'Ver como:',
   valoresDemo: 'Valores demostrativos para este prototipo',
+  valoresPublicados: 'Valores según planes publicados · sujetos a cambio',
   restaurarDemo: 'Restaurar demo',
   restaurarPregunta: '¿Restaurar los datos originales de la demo?',
   confirmar: 'Confirmar',

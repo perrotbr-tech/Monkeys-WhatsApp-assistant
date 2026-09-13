@@ -7,7 +7,7 @@ import { TENANT_DEFAULT, tenantActivo, varsMarca, USUARIOS_DEMO } from '../data/
 import { crearEngine } from '../engine/conversation.js';
 import { crearAutomation } from '../engine/automation.js';
 import { crearMemoria } from '../engine/store.js';
-import { FECHA_DEMO } from '../engine/dates.js';
+import { fechaHoy, fechaDesdeQuery } from '../engine/dates.js';
 import {
   COOKIE, parseCookies, firmarSesion, leerSesion, cookieSesion, cookieLogout,
   intentarLogin, usuariosConHash, hashClave, resetLocks,
@@ -73,12 +73,18 @@ export function crearApp({ mundo = null, persist = true, sessionSecret = SESSION
     return tenantActivo(slug);
   }
 
+  function fechaDeReq(req) {
+    const q = (req.query && req.query.fecha) || (req.body && req.body.fecha);
+    return fechaDesdeQuery(`fecha=${q || ''}`) || fechaHoy(req.tenant && req.tenant.zonaHoraria);
+  }
+
   function requireTenant(req, res, next) {
     const t = tenantOf(req);
     if (!t) return res.status(400).json({ error: 'tenant_not_found' });
     req.tenant = t;
     req.engine = engines[t.id];
     req.auto = autos[t.id];
+    if (req.engine && req.engine.setFechaRef) req.engine.setFechaRef(fechaDeReq(req));
     next();
   }
 
@@ -188,14 +194,14 @@ export function crearApp({ mundo = null, persist = true, sessionSecret = SESSION
   });
 
   app.post('/api/automation/run', requireTenant, requireAuth, (req, res) => {
-    const fecha = (req.body && req.body.fecha) || FECHA_DEMO;
+    const fecha = fechaDeReq(req);
     const campania = req.auto.ejecutarCiclo(fecha);
     saveState();
     res.json({ ok: true, campania, summary: req.auto.summary(fecha) });
   });
 
   app.get('/api/automation/summary', requireTenant, requireAuth, (req, res) => {
-    res.json(req.auto.summary(FECHA_DEMO));
+    res.json(req.auto.summary(fechaDeReq(req)));
   });
 
   app.get('/api/automation/actions', requireTenant, requireAuth, (req, res) => {

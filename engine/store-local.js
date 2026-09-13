@@ -1,24 +1,28 @@
 import { crearEngine } from './conversation.js';
 import { crearAutomation } from './automation.js';
 import { clonarDemo } from '../data/demo.js';
-import { FECHA_DEMO } from './dates.js';
+import { fechaHoy } from './dates.js';
 import { USUARIOS_DEMO, CLAVE_DEMO } from '../data/tenants.js';
 
 export function claveEstado(tenantId) {
   return `forkza_demo_state_${tenantId}`;
 }
 
-export function crearStoreLocal(tenantId, storage) {
+export function crearStoreLocal(tenantId, storage, opts = {}) {
+  const fechaRef = opts.fechaRef || fechaHoy();
   const KEY = claveEstado(tenantId);
   const LEGACY = tenantId === 'monkeys' ? 'monkeys_demo_state' : null;
-  let datos = clonarDemo(tenantId);
+  let datos = clonarDemo(tenantId, fechaRef);
   try {
     const raw = storage.getItem(KEY) || (LEGACY ? storage.getItem(LEGACY) : null);
     if (raw) datos = JSON.parse(raw);
+    if (tenantId === 'soma' && datos.plans && datos.plans[0] && !('cuposMes' in datos.plans[0])) {
+      datos = clonarDemo('soma', fechaRef);
+    }
   } catch {
-    datos = clonarDemo(tenantId);
+    datos = clonarDemo(tenantId, fechaRef);
   }
-  const engine = crearEngine(datos, tenantId);
+  const engine = crearEngine(datos, tenantId, { fechaRef });
   const auto = crearAutomation(datos, tenantId);
 
   function persist() {
@@ -53,11 +57,11 @@ export function crearStoreLocal(tenantId, storage) {
       return { ok: true };
     },
     async runAutomation() {
-      const campania = auto.ejecutarCiclo(FECHA_DEMO);
+      const campania = auto.ejecutarCiclo(fechaRef);
       persist();
-      return { ok: true, campania, summary: auto.summary(FECHA_DEMO) };
+      return { ok: true, campania, summary: auto.summary(fechaRef) };
     },
-    async automationSummary() { return auto.summary(FECHA_DEMO); },
+    async automationSummary() { return auto.summary(fechaRef); },
     async automationActions(q = {}) { return auto.listarAcciones(q); },
     async setActionEstado(id, estado) {
       const action = auto.setEstado(id, estado);

@@ -1,4 +1,5 @@
-import { FECHA_DEMO, addDays, dayKey } from '../engine/dates.js';
+import { fechaHoy, addDays, dayKey } from '../engine/dates.js';
+import { planIdDeSocioSoma, planSomaPorId } from './planes-soma.js';
 
 function socio(partial) {
   return {
@@ -10,7 +11,7 @@ function socio(partial) {
   };
 }
 
-function visits(socioId, daysAgoList, fechaRef = FECHA_DEMO) {
+function visits(socioId, daysAgoList, fechaRef = fechaHoy()) {
   return daysAgoList.map((ago) => ({
     socioId,
     fechaISO: addDays(fechaRef, -ago).toISOString(),
@@ -86,30 +87,44 @@ const SOMA_SOCIOS = [
   { id: 'sm20', nombre: 'Esteban Riquelme', telefono: '+56962000020', sedeId: 'SOMA Antofagasta', claseFavorita: 'Hyrox', fechaIngreso: '2025-03-30' },
 ];
 
+function cuposUsadosMesDe(asistencias, socioId, fechaRef, cuposMes) {
+  const ym = dayKey(fechaRef).slice(0, 7);
+  const n = asistencias.filter((a) => a.socioId === socioId && dayKey(a.fechaISO).startsWith(ym)).length;
+  if (cuposMes == null) return n;
+  return Math.min(n, cuposMes);
+}
+
 /**
- * 20 socios demo + asistencias 60 días respecto a FECHA_DEMO.
+ * 20 socios demo + asistencias 60 días respecto a la fecha de referencia.
  * 6 constantes, 8 regulares (2 recuperados), 4 riesgo, 2 silenciosos.
  */
-export function crearDatosRetencion(fechaRef = FECHA_DEMO, opts = {}) {
+export function crearDatosRetencion(fechaRef = fechaHoy(), opts = {}) {
   const tenantId = opts.tenantId || 'monkeys';
   const catalogo = tenantId === 'soma' ? SOMA_SOCIOS : MONKEYS_SOCIOS;
-  const socios = catalogo.map((row, i) => socio({
-    tenantId,
-    ...row,
-    fechaIngreso: row.fechaIngreso || dayKey(addDays(fechaRef, -12)),
-    planId: i === 19 && tenantId === 'soma' ? 'kids' : 'mensual',
-  }));
-
   const asistencias = catalogo.flatMap((row, i) => (
     visits(row.id, VISITAS[i], fechaRef).map((a) => ({ ...a, tenantId }))
   ));
+  const socios = catalogo.map((row, i) => {
+    const planId = tenantId === 'soma' ? planIdDeSocioSoma(row, i) : 'mensual';
+    const plan = tenantId === 'soma' ? planSomaPorId(planId) : null;
+    return socio({
+      tenantId,
+      ...row,
+      fechaIngreso: row.fechaIngreso || dayKey(addDays(fechaRef, -12)),
+      planId,
+      cuposUsadosMes: tenantId === 'soma'
+        ? cuposUsadosMesDe(asistencias, row.id, fechaRef, plan && plan.cuposMes)
+        : 0,
+    });
+  });
 
   const sRiesgoPrev = [catalogo[12], catalogo[13], catalogo[14]];
+  const prev = dayKey(addDays(fechaRef, -10));
   const campaniaAnterior = {
-    id: tenantId === 'soma' ? 'camp-soma-2026-09-01' : 'camp-2026-09-01',
+    id: `camp-${tenantId}-${prev}`,
     tenantId,
-    fecha: '2026-09-01',
-    fechaISO: '2026-09-01T12:00:00.000Z',
+    fecha: prev,
+    fechaISO: `${prev}T12:00:00.000Z`,
     clasificacion: sRiesgoPrev.map((s) => ({ socioId: s.id, segmento: 'riesgo' })),
     acciones: [
       {
@@ -125,7 +140,7 @@ export function crearDatosRetencion(fechaRef = FECHA_DEMO, opts = {}) {
         motivo: 'riesgo',
         prioridad: 'media',
         estado: 'enviado',
-        fechaISO: '2026-09-01T12:00:00.000Z',
+        fechaISO: `${prev}T12:00:00.000Z`,
         sedeId: catalogo[12].sedeId,
       },
     ],
@@ -140,7 +155,9 @@ export function crearDatosRetencion(fechaRef = FECHA_DEMO, opts = {}) {
     claseFavorita: catalogo[0].claseFavorita,
     fechaIngreso: '2024-01-10',
     estado: 'baja',
-    fechaBaja: '2026-07-01',
+    fechaBaja: dayKey(addDays(fechaRef, -70)),
+    planId: tenantId === 'soma' ? 'ct-2' : 'mensual',
+    cuposUsadosMes: 0,
   });
 
   return {

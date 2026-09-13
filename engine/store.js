@@ -1,10 +1,12 @@
 import { clonarDemo, clonarMundo, clonar } from '../data/demo.js';
 import { buscarTenant, listarTenants, TENANT_DEFAULT } from '../data/tenants.js';
+import { anioDe, fechaHoy } from './dates.js';
+import { planSomaPorId } from '../data/planes-soma.js';
 
 export { clonar };
 
-function anioCodigo() {
-  return '2026';
+function anioCodigo(fechaRef) {
+  return anioDe(fechaRef || fechaHoy());
 }
 
 function toWorld(datosIniciales) {
@@ -161,6 +163,18 @@ export function crearMemoria(datosIniciales) {
     return `${prefix}-${anioCodigo()}-${String(seq).padStart(4, '0')}`;
   }
 
+  function buscarSocioPorTelefono(tenantId, telefono) {
+    const s = requireSlice(tenantId);
+    const tel = normalizarTelefono(telefono) || telefono;
+    return (s.socios || []).find((row) => (normalizarTelefono(row.telefono) || row.telefono) === tel) || null;
+  }
+
+  function planDe(tenantId, socio) {
+    if (!socio || tenantId !== 'soma') return null;
+    const fromSlice = (requireSlice(tenantId).plans || []).find((p) => p.id === socio.planId);
+    return fromSlice || planSomaPorId(socio.planId);
+  }
+
   function confirmarReserva(tenantId, { claseId, nombre, telefono, email, sede }) {
     const s = requireSlice(tenantId);
     const clase = getClase(tenantId, claseId);
@@ -173,18 +187,70 @@ export function crearMemoria(datosIniciales) {
     if (clase.reserved >= clase.capacity) {
       return { ok: false, error: 'Esa clase está AGOTADA.' };
     }
+    const tel = normalizarTelefono(telefono) || telefono;
     const dup = s.bookings.find(
-      (b) => b.tenantId === tenantId && b.telefono === telefono && b.claseId === claseId && b.estado === 'confirmada',
+      (b) => b.tenantId === tenantId && b.telefono === tel && b.claseId === claseId && b.estado === 'confirmada',
     );
     if (dup) {
       return { ok: false, error: `Ya tienes una reserva en ${clase.nombre} (${dup.codigo}).` };
     }
+
+    const socio = buscarSocioPorTelefono(tenantId, tel);
+    const plan = planDe(tenantId, socio);
+    if (socio && socio.estado !== 'baja' && plan) {
+      const usados = socio.cuposUsadosMes || 0;
+      if (plan.cuposMes != null && usados >= plan.cuposMes) {
+        crearAccion(tenantId, {
+          agente: 'recordatorio',
+          tipo: 'tarea_equipo',
+          socioId: socio.id,
+          texto: null,
+          motivo: 'cupos agotados',
+          prioridad: 'media',
+          sedeId: sede || clase.sede,
+        });
+        return {
+          ok: false,
+          error: `Ya usaste los ${plan.cuposMes} cupos de tu plan este mes. ¿Quieres que el equipo te cuente cómo ampliarlo?`,
+          codigo: 'CUPOS_AGOTADOS',
+        };
+      }
+      const incluidas = plan.disciplinasIncluidas || [];
+      if (incluidas.length && !incluidas.includes(clase.nombre)) {
+        crearAccion(tenantId, {
+          agente: 'recordatorio',
+          tipo: 'tarea_equipo',
+          socioId: socio.id,
+          texto: null,
+          motivo: `disciplina no incluida: ${clase.nombre}`,
+          prioridad: 'media',
+          sedeId: sede || clase.sede,
+        });
+        return {
+          ok: false,
+          error: `Tu plan no incluye ${clase.nombre}. Dejamos la consulta al equipo.`,
+          codigo: 'DISCIPLINA',
+        };
+      }
+      const maxDia = plan.maxSesionesDia == null ? 2 : plan.maxSesionesDia;
+      const delDia = s.bookings.filter(
+        (b) => b.telefono === tel && b.dia === clase.dia && b.estado === 'confirmada',
+      ).length;
+      if (delDia >= maxDia) {
+        return {
+          ok: false,
+          error: `Ya tienes ${maxDia} reservas este día. El plan permite máximo ${maxDia}.`,
+          codigo: 'MAX_DIA',
+        };
+      }
+    }
+
     clase.reserved += 1;
     const booking = {
       tenantId,
       codigo: siguienteCodigo(tenantId),
       cliente: nombre,
-      telefono,
+      telefono: tel,
       email: email || null,
       claseId: clase.id,
       clase: clase.nombre,
@@ -194,7 +260,24 @@ export function crearMemoria(datosIniciales) {
       estado: 'confirmada',
     };
     s.bookings.push(booking);
-    return { ok: true, booking, clase: { ...clase } };
+    let cuposRestantes = null;
+    if (socio && plan && plan.cuposMes != null) {
+      socio.cuposUsadosMes = (socio.cuposUsadosMes || 0) + 1;
+      cuposRestantes = Math.max(0, plan.cuposMes - socio.cuposUsadosMes);
+    }
+    return { ok: true, booking, clase: { ...clase }, cuposRestantes };
+  }
+
+  function cancelarReserva(tenantId, codigo) {
+    const s = requireSlice(tenantId);
+    const b = s.bookings.find((row) => row.codigo === String(codigo || '').trim().toUpperCase());
+    if (!b || b.estado !== 'confirmada') return { ok: false, error: 'No encontramos esa reserva activa.' };
+    b.estado = 'cancelada';
+    const clase = getClase(tenantId, b.claseId);
+    if (clase && clase.reserved > 0) clase.reserved -= 1;
+    const socio = buscarSocioPorTelefono(tenantId, b.telefono);
+    if (socio && socio.cuposUsadosMes > 0) socio.cuposUsadosMes -= 1;
+    return { ok: true, booking: clonar(b), socio: socio ? clonar(socio) : null };
   }
 
   function buscarReserva(tenantId, codigo) {
@@ -278,7 +361,9 @@ export function crearMemoria(datosIniciales) {
     listarAcciones,
     listarCampanias,
     confirmarReserva,
+    cancelarReserva,
     buscarReserva,
+    buscarSocioPorTelefono,
     crearLead,
     crearConversacion,
     getConversacion,

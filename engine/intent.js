@@ -12,6 +12,7 @@ export const INTENCIONES = Object.freeze({
   PLANES: 'planes',
   HUMANO: 'humano',
   LOOKUP: 'lookup',
+  CUPOS: 'cupos',
   MENU: 'menu',
   AYUDA: 'ayuda',
   DESCONOCIDA: 'desconocida',
@@ -51,6 +52,7 @@ export function crearIntentService() {
       if (esHumano(t)) return pack(INTENCIONES.HUMANO, entidades, 0.93);
       if (esTrial(t)) return pack(INTENCIONES.TRIAL, entidades, 0.92);
       if (esLookup(t)) return pack(INTENCIONES.LOOKUP, entidades, 0.9);
+      if (esCupos(t)) return pack(INTENCIONES.CUPOS, entidades, 0.9);
       if (esReserva(t)) return pack(INTENCIONES.RESERVA, entidades, 0.92);
       if (esPlanes(t)) return pack(INTENCIONES.PLANES, entidades, 0.9);
       if (esClases(t) || (clase && dia)) return pack(INTENCIONES.CLASES, entidades, 0.88);
@@ -114,6 +116,16 @@ function esLookup(t) {
     'gym-2026',
     'codigo soma',
     'soma-2026',
+  ]);
+}
+
+function esCupos(t) {
+  return tiene(t, [
+    'cuantos cupos',
+    'cuántos cupos',
+    'cupos me quedan',
+    'cupos del plan',
+    'mis cupos',
   ]);
 }
 
