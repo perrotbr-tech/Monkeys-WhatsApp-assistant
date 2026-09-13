@@ -64,7 +64,7 @@ Abre http://localhost:3000 o http://localhost:3000?t=soma
 - **D** "quiero hablar con alguien" → atención pendiente
 - **E** Abrir `index.html` sin backend (`npx serve .`) → mismos flujos en localStorage, con `?t=monkeys` o `?t=soma`
 - **F** Login `dueno@soma.demo` → Dashboard → AUTOMATIZACIONES → Ejecutar ciclo mensual (demo) → acciones con nombres de SOMA
-- **G** SOMA: horarios, planes, reservar Crosstraining 18:00 → `SOMA-2026-0001`; preguntar Kinesiología → deriva al equipo; Musculación → acceso libre sin reserva
+- **G** SOMA: Ver clases pregunta día (Hoy · Mañana · Otro día) y disciplina; lista corto de ese cruce (máx. 6 líneas). Planes de a 4. Reservar Crosstraining 18:00 → `SOMA-2026-0001`; preguntar Kinesiología → deriva al equipo; Musculación → acceso libre sin reserva
 
 ## Automatizaciones
 
@@ -74,7 +74,7 @@ Base compartida para los agentes del gimnasio. Cada agente es un módulo con la 
 
 El motor (`engine/automation.js`) recorre los agentes activos, guarda como máximo una campaña por día (si se vuelve a ejecutar el mismo día, la reemplaza) y escribe en una sola tabla de acciones. El modelo de acción es común: `mensaje` o `tarea_equipo`, con `agente`, `socioId`, `prioridad` y `estado`.
 
-Agentes demo: **Retención** (completo) más avisos mínimos de cobranza, reactivación, recordatorio y referidos para mostrar el ciclo en ambos tenants.
+Agentes demo: **Retención** (completo) más avisos mínimos de cobranza, reactivación, recordatorio y referidos. En `#automatizaciones` hay una card por agente: Retención con socios en riesgo / recuperados; los otros cuatro con el conteo de acciones del último ciclo y el texto del aviso.
 
 ### Retención
 

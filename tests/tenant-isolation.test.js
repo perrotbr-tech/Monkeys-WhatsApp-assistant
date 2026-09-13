@@ -116,10 +116,72 @@ test('kinesiología deriva al equipo y musculación informa acceso libre', () =>
 test('chat soma responde horarios y planes', () => {
   const engine = crearEngine(clonarDemo('soma'), 'soma');
   const { conversacion } = engine.iniciar();
-  const clases = engine.procesar(conversacion.id, '1');
-  assert.match(clases.mensajes[0].texto, /Crosstraining/);
-  const planes = engine.procesar(conversacion.id, '4');
+  const id = conversacion.id;
+  const dia = engine.procesar(id, '1');
+  assert.match(dia.mensajes[0].texto, /Para qué día/);
+  engine.procesar(id, 'mañana');
+  const clases = engine.procesar(id, 'Crosstraining');
+  const cuerpo = clases.mensajes[0].texto;
+  assert.match(cuerpo, /Crosstraining/);
+  assert.equal(cuerpo.split('\n').filter(Boolean).length <= 7, true);
+  assert.equal(cuerpo.length <= 400, true);
+  assert.equal(/Hyrox|Pilates/.test(cuerpo), false);
+  engine.procesar(id, 'menu');
+  const planes = engine.procesar(id, '4');
   assert.match(planes.mensajes[0].texto, /69\.990/);
   assert.match(planes.mensajes[0].texto, /Functional Kids/);
   assert.match(planes.mensajes[0].texto, /Valores demostrativos/);
+});
+
+test('crosstraining mañana no repregunta día ni disciplina', () => {
+  const engine = crearEngine(clonarDemo('soma'), 'soma');
+  const { conversacion } = engine.iniciar();
+  const r = engine.procesar(conversacion.id, 'crosstraining mañana');
+  assert.equal(/Para qué día|Qué disciplina/i.test(r.mensajes[0].texto), false);
+  assert.match(r.mensajes[0].texto, /Crosstraining/);
+  assert.match(r.mensajes[0].texto, /mañana/);
+});
+
+test('reserva soma con teléfono duplicado en la misma sesión se rechaza', () => {
+  const engine = crearEngine(clonarDemo('soma'), 'soma');
+  const { conversacion } = engine.iniciar();
+  const id = conversacion.id;
+  engine.procesar(id, '2');
+  engine.procesar(id, 'Crosstraining Lunes 18:00');
+  engine.procesar(id, 'Ana Soma');
+  engine.procesar(id, '912345678');
+  engine.procesar(id, 'omitir');
+  engine.procesar(id, 'confirmar');
+  engine.procesar(id, '2');
+  engine.procesar(id, 'Crosstraining Lunes 18:00');
+  engine.procesar(id, 'Ana Soma');
+  engine.procesar(id, '912345678');
+  engine.procesar(id, 'omitir');
+  const dup = engine.procesar(id, 'confirmar');
+  assert.match(dup.mensajes[0].texto, /Ya tienes una reserva/);
+  assert.equal(engine.listarReservas().length, 1);
+});
+
+test('Crosstraining 18:00 llena no crea reserva', () => {
+  const d = clonarDemo('soma');
+  const cupo = d.classes.find((c) => c.id === 'so-ct-lun-18');
+  cupo.reserved = 16;
+  const engine = crearEngine(d, 'soma');
+  const { conversacion } = engine.iniciar();
+  const id = conversacion.id;
+  engine.procesar(id, '2');
+  const r = engine.procesar(id, 'Crosstraining Lunes 18:00');
+  assert.match(r.mensajes[0].texto, /AGOTADA/i);
+  assert.equal(engine.listarReservas().length, 0);
+});
+
+test('texto largo, emoji y raro en chat soma no lanza ni deja llaves', () => {
+  const engine = crearEngine(clonarDemo('soma'), 'soma');
+  const { conversacion } = engine.iniciar();
+  const raro = `😀✨ ${'x'.repeat(2000)} <>\\n\u0000`;
+  const r = engine.procesar(conversacion.id, raro);
+  assert.equal(r.mensajes.length >= 1, true);
+  for (const m of r.mensajes) {
+    assert.equal(/\{|\}/.test(m.texto), false, m.texto);
+  }
 });
