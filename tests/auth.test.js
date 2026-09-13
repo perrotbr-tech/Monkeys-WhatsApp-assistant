@@ -90,6 +90,13 @@ test('rutas protegidas sin sesión → 401', async () => {
   assert.equal(auto.res.status, 401);
 });
 
+test('POST conversación soma inicia en la sede única', async () => {
+  const r = await req(port, { method: 'POST', path: '/api/conversations', headers: { 'X-Tenant': 'soma' } });
+  assert.equal(r.res.status, 200);
+  assert.equal(r.json.conversacion.sede, 'SOMA Antofagasta');
+  assert.match(r.json.mensajes[0].texto, /asistente de SOMA/);
+});
+
 test('GET /api/me con sesión', async () => {
   resetLocks();
   const login = await req(port, {

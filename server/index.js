@@ -143,7 +143,7 @@ export function crearApp({ mundo = null, persist = true, sessionSecret = SESSION
     res.json({ usuario: { email: s.email, nombre: s.nombre, rol: s.rol, tenantId: s.tenantId } });
   });
 
-  app.post('/api/conversations', requireTenant, (_req, res) => {
+  app.post('/api/conversations', requireTenant, (req, res) => {
     const result = req.engine.iniciar();
     saveState();
     res.json(result);
@@ -160,23 +160,23 @@ export function crearApp({ mundo = null, persist = true, sessionSecret = SESSION
     res.json({ classes: req.engine.listarClases(req.query.sede) });
   });
 
-  app.get('/api/plans', requireTenant, (_req, res) => {
+  app.get('/api/plans', requireTenant, (req, res) => {
     res.json({ plans: req.engine.listarPlanes() });
   });
 
-  app.get('/api/bookings', requireTenant, requireAuth, (_req, res) => {
+  app.get('/api/bookings', requireTenant, requireAuth, (req, res) => {
     res.json({ bookings: req.engine.listarReservas() });
   });
 
-  app.get('/api/leads', requireTenant, requireAuth, (_req, res) => {
+  app.get('/api/leads', requireTenant, requireAuth, (req, res) => {
     res.json({ leads: req.engine.listarLeads() });
   });
 
-  app.get('/api/conversations', requireTenant, requireAuth, (_req, res) => {
+  app.get('/api/conversations', requireTenant, requireAuth, (req, res) => {
     res.json({ conversations: req.engine.listarConversaciones() });
   });
 
-  app.post('/api/demo/reset', requireTenant, requireAuth, (_req, res) => {
+  app.post('/api/demo/reset', requireTenant, requireAuth, (req, res) => {
     const seed = clonarMundo();
     memoria.hidratar(seed);
     engines.monkeys = crearEngine({ memoria }, 'monkeys');
@@ -194,7 +194,7 @@ export function crearApp({ mundo = null, persist = true, sessionSecret = SESSION
     res.json({ ok: true, campania, summary: req.auto.summary(fecha) });
   });
 
-  app.get('/api/automation/summary', requireTenant, requireAuth, (_req, res) => {
+  app.get('/api/automation/summary', requireTenant, requireAuth, (req, res) => {
     res.json(req.auto.summary(FECHA_DEMO));
   });
 
