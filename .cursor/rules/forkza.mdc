@@ -1,0 +1,37 @@
+---
+description: Reglas del proyecto FORKZA AI (Perrot Tech) — plataforma multi-gimnasio con asistente IA + bots
+alwaysApply: true
+---
+# Contexto
+FORKZA AI: plataforma multi-gimnasio (agenda, entrenamientos, socios, pagos, asistencia) con asistente conversacional (Agente IA + Bots), automatizaciones mensuales y panel. Primer tenant: monkeys. Se vende por suscripción en Chile y LATAM.
+
+# Arquitectura (obligatoria)
+- Node 20 + Express + JavaScript plano con módulos ES. Sin TypeScript, sin React, sin bundler, sin CDN externos. Cero pasos de build.
+- /engine: reglas de negocio puras e isomórficas. Prohibido document, window, fetch, fs, localStorage.
+- /engine/agents/*: cada agente exporta `evaluar(contexto, fechaRef) → acciones[]` con el modelo de ACCIÓN único.
+- /server/store/*: StoreJson y StorePostgres implementan la MISMA interfaz; el engine no sabe cuál usa.
+- /channels/*: adaptadores de canal (web, whatsapp). El engine no conoce el canal.
+- Frontend: index.html + app.js + styles.css en la raíz; vistas por hash. Rutas relativas (./). Funciona servido por Express y en GitHub Pages (modo standalone).
+- Multi-tenant: TODA entidad lleva tenantId; TODO query filtra por tenant; existe tests/tenant-isolation.test.js y debe seguir en verde.
+
+# Reglas de negocio
+- La IA interpreta; nunca inventa precios, cupos, horarios ni confirma reservas. Nunca publica entrenamientos: el coach aprueba.
+- Reservas: validar cupo al confirmar; sin duplicados (teléfono + sesión); código correlativo por tenant GYM-YYYY-NNNN.
+- Mensajes automáticos: sin placeholders sin resolver ("{" "}"), sin "promo", sin "$" salvo cobranza. Nunca dos mensajes del mismo agente al mismo socio en la misma campaña. Nunca a socios en baja (salvo reactivación).
+- Casos que requieren persona → tarea_equipo, no mensaje.
+
+# Datos y textos
+- Todo texto visible al usuario vive en /data/i18n o en la config del tenant. Español de Chile por defecto, cercano y breve, máximo 1 emoji por mensaje.
+- Datos demo rotulados como ficticios en la interfaz.
+- Teléfonos en E.164 según país del tenant. Moneda y formato por tenant.
+
+# Interfaz
+- Design tokens por tenant (CSS variables inyectadas); base negro/amarillo de MONKEYS como tenant demo.
+- Móvil primero (375 px), escritorio 1440 px. Sin scroll horizontal. Botones ≥ 44 px. Contraste AA.
+- Todo dato de usuario con textContent. Sin alert/confirm/prompt del navegador.
+
+# Calidad
+- Cada PR: `node --test tests/` en verde, README actualizado, capturas 375 y 1440 px, descripción con decisiones y pendientes. Sin historial de versiones en textos visibles.
+- Time-box: si algo no cabe, se quita y se anota como pendiente. Un flujo que funciona vale más que tres a medias.
+- No agregar funciones no pedidas. Ante ambigüedad menor, la opción más simple; anotarla en el PR.
+- Commits en español, imperativo, cortos. UN PR por spec.
