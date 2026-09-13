@@ -13,9 +13,14 @@ const viewDash = document.getElementById('view-dashboard');
 const viewAuto = document.getElementById('view-auto');
 const viewLogin = document.getElementById('view-login');
 const viewMissing = document.getElementById('view-missing');
+const viewSocios = document.getElementById('view-socios');
+const viewPagos = document.getElementById('view-pagos');
+const viewPago = document.getElementById('view-pago');
 const navA = document.getElementById('nav-asistente');
 const navD = document.getElementById('nav-dashboard');
 const navAuto = document.getElementById('nav-auto');
+const navSocios = document.getElementById('nav-socios');
+const navPagos = document.getElementById('nav-pagos');
 const headerTenant = document.getElementById('header-tenant');
 const headerForkza = document.getElementById('header-forkza');
 
@@ -25,6 +30,10 @@ let convId = null;
 let dashTimer = null;
 let sedeFiltro = 'Todas';
 let autoFiltro = { agente: '', sede: '', estado: '' };
+let sociosFiltro = { q: '', sede: '', plan: '', estado: '', vence7: false };
+let pagosFiltro = { estado: '' };
+let socioSel = null;
+let pagoMarcarId = null;
 let session = null;
 let standalone = false;
 
@@ -81,6 +90,8 @@ function paintTenant(t) {
   document.getElementById('forkza-tenant-name').textContent = t.nombre;
   document.getElementById('dash-title').textContent = `${name} · PANEL DE GESTIÓN`;
   document.getElementById('auto-title').textContent = `${name} · AUTOMATIZACIONES`;
+  document.getElementById('socios-title').textContent = `${name} · SOCIOS`;
+  document.getElementById('pagos-title').textContent = `${name} · PAGOS`;
   document.getElementById('banner-demo').textContent = t.textosBot.disclaimer || 'Prototipo demostrativo · datos ficticios';
   const sw = document.getElementById('tenant-switch');
   sw.replaceChildren();
@@ -137,6 +148,108 @@ class StoreApi {
     const res = await fetch(apiUrl('./api/conversations'), { headers: headers() });
     if (res.status === 401) throw new Error('unauthorized');
     return (await res.json()).conversations;
+  }
+  async listarSocios(filtro = {}) {
+    const p = new URLSearchParams();
+    if (filtro.q) p.set('q', filtro.q);
+    if (filtro.sede) p.set('sede', filtro.sede);
+    if (filtro.plan) p.set('plan', filtro.plan);
+    if (filtro.estado) p.set('estado', filtro.estado);
+    if (filtro.vence7) p.set('vence7', '1');
+    const res = await fetch(apiUrl(`./api/socios?${p.toString()}`), { headers: headers() });
+    if (res.status === 401) throw new Error('unauthorized');
+    return (await res.json()).socios;
+  }
+  async fichaSocio(id) {
+    const res = await fetch(apiUrl(`./api/socios/${id}`), { headers: headers() });
+    if (res.status === 401) throw new Error('unauthorized');
+    if (!res.ok) return null;
+    return res.json();
+  }
+  async altaSocio(datos) {
+    const res = await fetch(apiUrl('./api/socios'), {
+      method: 'POST',
+      headers: headers({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify(datos),
+    });
+    return res.json();
+  }
+  async editarSocio(id, datos) {
+    const res = await fetch(apiUrl(`./api/socios/${id}`), {
+      method: 'PUT',
+      headers: headers({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify(datos),
+    });
+    return res.json();
+  }
+  async bajaSocio(id, motivo) {
+    const res = await fetch(apiUrl(`./api/socios/${id}/baja`), {
+      method: 'POST',
+      headers: headers({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify({ motivo }),
+    });
+    return res.json();
+  }
+  async reactivarSocio(id) {
+    const res = await fetch(apiUrl(`./api/socios/${id}/reactivar`), {
+      method: 'POST',
+      headers: headers({ 'Content-Type': 'application/json' }),
+    });
+    return res.json();
+  }
+  async importarSociosCsv(csv) {
+    const res = await fetch(apiUrl('./api/socios/import'), {
+      method: 'POST',
+      headers: headers({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify({ csv }),
+    });
+    return res.json();
+  }
+  async plantillaCsv() {
+    const res = await fetch(apiUrl('./api/socios/plantilla.csv'), { headers: headers() });
+    return res.text();
+  }
+  async listarPagos(estado) {
+    const p = new URLSearchParams();
+    if (estado) p.set('estado', estado);
+    const res = await fetch(apiUrl(`./api/pagos?${p.toString()}`), { headers: headers() });
+    if (res.status === 401) throw new Error('unauthorized');
+    return res.json();
+  }
+  async marcarPagado(id, referencia) {
+    const res = await fetch(apiUrl(`./api/pagos/${id}/marcar`), {
+      method: 'POST',
+      headers: headers({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify({ referencia }),
+    });
+    return res.json();
+  }
+  async enviarLinkPago(id) {
+    const res = await fetch(apiUrl(`./api/pagos/${id}/enviar-link`), {
+      method: 'POST',
+      headers: headers({ 'Content-Type': 'application/json' }),
+    });
+    return res.json();
+  }
+  async exportarPagosCsv() {
+    const res = await fetch(apiUrl('./api/pagos/export.csv'), { headers: headers() });
+    return res.text();
+  }
+  async pagosConfig() {
+    const res = await fetch(apiUrl('./api/pagos/config'), { headers: headers() });
+    return res.json();
+  }
+  async getPagoDemo(ref) {
+    const res = await fetch(apiUrl(`./api/pagos/demo/${encodeURIComponent(ref)}`), { headers: headers() });
+    if (!res.ok) return null;
+    return (await res.json()).pago;
+  }
+  async pagarDemo(ref) {
+    const res = await fetch(apiUrl(`./api/pagos/demo/${encodeURIComponent(ref)}/pagar`), {
+      method: 'POST',
+      headers: headers({ 'Content-Type': 'application/json' }),
+    });
+    return res.json();
   }
   async reset() {
     const res = await fetch(apiUrl('./api/demo/reset'), { method: 'POST', headers: headers() });
@@ -306,42 +419,77 @@ function hashName() {
   return (location.hash || '#asistente').replace('#', '') || 'asistente';
 }
 
+function hashParts() {
+  return hashName().split('/');
+}
+
+function hideAllViews() {
+  for (const v of [viewChat, viewDash, viewAuto, viewLogin, viewSocios, viewPagos, viewPago, viewMissing]) {
+    v.classList.add('hidden');
+  }
+}
+
 function route() {
   if (!tenant) {
+    hideAllViews();
     viewMissing.classList.remove('hidden');
-    viewChat.classList.add('hidden');
-    viewDash.classList.add('hidden');
-    viewAuto.classList.add('hidden');
-    viewLogin.classList.add('hidden');
     headerTenant.classList.add('hidden');
     headerForkza.classList.add('hidden');
     return;
   }
   viewMissing.classList.add('hidden');
-  const hash = hashName();
-  const needsAuth = hash === 'dashboard' || hash === 'automatizaciones' || hash === 'login';
-  headerTenant.classList.toggle('hidden', needsAuth);
-  headerForkza.classList.toggle('hidden', !needsAuth);
+  const [hash, param] = hashParts();
+  const staff = hash === 'dashboard' || hash === 'automatizaciones' || hash === 'socios' || hash === 'pagos' || hash === 'login';
+  headerTenant.classList.toggle('hidden', staff);
+  headerForkza.classList.toggle('hidden', !staff);
 
-  if ((hash === 'dashboard' || hash === 'automatizaciones') && !session) {
+  if ((hash === 'dashboard' || hash === 'automatizaciones' || hash === 'socios' || hash === 'pagos') && !session) {
     if (location.hash !== '#login') location.hash = 'login';
+    hideAllViews();
+    viewLogin.classList.remove('hidden');
     showLogin();
     return;
   }
 
-  const dash = hash === 'dashboard';
-  const auto = hash === 'automatizaciones';
-  const login = hash === 'login';
-  viewChat.classList.toggle('hidden', dash || auto || login);
-  viewDash.classList.toggle('hidden', !dash);
-  viewAuto.classList.toggle('hidden', !auto);
-  viewLogin.classList.toggle('hidden', !login);
-  navA.classList.toggle('is-active', !dash && !auto && !login);
-  navD.classList.toggle('is-active', dash);
-  navAuto.classList.toggle('is-active', auto);
-  if (login) showLogin();
-  if (dash) renderDashboard();
-  if (auto) renderAutomations();
+  hideAllViews();
+  navA.classList.toggle('is-active', hash === 'asistente' || hash === '');
+  navD.classList.toggle('is-active', hash === 'dashboard');
+  navAuto.classList.toggle('is-active', hash === 'automatizaciones');
+  navSocios.classList.toggle('is-active', hash === 'socios');
+  navPagos.classList.toggle('is-active', hash === 'pagos' || hash === 'pago');
+
+  if (hash === 'login') {
+    viewLogin.classList.remove('hidden');
+    showLogin();
+    return;
+  }
+  if (hash === 'dashboard') {
+    viewDash.classList.remove('hidden');
+    renderDashboard();
+    return;
+  }
+  if (hash === 'automatizaciones') {
+    viewAuto.classList.remove('hidden');
+    renderAutomations();
+    return;
+  }
+  if (hash === 'socios') {
+    viewSocios.classList.remove('hidden');
+    if (param) socioSel = param;
+    renderSocios();
+    return;
+  }
+  if (hash === 'pagos') {
+    viewPagos.classList.remove('hidden');
+    renderPagos();
+    return;
+  }
+  if (hash === 'pago') {
+    viewPago.classList.remove('hidden');
+    renderPagoDemo(param);
+    return;
+  }
+  viewChat.classList.remove('hidden');
 }
 
 function showLogin() {
@@ -552,6 +700,249 @@ async function renderAutomations() {
   }
 }
 
+async function fillPasarela(elId) {
+  try {
+    const cfg = await store.pagosConfig();
+    const n = document.getElementById(elId);
+    if (n) n.textContent = cfg.pasarela || i18n.pasarelaDemo;
+  } catch { /* ignore */ }
+}
+
+async function renderSocios() {
+  let socios;
+  try {
+    socios = await store.listarSocios(sociosFiltro);
+  } catch {
+    location.hash = 'login';
+    return;
+  }
+  document.getElementById('socios-title').textContent = `${tenant.marca.wordmark || tenant.nombre} · SOCIOS`;
+  await fillPasarela('socios-pasarela');
+  const filters = document.getElementById('socios-filters');
+  filters.replaceChildren();
+  const addChip = (label, on, click) => {
+    const b = el('button', 'chip', label);
+    if (on) b.style.borderColor = 'var(--color-acento)';
+    b.addEventListener('click', click);
+    filters.appendChild(b);
+  };
+  for (const s of ['Todas', ...(tenant.sedes || []).map((x) => x.nombre)]) {
+    addChip(s, (sociosFiltro.sede || 'Todas') === s, () => {
+      sociosFiltro.sede = s === 'Todas' ? '' : s;
+      renderSocios();
+    });
+  }
+  addChip('Vence en 7 días', sociosFiltro.vence7, () => {
+    sociosFiltro.vence7 = !sociosFiltro.vence7;
+    renderSocios();
+  });
+  for (const est of ['', 'vigente', 'vencida', 'pausada']) {
+    addChip(est || 'Todos estado', sociosFiltro.estado === est, () => {
+      sociosFiltro.estado = est;
+      renderSocios();
+    });
+  }
+  const tb = document.getElementById('socios-table');
+  tb.replaceChildren();
+  for (const s of socios) {
+    const tr = document.createElement('tr');
+    const mem = s.membresia || {};
+    for (const cell of [s.nombre, s.telefono, s.sedeId, s.planNombre || s.planId, s.estado, mem.fin || '—']) {
+      tr.appendChild(el('td', null, cell));
+    }
+    tr.addEventListener('click', () => {
+      socioSel = s.id;
+      location.hash = `socios/${s.id}`;
+      pintarFicha(s.id);
+    });
+    tb.appendChild(tr);
+  }
+  if (socioSel) pintarFicha(socioSel);
+}
+
+async function pintarFicha(id) {
+  const box = document.getElementById('socio-ficha');
+  const ficha = await store.fichaSocio(id);
+  if (!ficha) {
+    box.classList.add('hidden');
+    return;
+  }
+  box.classList.remove('hidden');
+  box.replaceChildren();
+  const s = ficha.socio;
+  box.appendChild(el('h2', null, s.nombre));
+  box.appendChild(el('p', null, `${s.telefono} · ${s.sedeId}`));
+  box.appendChild(el('p', null, `Estado socio: ${s.estado}`));
+  if (ficha.plan) box.appendChild(el('p', null, `Plan: ${ficha.plan.nombre}`));
+  if (ficha.membresia) {
+    box.appendChild(el('p', null, `Membresía ${ficha.membresia.estado}: ${ficha.membresia.inicio} a ${ficha.membresia.fin}`));
+  }
+  if (tenant.id === 'soma' && ficha.cuposRestantes != null) {
+    box.appendChild(el('p', null, `Cupos del mes: ${ficha.cuposRestantes} de ${ficha.cuposMes}`));
+  }
+  box.appendChild(el('h3', null, 'Pagos'));
+  for (const p of (ficha.pagos || []).slice(0, 8)) {
+    box.appendChild(el('p', null, `${p.estado} · ${p.monto} CLP · ${p.referencia || 'sin ref'}`));
+  }
+  box.appendChild(el('h3', null, 'Asistencias'));
+  box.appendChild(el('p', null, `${(ficha.asistencias || []).length} registros`));
+  box.appendChild(el('h3', null, 'Reservas'));
+  for (const b of (ficha.reservas || []).slice(0, 6)) {
+    box.appendChild(el('p', null, `${b.codigo} · ${b.clase} · ${b.estado}`));
+  }
+  const actions = el('div', 'form-row');
+  if (s.estado !== 'baja') {
+    const ed = el('button', null, 'Editar');
+    ed.addEventListener('click', () => abrirFormSocio(s));
+    const baja = el('button', 'ghost', 'Dar de baja');
+    baja.addEventListener('click', () => abrirBaja(s.id));
+    actions.appendChild(ed);
+    actions.appendChild(baja);
+  } else {
+    const re = el('button', null, 'Reactivar');
+    re.addEventListener('click', async () => {
+      await store.reactivarSocio(s.id);
+      renderSocios();
+    });
+    actions.appendChild(re);
+  }
+  box.appendChild(actions);
+}
+
+function abrirBaja(id) {
+  const box = document.getElementById('socio-ficha');
+  const form = el('form', null);
+  form.appendChild(el('p', null, 'Motivo de baja'));
+  const inp = document.createElement('input');
+  inp.required = true;
+  inp.maxLength = 200;
+  form.appendChild(inp);
+  const ok = el('button', null, 'Confirmar baja');
+  form.appendChild(ok);
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    await store.bajaSocio(id, inp.value);
+    renderSocios();
+  });
+  box.appendChild(form);
+}
+
+function abrirFormSocio(socio) {
+  const form = document.getElementById('socio-form');
+  form.classList.remove('hidden');
+  document.getElementById('socio-form-title').textContent = socio ? 'Editar socio' : 'Alta de socio';
+  document.getElementById('sf-nombre').value = socio ? socio.nombre : '';
+  document.getElementById('sf-tel').value = socio ? socio.telefono : '';
+  document.getElementById('sf-email').value = socio && socio.email ? socio.email : '';
+  document.getElementById('sf-inicio').value = socio && socio.fechaIngreso ? socio.fechaIngreso : '';
+  form.dataset.id = socio ? socio.id : '';
+  fillSelectsSocio(socio);
+}
+
+async function fillSelectsSocio(socio) {
+  const sedeSel = document.getElementById('sf-sede');
+  const planSel = document.getElementById('sf-plan');
+  sedeSel.replaceChildren();
+  for (const s of tenant.sedes || []) {
+    const o = document.createElement('option');
+    o.value = s.nombre;
+    o.textContent = s.nombre;
+    if (socio && socio.sedeId === s.nombre) o.selected = true;
+    sedeSel.appendChild(o);
+  }
+  const plans = await store.listarPlanes();
+  planSel.replaceChildren();
+  for (const p of plans) {
+    const o = document.createElement('option');
+    o.value = p.id;
+    o.textContent = p.nombre;
+    if (socio && socio.planId === p.id) o.selected = true;
+    planSel.appendChild(o);
+  }
+}
+
+async function renderPagos() {
+  let data;
+  try {
+    data = await store.listarPagos(pagosFiltro.estado);
+  } catch {
+    location.hash = 'login';
+    return;
+  }
+  await fillPasarela('pagos-pasarela');
+  const conc = data.conciliacion || {};
+  const cards = document.getElementById('pagos-conc');
+  cards.replaceChildren();
+  cards.appendChild(card(conc.esperado || 0, 'ESPERADO'));
+  cards.appendChild(card(conc.pagado || 0, 'PAGADO'));
+  cards.appendChild(card(conc.pendiente || 0, 'PENDIENTE'));
+  cards.appendChild(card(conc.vencido || 0, 'VENCIDO'));
+  const filters = document.getElementById('pagos-filters');
+  filters.replaceChildren();
+  for (const est of ['', 'pendiente', 'pagada', 'vencida', 'rechazada']) {
+    const b = el('button', 'chip', est || 'Todos');
+    if (pagosFiltro.estado === est) b.style.borderColor = 'var(--color-acento)';
+    b.addEventListener('click', () => {
+      pagosFiltro.estado = est;
+      renderPagos();
+    });
+    filters.appendChild(b);
+  }
+  const socios = await store.listarSocios({});
+  const byId = new Map(socios.map((s) => [s.id, s]));
+  const plans = await store.listarPlanes();
+  const planBy = new Map(plans.map((p) => [p.id, p]));
+  const tb = document.getElementById('pagos-table');
+  tb.replaceChildren();
+  for (const p of data.pagos || []) {
+    const tr = document.createElement('tr');
+    const socio = byId.get(p.socioId);
+    const plan = planBy.get(p.planId);
+    tr.appendChild(el('td', null, socio ? socio.nombre : p.socioId));
+    tr.appendChild(el('td', null, plan ? plan.nombre : p.planId));
+    tr.appendChild(el('td', null, `${p.monto} CLP`));
+    tr.appendChild(el('td', null, p.estado));
+    tr.appendChild(el('td', null, p.referencia || p.linkReferencia || '—'));
+    const td = document.createElement('td');
+    if (p.estado === 'pendiente' || p.estado === 'vencida') {
+      const m = el('button', 'linkish', 'Marcar pagado');
+      m.addEventListener('click', () => {
+        pagoMarcarId = p.id;
+        document.getElementById('pago-ref-form').classList.remove('hidden');
+        document.getElementById('pago-ref-input').value = '';
+      });
+      td.appendChild(m);
+      const l = el('button', 'linkish', 'Enviar link');
+      l.addEventListener('click', async () => {
+        const r = await store.enviarLinkPago(p.id);
+        if (r.ok && r.url) location.hash = r.url.replace('#', '');
+        else renderPagos();
+      });
+      td.appendChild(l);
+    }
+    tr.appendChild(td);
+    tb.appendChild(tr);
+  }
+}
+
+async function renderPagoDemo(ref) {
+  document.getElementById('pago-demo-pasarela').textContent = i18n.pasarelaDemo;
+  const det = document.getElementById('pago-demo-detalle');
+  const err = document.getElementById('pago-demo-error');
+  err.hidden = true;
+  const pago = await store.getPagoDemo(ref);
+  if (!pago) {
+    det.textContent = 'No encontramos ese pago demo.';
+    document.getElementById('btn-pagar-demo').disabled = true;
+    return;
+  }
+  document.getElementById('btn-pagar-demo').disabled = pago.estado === 'pagada';
+  det.textContent = pago.estado === 'pagada'
+    ? `Pago ${pago.referencia || ref} ya está pagado. Monto ${pago.monto} CLP.`
+    : `Pagar membresía · ${pago.monto} CLP · ref ${ref} (demo, datos ficticios).`;
+  document.getElementById('btn-pagar-demo').dataset.ref = ref;
+}
+
 function openMsg(a) {
   document.getElementById('msg-meta').textContent = `${a.socioNombre || ''} · ${a.claseFavorita || ''} · ${a.sedeId}`;
   document.getElementById('msg-body').textContent = a.texto || a.motivo || '';
@@ -643,6 +1034,93 @@ async function main() {
     session = r.usuario;
     location.hash = 'dashboard';
     route();
+  });
+
+  document.getElementById('socios-q').addEventListener('input', () => {
+    sociosFiltro.q = document.getElementById('socios-q').value;
+    renderSocios();
+  });
+  document.getElementById('btn-socio-alta').addEventListener('click', () => abrirFormSocio(null));
+  document.getElementById('sf-cancel').addEventListener('click', () => {
+    document.getElementById('socio-form').classList.add('hidden');
+  });
+  document.getElementById('socio-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const err = document.getElementById('sf-error');
+    err.hidden = true;
+    const datos = {
+      nombre: document.getElementById('sf-nombre').value,
+      telefono: document.getElementById('sf-tel').value,
+      email: document.getElementById('sf-email').value,
+      sedeId: document.getElementById('sf-sede').value,
+      planId: document.getElementById('sf-plan').value,
+      fechaInicio: document.getElementById('sf-inicio').value,
+    };
+    const id = document.getElementById('socio-form').dataset.id;
+    const r = id ? await store.editarSocio(id, datos) : await store.altaSocio(datos);
+    if (!r.ok) {
+      err.hidden = false;
+      err.textContent = r.error || 'No se pudo guardar';
+      return;
+    }
+    document.getElementById('socio-form').classList.add('hidden');
+    socioSel = r.socio.id;
+    renderSocios();
+  });
+  document.getElementById('btn-csv-plantilla').addEventListener('click', async () => {
+    const csv = await store.plantillaCsv();
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'plantilla-socios.csv';
+    a.click();
+  });
+  document.getElementById('socios-csv').addEventListener('change', async (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    const csv = await file.text();
+    const r = await store.importarSociosCsv(csv);
+    const msg = document.getElementById('socios-import-msg');
+    msg.textContent = r.ok
+      ? `Importados ${r.creados.length} de ${r.total}.`
+      : `Importados ${r.creados.length} de ${r.total}. Errores: ${r.errores.map((x) => `fila ${x.fila} (${x.error})`).join('; ')}`;
+    e.target.value = '';
+    renderSocios();
+  });
+  document.getElementById('btn-pagos-csv').addEventListener('click', async () => {
+    const csv = await store.exportarPagosCsv();
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'pagos-mes.csv';
+    a.click();
+  });
+  document.getElementById('pago-ref-cancel').addEventListener('click', () => {
+    document.getElementById('pago-ref-form').classList.add('hidden');
+  });
+  document.getElementById('pago-ref-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const err = document.getElementById('pago-ref-error');
+    err.hidden = true;
+    const r = await store.marcarPagado(pagoMarcarId, document.getElementById('pago-ref-input').value);
+    if (!r.ok) {
+      err.hidden = false;
+      err.textContent = r.error || 'No se pudo marcar';
+      return;
+    }
+    document.getElementById('pago-ref-form').classList.add('hidden');
+    renderPagos();
+  });
+  document.getElementById('btn-pagar-demo').addEventListener('click', async () => {
+    const ref = document.getElementById('btn-pagar-demo').dataset.ref;
+    const r = await store.pagarDemo(ref);
+    const err = document.getElementById('pago-demo-error');
+    if (!r.ok) {
+      err.hidden = false;
+      err.textContent = r.error || 'No se pudo pagar';
+      return;
+    }
+    location.hash = 'pagos';
   });
 
   route();

@@ -58,7 +58,10 @@ Abre http://localhost:3000 o http://localhost:3000?t=soma
 - Chat: `#asistente`
 - Login equipo: `#login`
 - Dashboard: `#dashboard`
+- Socios: `#socios`
+- Pagos: `#pagos`
 - Automatizaciones: `#automatizaciones`
+- Pago demo: `#pago/<referencia>`
 
 ## Recorridos
 
@@ -71,6 +74,20 @@ Abre http://localhost:3000 o http://localhost:3000?t=soma
 - **G** SOMA: Ver clases pregunta día (Hoy · Mañana · Otro día) y disciplina; lista corto de ese cruce (máx. 6 líneas). Ver planes agrupa por familia (CrossTraining · Small Group · HappyFLEX · Kids · Pases), de a 4, con el rótulo de valores publicados. Reservar Crosstraining 18:00 → `SOMA-YYYY-0001`; preguntar Kinesiología → deriva al equipo; Musculación → acceso libre sin reserva
 - **H** SOMA: socio con plan reserva y el bot dice “Te quedan X cupos este mes”. Si agotó el mes, rechaza y crea `tarea_equipo` (motivo cupos agotados), sin precios ni upgrade. “¿Cuántos cupos me quedan?” responde restantes y que se renuevan el 1 de cada mes. MONKEYS no aplica cupos por plan.
 - **I** Reserva WhatsApp: disciplina → Hoy/Mañana/Otro día → horarios de ese cruce (≤ 10). Nunca una lista de toda la semana. El simulador pinta botones (≤ 3) o lista (4–10).
+- **J** Login → `#socios` → importar CSV → ficha → `#pagos` marcar transferencia o Enviar link → `#pago/<ref>` Pagar (demo) → chat “mi membresía” / “pagar”.
+
+## Socios y pagos
+
+El equipo (sesión) administra socios y cuotas. El chat `mi_membresia` y `pagar` no piden login: identifican al socio por teléfono E.164.
+
+- **Socios** (`#socios`): búsqueda, filtros (sede, plan, estado, vence en 7 días), ficha, alta/edición, baja con motivo, reactivación, importación CSV (plantilla descargable). No se duplica por teléfono.
+- **Membresía**: `{tenantId, socioId, planId, inicio, fin, estado: vigente | vencida | pausada}`. Al registrar un pago se crea o se extiende según `periodo` del plan (mensual 30 días, trimestral 90, anual 365, pase 1 día). El monto sale siempre del plan.
+- **Pagos** (`#pagos`): pendiente, pagada, vencida, rechazada. Marcar pagado (transferencia con referencia), enviar link, exportar CSV del mes. Conciliación: esperado = pagado + pendiente + vencido.
+- **Proveedores** (`engine/services/pagos.js`, interfaz `PaymentProvider`):
+  - `TransferenciaManual`: cuota pendiente con datos bancarios del tenant (texto de config; en demo, ficticios y rotulados).
+  - `LinkPagoDemo`: URL local `#pago/<referencia>` con botón “Pagar (demo)”.
+  - `MercadoPagoProvider`: Checkout Pro (preferencia → `init_point`, webhook → estado). Lee `MERCADOPAGO_ACCESS_TOKEN` (y opcional `MERCADOPAGO_PUBLIC_KEY`, `MERCADOPAGO_WEBHOOK_SECRET`). Si no hay token, el tenant usa `LinkPagoDemo` y el panel muestra **Pasarela en modo demostración**. Los tests no llaman a Mercado Pago: el cliente HTTP se inyecta y se mockea.
+- Cobranza toma membresías que vencen en ≤ 7 días (y pagos rechazados). Reactivación toma vencidas > 15 días y socios en baja.
 
 ## Automatizaciones
 

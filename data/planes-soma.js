@@ -6,7 +6,7 @@ const HF = ['Pilates'];
 const KIDS = ['Functional Kids'];
 
 function plan(partial) {
-  return {
+  const row = {
     tenantId: 'soma',
     maxSesionesDia: 2,
     cuposMes: null,
@@ -15,6 +15,10 @@ function plan(partial) {
     destacado: false,
     ...partial,
   };
+  if (row.monto == null) {
+    row.monto = Number(String(row.precio || '').replace(/\D/g, '')) || 0;
+  }
+  return row;
 }
 
 export const PLANES_SOMA = [

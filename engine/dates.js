@@ -65,3 +65,11 @@ export function enVentana(visitISO, fechaRef, days) {
 export function anioDe(ref) {
   return String(parseFecha(ref).getUTCFullYear());
 }
+
+export function diffDays(a, b) {
+  return Math.round((parseFecha(a) - parseFecha(b)) / 86400000);
+}
+
+export function ymKey(ref) {
+  return dayKey(ref).slice(0, 7);
+}

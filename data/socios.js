@@ -1,5 +1,12 @@
 import { fechaHoy, addDays, dayKey } from '../engine/dates.js';
-import { planIdDeSocioSoma, planSomaPorId } from './planes-soma.js';
+import { planIdDeSocioSoma, planSomaPorId, PLANES_SOMA } from './planes-soma.js';
+import { crearMembresiasYPagos } from './membresias-demo.js';
+
+const PLANES_MONKEYS = [
+  { id: 'mensual', tenantId: 'monkeys', nombre: 'PLAN MENSUAL', precio: '$69.990 CLP', monto: 69990, periodo: 'mensual' },
+  { id: 'trimestral', tenantId: 'monkeys', nombre: 'PLAN TRIMESTRAL', precio: '$189.990 CLP', monto: 189990, periodo: 'trimestral' },
+  { id: 'anual', tenantId: 'monkeys', nombre: 'PLAN ANUAL', precio: '$649.990 CLP', monto: 649990, periodo: 'anual' },
+];
 
 function socio(partial) {
   return {
@@ -39,6 +46,26 @@ const VISITAS = [
   [10],
   [25, 40, 55],
   [45, 58],
+  [1, 5, 9, 15],
+  [1, 5, 9, 15],
+  [1, 5, 9, 15],
+  [1, 5, 9, 15],
+  [1, 5, 9, 15],
+  [1, 5, 9, 15],
+  [1, 5, 9, 15],
+  [1, 5, 9, 15],
+  [1, 5, 9, 15],
+  [1, 5, 9, 15],
+  [1, 5, 9, 15],
+  [1, 5, 9, 15],
+  [1, 5, 9, 15],
+  [1, 5, 9, 15],
+  [1, 5, 9, 15],
+  [1, 5, 9, 15],
+  [1, 5, 9, 15],
+  [1, 5, 9, 15],
+  [1, 5, 9, 15],
+  [1, 5, 9, 15],
 ];
 
 const MONKEYS_SOCIOS = [
@@ -62,6 +89,26 @@ const MONKEYS_SOCIOS = [
   { id: 's18', nombre: 'Ignacio Parra', telefono: '+56961000018', sedeId: 'Alta Vista', claseFavorita: 'Yoga', fechaIngreso: '2025-06-11' },
   { id: 's19', nombre: 'Francisca Ortiz', telefono: '+56961000019', sedeId: 'Félix García', claseFavorita: 'Spinning', fechaIngreso: '2025-02-02' },
   { id: 's20', nombre: 'Vicente Salas', telefono: '+56961000020', sedeId: 'Alta Vista', claseFavorita: 'Yoga', fechaIngreso: '2025-03-30' },
+  { id: 's21', nombre: 'Amanda Rivas', telefono: '+56961000021', sedeId: 'Félix García', claseFavorita: 'Spinning', fechaIngreso: '2025-01-15' },
+  { id: 's22', nombre: 'Bruno Caceres', telefono: '+56961000022', sedeId: 'Alta Vista', claseFavorita: 'Yoga', fechaIngreso: '2025-02-08' },
+  { id: 's23', nombre: 'Cecilia Paredes', telefono: '+56961000023', sedeId: 'Félix García', claseFavorita: 'Funcional', fechaIngreso: '2024-12-12' },
+  { id: 's24', nombre: 'Dario Henriquez', telefono: '+56961000024', sedeId: 'Alta Vista', claseFavorita: 'Cross Training', fechaIngreso: '2025-03-01' },
+  { id: 's25', nombre: 'Elena Fuenzalida', telefono: '+56961000025', sedeId: 'Félix García', claseFavorita: 'Spinning', fechaIngreso: '2025-04-20' },
+  { id: 's26', nombre: 'Franco Villalobos', telefono: '+56961000026', sedeId: 'Alta Vista', claseFavorita: 'Yoga', fechaIngreso: '2025-01-28' },
+  { id: 's27', nombre: 'Gabriela Opazo', telefono: '+56961000027', sedeId: 'Félix García', claseFavorita: 'Funcional', fechaIngreso: '2024-11-05' },
+  { id: 's28', nombre: 'Hugo Saavedra', telefono: '+56961000028', sedeId: 'Alta Vista', claseFavorita: 'Cross Training', fechaIngreso: '2025-05-02' },
+  { id: 's29', nombre: 'Ines Carmona', telefono: '+56961000029', sedeId: 'Félix García', claseFavorita: 'Spinning', fechaIngreso: '2025-02-19' },
+  { id: 's30', nombre: 'Julian Toledo', telefono: '+56961000030', sedeId: 'Alta Vista', claseFavorita: 'Yoga', fechaIngreso: '2024-10-22' },
+  { id: 's31', nombre: 'Karla Orellana', telefono: '+56961000031', sedeId: 'Félix García', claseFavorita: 'Funcional', fechaIngreso: '2025-06-08' },
+  { id: 's32', nombre: 'Leon Valenzuela', telefono: '+56961000032', sedeId: 'Alta Vista', claseFavorita: 'Cross Training', fechaIngreso: '2025-03-17' },
+  { id: 's33', nombre: 'Monica Godoy', telefono: '+56961000033', sedeId: 'Félix García', claseFavorita: 'Spinning', fechaIngreso: '2025-01-04' },
+  { id: 's34', nombre: 'Nestor Palma', telefono: '+56961000034', sedeId: 'Alta Vista', claseFavorita: 'Yoga', fechaIngreso: '2024-12-28' },
+  { id: 's35', nombre: 'Olga Sepulveda', telefono: '+56961000035', sedeId: 'Félix García', claseFavorita: 'Funcional', fechaIngreso: '2025-04-11' },
+  { id: 's36', nombre: 'Patricio Nuñez', telefono: '+56961000036', sedeId: 'Alta Vista', claseFavorita: 'Cross Training', fechaIngreso: '2025-02-25' },
+  { id: 's37', nombre: 'Quena Aravena', telefono: '+56961000037', sedeId: 'Félix García', claseFavorita: 'Spinning', fechaIngreso: '2025-05-30' },
+  { id: 's38', nombre: 'Renato Lagos', telefono: '+56961000038', sedeId: 'Alta Vista', claseFavorita: 'Yoga', fechaIngreso: '2025-03-09' },
+  { id: 's39', nombre: 'Sofia Venegas', telefono: '+56961000039', sedeId: 'Félix García', claseFavorita: 'Funcional', fechaIngreso: '2024-11-18' },
+  { id: 's40', nombre: 'Tadeo Miranda', telefono: '+56961000040', sedeId: 'Alta Vista', claseFavorita: 'Cross Training', fechaIngreso: '2025-01-21' },
 ];
 
 const SOMA_SOCIOS = [
@@ -105,8 +152,10 @@ export function crearDatosRetencion(fechaRef = fechaHoy(), opts = {}) {
     visits(row.id, VISITAS[i], fechaRef).map((a) => ({ ...a, tenantId }))
   ));
   const socios = catalogo.map((row, i) => {
-    const planId = tenantId === 'soma' ? planIdDeSocioSoma(row, i) : 'mensual';
-    const plan = tenantId === 'soma' ? planSomaPorId(planId) : null;
+    const planId = tenantId === 'soma'
+      ? planIdDeSocioSoma(row, i)
+      : (i < 20 ? 'mensual' : PLANES_MONKEYS[i % 3].id);
+    const plan = tenantId === 'soma' ? planSomaPorId(planId) : PLANES_MONKEYS.find((p) => p.id === planId);
     return socio({
       tenantId,
       ...row,
@@ -160,9 +209,15 @@ export function crearDatosRetencion(fechaRef = fechaHoy(), opts = {}) {
     cuposUsadosMes: 0,
   });
 
+  const todos = [...socios, baja];
+  const plans = tenantId === 'soma' ? PLANES_SOMA : PLANES_MONKEYS;
+  const finanzas = crearMembresiasYPagos(todos, plans, fechaRef, tenantId);
+
   return {
-    socios: [...socios, baja],
+    socios: todos,
     asistencias,
+    nextSocioSeq: catalogo.length,
+    ...finanzas,
     automation: {
       nextActionSeq: 2,
       agentesActivos: { retencion: true, cobranza: true, reactivacion: true, recordatorio: true, referidos: true },

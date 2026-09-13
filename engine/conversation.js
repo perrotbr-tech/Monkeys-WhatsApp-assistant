@@ -52,6 +52,8 @@ const IA_LINEA = {
   [INTENCIONES.PLANES]: 'Entendí que quieres ver los planes.',
   [INTENCIONES.HUMANO]: 'Entendí que quieres hablar con el equipo.',
   [INTENCIONES.LOOKUP]: 'Entendí que quieres consultar una reserva.',
+  [INTENCIONES.MI_MEMBRESIA]: 'Entendí que quieres ver tu membresía.',
+  [INTENCIONES.PAGAR]: 'Entendí que quieres pagar.',
   [INTENCIONES.MENU]: 'Entendí que quieres volver al menú.',
   [INTENCIONES.AYUDA]: 'Entendí que necesitas orientación.',
 };
@@ -135,6 +137,10 @@ export function crearEngine(datosIniciales, tenantId = TENANT_DEFAULT, opts = {}
     else if (cmd === 'ayuda') out = ayuda(conv);
     else if (esConsultaCupos(cmd) && conv.paso !== 'reserve_name' && conv.paso !== 'trial_name') {
       out = responderCupos(conv, texto);
+    } else if (esConsultaMembresia(cmd) && conv.paso !== 'reserve_name' && conv.paso !== 'trial_name') {
+      out = responderMembresia(conv);
+    } else if (esConsultaPagar(cmd) && conv.paso !== 'reserve_name' && conv.paso !== 'trial_name') {
+      out = responderPagar(conv);
     }
     else if (esKine(cmd) && conv.paso !== 'reserve_name' && conv.paso !== 'trial_name') {
       out = responderKine(conv);
@@ -201,6 +207,10 @@ export function crearEngine(datosIniciales, tenantId = TENANT_DEFAULT, opts = {}
         return lookupDone(conv, cmd);
       case 'cupos_phone':
         return cuposPhone(conv, texto);
+      case 'membresia_phone':
+        return membresiaPhone(conv, texto);
+      case 'pagar_phone':
+        return pagarPhone(conv, texto);
       case 'plans_info_name':
         return plansInfoName(conv, texto);
       case 'plans_info_phone':
@@ -264,6 +274,8 @@ export function crearEngine(datosIniciales, tenantId = TENANT_DEFAULT, opts = {}
     if (det.intencion === INTENCIONES.PLANES) return verPlanes(conv, marcarIa);
     if (det.intencion === INTENCIONES.HUMANO) return iniciarHumano(conv, marcarIa);
     if (det.intencion === INTENCIONES.CUPOS) return responderCupos(conv, texto || '');
+    if (det.intencion === INTENCIONES.MI_MEMBRESIA) return responderMembresia(conv, true);
+    if (det.intencion === INTENCIONES.PAGAR) return responderPagar(conv, true);
     if (det.intencion === INTENCIONES.LOOKUP) return iniciarLookup(conv, marcarIa);
     if (det.intencion === INTENCIONES.MENU) return irMenu(conv, marcarIa);
     if (det.intencion === INTENCIONES.AYUDA) return ayuda(conv, marcarIa);
@@ -968,6 +980,52 @@ export function crearEngine(datosIniciales, tenantId = TENANT_DEFAULT, opts = {}
     )];
   }
 
+  function responderMembresia(conv, ia = false) {
+    const tel = conv.telefono;
+    if (!tel) {
+      conv.paso = 'membresia_phone';
+      return maybeIa(ia, INTENCIONES.MI_MEMBRESIA, [botMsg('¿Cuál es tu teléfono para revisar tu membresía?')]);
+    }
+    return informarMembresia(conv, tel, ia);
+  }
+
+  function membresiaPhone(conv, texto) {
+    const tel = normalizarTelefono(texto);
+    if (!tel) return [botMsg('Teléfono no válido. Usa +56 9 XXXX XXXX.')];
+    conv.telefono = tel;
+    return informarMembresia(conv, tel, false);
+  }
+
+  function informarMembresia(conv, tel, ia) {
+    conv.paso = 'menu';
+    const r = memoria.resumenMembresiaChat(tid, tel, fecha());
+    if (!r.ok) return maybeIa(ia, INTENCIONES.MI_MEMBRESIA, [botMsg(r.error, menuOps())]);
+    return maybeIa(ia, INTENCIONES.MI_MEMBRESIA, [botMsg(r.texto, menuOps())]);
+  }
+
+  function responderPagar(conv, ia = false) {
+    const tel = conv.telefono;
+    if (!tel) {
+      conv.paso = 'pagar_phone';
+      return maybeIa(ia, INTENCIONES.PAGAR, [botMsg('¿Cuál es tu teléfono para generar el pago?')]);
+    }
+    return informarPagar(conv, tel, ia);
+  }
+
+  function pagarPhone(conv, texto) {
+    const tel = normalizarTelefono(texto);
+    if (!tel) return [botMsg('Teléfono no válido. Usa +56 9 XXXX XXXX.')];
+    conv.telefono = tel;
+    return informarPagar(conv, tel, false);
+  }
+
+  function informarPagar(conv, tel, ia) {
+    conv.paso = 'menu';
+    const r = memoria.responderPagarChat(tid, tel, fecha());
+    if (!r.ok) return maybeIa(ia, INTENCIONES.PAGAR, [botMsg(r.error, menuOps())]);
+    return maybeIa(ia, INTENCIONES.PAGAR, [botMsg(r.texto, menuOps())]);
+  }
+
   function ayuda(conv, ia = false) {
     conv.paso = conv.sede ? 'menu' : 'pick_sede';
     return maybeIa(ia, INTENCIONES.AYUDA, [
@@ -1075,6 +1133,22 @@ export function crearEngine(datosIniciales, tenantId = TENANT_DEFAULT, opts = {}
     listarLeads: () => memoria.listarLeads(tid),
     listarConversaciones: () => memoria.listarConversaciones(tid),
     listarSedes: () => memoria.listarSedes(tid),
+    listarSocios: () => memoria.listarSocios(tid),
+    listarMembresias: (fecha) => memoria.listarMembresias(tid, fecha),
+    listarPagos: () => memoria.listarPagos(tid),
+    filtrarSocios: (f, fecha) => memoria.filtrarSocios(tid, f, fecha),
+    fichaSocio: (id, fecha) => memoria.fichaSocio(tid, id, fecha),
+    altaSocio: (datos, fecha) => memoria.altaSocio(tid, datos, fecha),
+    editarSocio: (id, datos) => memoria.editarSocio(tid, id, datos),
+    bajaSocio: (id, motivo, fecha) => memoria.bajaSocio(tid, id, motivo, fecha),
+    reactivarSocio: (id) => memoria.reactivarSocio(tid, id),
+    importarSociosCsv: (csv, fecha) => memoria.importarSociosCsv(tid, csv, fecha),
+    marcarPagado: (id, ref, fecha) => memoria.marcarPagado(tid, id, ref, fecha),
+    enviarLinkPago: (id, opts) => memoria.enviarLinkPago(tid, id, opts),
+    pagarDemo: (ref, fecha) => memoria.pagarDemo(ref, fecha),
+    conciliacionMes: (fecha) => memoria.conciliacionMes(tid, fecha),
+    exportarPagosCsv: (fecha) => memoria.exportarPagosCsv(tid, fecha),
+    datosBancarios: () => memoria.datosBancarios(tid),
     getTenant: () => tenant(),
     reset() {
       if (memoria.hidratarTenant) memoria.hidratarTenant(tid, clonarDemo(tid, fechaRef));
@@ -1143,6 +1217,14 @@ function esMusculacion(cmd) {
 
 function esConsultaCupos(cmd) {
   return cmd.includes('cuantos cupos') || cmd.includes('cupos me quedan') || cmd.includes('mis cupos') || cmd.includes('cupos del plan');
+}
+
+function esConsultaMembresia(cmd) {
+  return cmd.includes('mi membresia') || cmd.includes('mi plan') || cmd.includes('estado de mi plan');
+}
+
+function esConsultaPagar(cmd) {
+  return cmd === 'pagar' || cmd.includes('quiero pagar') || cmd.includes('link de pago') || cmd.includes('datos de transferencia');
 }
 
 function lineaPlan(p) {
