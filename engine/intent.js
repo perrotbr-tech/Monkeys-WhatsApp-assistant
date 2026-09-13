@@ -13,6 +13,8 @@ export const INTENCIONES = Object.freeze({
   HUMANO: 'humano',
   LOOKUP: 'lookup',
   CUPOS: 'cupos',
+  MI_MEMBRESIA: 'mi_membresia',
+  PAGAR: 'pagar',
   MENU: 'menu',
   AYUDA: 'ayuda',
   DESCONOCIDA: 'desconocida',
@@ -52,6 +54,8 @@ export function crearIntentService() {
       if (esHumano(t)) return pack(INTENCIONES.HUMANO, entidades, 0.93);
       if (esTrial(t)) return pack(INTENCIONES.TRIAL, entidades, 0.92);
       if (esLookup(t)) return pack(INTENCIONES.LOOKUP, entidades, 0.9);
+      if (esMiMembresia(t)) return pack(INTENCIONES.MI_MEMBRESIA, entidades, 0.92);
+      if (esPagar(t)) return pack(INTENCIONES.PAGAR, entidades, 0.92);
       if (esCupos(t)) return pack(INTENCIONES.CUPOS, entidades, 0.9);
       if (esReserva(t)) return pack(INTENCIONES.RESERVA, entidades, 0.92);
       if (esPlanes(t)) return pack(INTENCIONES.PLANES, entidades, 0.9);
@@ -133,6 +137,26 @@ function esReserva(t) {
   return tiene(t, ['reservar', 'reserva', 'reservar mi cupo', 'quiero un cupo']);
 }
 
+function esMiMembresia(t) {
+  return tiene(t, [
+    'mi membresia',
+    'mi plan',
+    'estado de mi plan',
+    'vigencia',
+    'como va mi plan',
+  ]);
+}
+
+function esPagar(t) {
+  return t === 'pagar' || tiene(t, [
+    'quiero pagar',
+    'pagar membresia',
+    'link de pago',
+    'datos de transferencia',
+    'hacer una transferencia',
+  ]);
+}
+
 function esPlanes(t) {
   return tiene(t, [
     'cuanto cuesta',
@@ -140,7 +164,6 @@ function esPlanes(t) {
     'planes',
     'precio',
     'precios',
-    'membresia',
     'plan mensual',
   ]);
 }

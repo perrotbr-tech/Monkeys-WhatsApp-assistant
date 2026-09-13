@@ -49,6 +49,8 @@ export function crearAutomation(datosIniciales, tenantId = TENANT_DEFAULT) {
       campanias: state.automation.campanias,
       referidos: state.referidos || [],
       planes: state.plans,
+      membresias: state.membresias || [],
+      pagos: state.pagos || [],
     };
   }
 
@@ -215,6 +217,8 @@ export function crearAutomation(datosIniciales, tenantId = TENANT_DEFAULT) {
         asistencias: clonar(state.asistencias),
         classes: clonar(state.classes),
         plans: clonar(state.plans),
+        membresias: clonar(state.membresias || []),
+        pagos: clonar(state.pagos || []),
         automation: clonar(state.automation),
       };
     },
@@ -239,6 +243,8 @@ function extraer(datos, tenantId = TENANT_DEFAULT) {
     asistencias: clonar(src.asistencias || seed.asistencias),
     classes: clonar(src.classes || seed.classes),
     plans: clonar(src.plans || seed.plans),
+    membresias: clonar(src.membresias || seed.membresias || []),
+    pagos: clonar(src.pagos || seed.pagos || []),
     referidos: clonar(src.referidos || []),
     automation: clonar(src.automation || seed.automation),
   };

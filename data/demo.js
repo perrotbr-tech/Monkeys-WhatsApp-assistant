@@ -73,9 +73,9 @@ function armarMonkeys(fechaRef) {
       },
     ],
     plans: [
-      { id: 'mensual', tenantId: 'monkeys', nombre: 'PLAN MENSUAL', precio: '$69.990 CLP' },
-      { id: 'trimestral', tenantId: 'monkeys', nombre: 'PLAN TRIMESTRAL', precio: '$189.990 CLP' },
-      { id: 'anual', tenantId: 'monkeys', nombre: 'PLAN ANUAL', precio: '$649.990 CLP' },
+      { id: 'mensual', tenantId: 'monkeys', nombre: 'PLAN MENSUAL', precio: '$69.990 CLP', monto: 69990, periodo: 'mensual' },
+      { id: 'trimestral', tenantId: 'monkeys', nombre: 'PLAN TRIMESTRAL', precio: '$189.990 CLP', monto: 189990, periodo: 'trimestral' },
+      { id: 'anual', tenantId: 'monkeys', nombre: 'PLAN ANUAL', precio: '$649.990 CLP', monto: 649990, periodo: 'anual' },
     ],
     bookings: [
       {

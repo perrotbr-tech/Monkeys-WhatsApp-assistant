@@ -36,6 +36,7 @@ export const tenants = [
       disclaimer: 'Prototipo demostrativo · datos ficticios',
       lookupEjemplo: 'GYM-2026-0001',
     },
+    datosBancarios: 'Transferencia (ficticia, demo): Banco Estado · Chequera electrónica · 00000001 · RUT 76.111.111-1 · MONKEYS SpA. Prototipo demostrativo.',
     sedes: [
       { id: 'felix-garcia', nombre: 'Félix García', direccion: 'Antofagasta' },
       { id: 'alta-vista', nombre: 'Alta Vista', direccion: 'Antofagasta' },
@@ -75,6 +76,7 @@ export const tenants = [
       lookupEjemplo: 'SOMA-2026-0001',
       valoresPlanes: 'Valores según planes publicados · sujetos a cambio',
     },
+    datosBancarios: 'Transferencia (ficticia, demo): Banco de Chile · Cuenta corriente · 00000002 · RUT 76.222.222-2 · SOMA Gym SpA. Prototipo demostrativo.',
     sedes: [
       {
         id: 'soma-antofagasta',

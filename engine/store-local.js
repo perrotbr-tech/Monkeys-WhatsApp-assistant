@@ -20,6 +20,9 @@ export function crearStoreLocal(tenantId, storage, opts = {}) {
     if (tenantId === 'soma' && datos.plans && datos.plans[0] && !('cuposMes' in datos.plans[0])) {
       datos = clonarDemo('soma', fechaRef);
     }
+    if (!Array.isArray(datos.membresias) || (tenantId === 'monkeys' && (datos.socios || []).length < 40)) {
+      datos = clonarDemo(tenantId, fechaRef);
+    }
   } catch {
     datos = clonarDemo(tenantId, fechaRef);
   }
@@ -53,6 +56,65 @@ export function crearStoreLocal(tenantId, storage, opts = {}) {
     async listarReservas() { return engine.listarReservas(); },
     async listarLeads() { return engine.listarLeads(); },
     async listarConversaciones() { return engine.listarConversaciones(); },
+    async listarSocios(filtro = {}) { return engine.filtrarSocios(filtro, fechaRef); },
+    async fichaSocio(id) { return engine.fichaSocio(id, fechaRef); },
+    async altaSocio(datos) {
+      const r = engine.altaSocio(datos, fechaRef);
+      persist();
+      return r;
+    },
+    async editarSocio(id, datos) {
+      const r = engine.editarSocio(id, datos);
+      persist();
+      return r;
+    },
+    async bajaSocio(id, motivo) {
+      const r = engine.bajaSocio(id, motivo, fechaRef);
+      persist();
+      return r;
+    },
+    async reactivarSocio(id) {
+      const r = engine.reactivarSocio(id);
+      persist();
+      return r;
+    },
+    async importarSociosCsv(csv) {
+      const r = engine.importarSociosCsv(csv, fechaRef);
+      persist();
+      return r;
+    },
+    async listarPagos(estado) {
+      let pagos = engine.listarPagos();
+      if (estado) pagos = pagos.filter((p) => p.estado === estado);
+      return { pagos, conciliacion: engine.conciliacionMes(fechaRef) };
+    },
+    async marcarPagado(id, referencia) {
+      const r = engine.marcarPagado(id, referencia, fechaRef);
+      persist();
+      return r;
+    },
+    async enviarLinkPago(id) {
+      const r = engine.enviarLinkPago(id, {});
+      persist();
+      return r;
+    },
+    async pagarDemo(ref) {
+      const r = engine.pagarDemo(ref, fechaRef);
+      persist();
+      return r;
+    },
+    async conciliacionMes() { return engine.conciliacionMes(fechaRef); },
+    async exportarPagosCsv() { return engine.exportarPagosCsv(fechaRef); },
+    async pagosConfig() {
+      return { modo: 'demo', pasarela: 'Pasarela en modo demostración', datosBancarios: engine.datosBancarios() };
+    },
+    async getPagoDemo(ref) {
+      const hit = engine.memoria.buscarPagoEnTenants(ref);
+      return hit ? hit.pago : null;
+    },
+    async plantillaCsv() {
+      return 'nombre,telefono,email,plan,fechaInicio,sede\n';
+    },
     async reset() {
       engine.reset();
       auto.reset();

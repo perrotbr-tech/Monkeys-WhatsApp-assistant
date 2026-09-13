@@ -19,6 +19,8 @@
     <nav class="nav">
       <a href="#asistente" id="nav-asistente" class="nav-link is-active">ASISTENTE</a>
       <a href="#dashboard" id="nav-dashboard" class="nav-link">DASHBOARD</a>
+      <a href="#socios" id="nav-socios" class="nav-link">SOCIOS</a>
+      <a href="#pagos" id="nav-pagos" class="nav-link">PAGOS</a>
       <a href="#automatizaciones" id="nav-auto" class="nav-link">AUTOMATIZACIONES</a>
     </nav>
   </header>
@@ -94,6 +96,97 @@
       </div>
     </section>
   </main>
+
+  <section id="view-socios" class="dashboard hidden">
+    <h1 id="socios-title">SOCIOS</h1>
+    <p id="socios-pasarela" class="note-foot"></p>
+    <div class="filters" id="socios-filters"></div>
+    <div class="form-row">
+      <input id="socios-q" type="search" placeholder="Buscar nombre o teléfono" />
+      <button type="button" id="btn-socio-alta">Alta manual</button>
+      <button type="button" id="btn-csv-plantilla" class="ghost">Plantilla CSV</button>
+      <label class="file-btn">
+        Importar CSV
+        <input id="socios-csv" type="file" accept=".csv,text/csv" hidden />
+      </label>
+    </div>
+    <p id="socios-import-msg" class="note-foot"></p>
+    <div class="layout-split">
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Nombre</th>
+              <th>Teléfono</th>
+              <th>Sede</th>
+              <th>Plan</th>
+              <th>Estado</th>
+              <th>Vence</th>
+            </tr>
+          </thead>
+          <tbody id="socios-table"></tbody>
+        </table>
+      </div>
+      <aside id="socio-ficha" class="ficha hidden"></aside>
+    </div>
+    <form id="socio-form" class="ficha hidden">
+      <h2 id="socio-form-title">Alta de socio</h2>
+      <label>Nombre <input id="sf-nombre" required maxlength="60" /></label>
+      <label>Teléfono <input id="sf-tel" required /></label>
+      <label>Email <input id="sf-email" type="email" /></label>
+      <label>Sede <select id="sf-sede"></select></label>
+      <label>Plan <select id="sf-plan"></select></label>
+      <label>Inicio <input id="sf-inicio" type="date" /></label>
+      <p id="sf-error" class="login-error" hidden></p>
+      <div class="form-row">
+        <button type="submit">Guardar</button>
+        <button type="button" id="sf-cancel" class="ghost">Cancelar</button>
+      </div>
+    </form>
+  </section>
+
+  <section id="view-pagos" class="dashboard hidden">
+    <h1 id="pagos-title">PAGOS</h1>
+    <p id="pagos-pasarela" class="note-foot"></p>
+    <div class="cards" id="pagos-conc"></div>
+    <div class="filters" id="pagos-filters"></div>
+    <div class="form-row">
+      <button type="button" id="btn-pagos-csv">Exportar CSV del mes</button>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Socio</th>
+            <th>Plan</th>
+            <th>Monto</th>
+            <th>Estado</th>
+            <th>Referencia</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="pagos-table"></tbody>
+      </table>
+    </div>
+    <form id="pago-ref-form" class="ficha hidden">
+      <h2>Marcar pagado</h2>
+      <label>Referencia <input id="pago-ref-input" required maxlength="80" /></label>
+      <p id="pago-ref-error" class="login-error" hidden></p>
+      <div class="form-row">
+        <button type="submit">Confirmar</button>
+        <button type="button" id="pago-ref-cancel" class="ghost">Cancelar</button>
+      </div>
+    </form>
+  </section>
+
+  <section id="view-pago" class="login hidden">
+    <h1>Pago demo</h1>
+    <p id="pago-demo-pasarela" class="note-foot">Pasarela en modo demostración</p>
+    <p id="pago-demo-detalle"></p>
+    <p id="pago-demo-error" class="login-error" hidden></p>
+    <button type="button" id="btn-pagar-demo">Pagar (demo)</button>
+    <p><a href="#pagos" id="pago-demo-back">Volver</a></p>
+  </section>
 
   <section id="view-dashboard" class="dashboard hidden">
     <h1 id="dash-title">PANEL DE GESTIÓN</h1>

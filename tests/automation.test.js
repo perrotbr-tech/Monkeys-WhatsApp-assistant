@@ -11,12 +11,12 @@ function ciclo(fecha = fechaHoy()) {
   return auto;
 }
 
-test('clasifica 6 constantes, 8 regulares, 4 riesgo y 2 silenciosos', () => {
+test('clasifica 6 constantes, 28 regulares, 4 riesgo y 2 silenciosos', () => {
   const auto = crearAutomation(crearDatosRetencion());
   const c = auto.clasificarSocios();
   const n = (s) => c.filter((x) => x.segmento === s).length;
   assert.equal(n('constante'), 6);
-  assert.equal(n('regular'), 8);
+  assert.equal(n('regular'), 28);
   assert.equal(n('riesgo'), 4);
   assert.equal(n('silencioso'), 2);
 });
