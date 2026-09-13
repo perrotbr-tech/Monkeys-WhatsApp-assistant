@@ -21,7 +21,13 @@ const CLASES = [
   { id: 'Spinning', aliases: ['spinning', 'spin'] },
   { id: 'Funcional', aliases: ['funcional'] },
   { id: 'Yoga', aliases: ['yoga'] },
-  { id: 'Cross Training', aliases: ['cross training', 'cross', 'crosstraining'] },
+  { id: 'Cross Training', aliases: ['cross training'] },
+  { id: 'Crosstraining', aliases: ['crosstraining'] },
+  { id: 'Hyrox', aliases: ['hyrox'] },
+  { id: 'Pilates', aliases: ['pilates'] },
+  { id: 'Functional Kids', aliases: ['functional kids', 'kids'] },
+  { id: 'Musculación', aliases: ['musculacion', 'musculación'] },
+  { id: 'Kinesiología', aliases: ['kinesiologia', 'kinesiología', 'kine'] },
 ];
 
 export function crearIntentService() {
@@ -35,6 +41,8 @@ export function crearIntentService() {
       const entidades = {};
       const clase = extraerClase(t);
       if (clase) entidades.clase = clase;
+      const hora = extraerHora(t);
+      if (hora) entidades.hora = hora;
 
       if (!t) return pack(INTENCIONES.DESCONOCIDA, entidades, 0);
 
@@ -102,6 +110,8 @@ function esLookup(t) {
     'mi reserva',
     'codigo gym',
     'gym-2026',
+    'codigo soma',
+    'soma-2026',
   ]);
 }
 
@@ -139,4 +149,9 @@ function extraerClase(t) {
     }
   }
   return undefined;
+}
+
+function extraerHora(t) {
+  const m = String(t || '').match(/(\d{1,2}:\d{2})/);
+  return m ? m[1] : undefined;
 }

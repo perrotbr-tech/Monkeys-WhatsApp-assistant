@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="Forkza AI">
+  <rect width="32" height="32" rx="6" fill="#0F1C2E"/>
+  <path d="M8 6h14v4H13v4h8v4H13v8H8V6z" fill="#FFFFFF"/>
+  <circle cx="24" cy="24" r="4" fill="#1E5BFF"/>
+</svg>
