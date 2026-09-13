@@ -212,6 +212,46 @@ body.wordmark-italic .wordmark {
   font-size: 13px;
 }
 .chip:hover { border-color: var(--color-acento); color: var(--color-acento); }
+.wa-buttons { max-width: 100%; }
+.wa-list {
+  margin-top: 8px;
+  width: 100%;
+  border: 1px solid var(--color-linea);
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--color-panel);
+}
+.wa-list-title {
+  padding: 10px 12px 6px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-texto-muted);
+}
+.wa-row {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 12px;
+  background: transparent;
+  color: var(--color-texto);
+  border: 0;
+  border-top: 1px solid var(--color-linea);
+  text-align: left;
+  font-weight: 700;
+  font-size: 14px;
+}
+.wa-row-title { font-weight: 700; }
+.wa-row-desc {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-texto-muted);
+}
+.wa-row:hover { color: var(--color-acento); }
 .typing { color: var(--color-texto-muted); font-size: 13px; align-self: flex-start; }
 
 .chat-input-row {

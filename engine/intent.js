@@ -166,8 +166,13 @@ function extraerClase(t) {
 }
 
 function extraerHora(t) {
-  const m = String(t || '').match(/(\d{1,2}:\d{2})/);
-  return m ? m[1] : undefined;
+  const s = String(t || '');
+  const m = s.match(/\b(\d{1,2}):(\d{2})\b/) || s.match(/\b(\d{1,2})\s+(\d{2})\b/);
+  if (!m) return undefined;
+  const hh = Number(m[1]);
+  const mm = Number(m[2]);
+  if (hh > 23 || mm > 59) return undefined;
+  return `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`;
 }
 
 function extraerDia(t) {

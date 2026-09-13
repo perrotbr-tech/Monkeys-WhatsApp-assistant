@@ -1,6 +1,7 @@
 import { fechaHoy, fechaDesdeQuery } from './engine/dates.js';
 import { TENANT_DEFAULT, tenantActivo, varsMarca, USUARIOS_DEMO, CLAVE_DEMO } from './data/tenants.js';
 import { crearStoreLocal } from './engine/store-local.js';
+import { i18n } from './data/i18n.js';
 
 const TENANT_KEY = 'forkza_tenant';
 
@@ -219,17 +220,46 @@ function appendBubble(msg) {
   meta.textContent = horaCorta(msg.hora);
   wrap.appendChild(meta);
   if (msg.autor === 'bot' && msg.opciones && msg.opciones.length) {
-    const chips = document.createElement('div');
-    chips.className = 'chips';
-    for (const op of msg.opciones) {
-      const b = document.createElement('button');
-      b.type = 'button';
-      b.className = 'chip';
-      b.textContent = op.etiqueta;
-      b.addEventListener('click', () => send(op.valor));
-      chips.appendChild(b);
+    const tipo = msg.tipoOpciones || (msg.opciones.length <= 3 ? 'botones' : 'lista');
+    const ops = msg.opciones.slice(0, 10);
+    if (tipo === 'botones') {
+      const chips = document.createElement('div');
+      chips.className = 'chips wa-buttons';
+      for (const op of ops.slice(0, 3)) {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'chip';
+        b.textContent = op.etiqueta;
+        b.addEventListener('click', () => send(op.valor));
+        chips.appendChild(b);
+      }
+      wrap.appendChild(chips);
+    } else {
+      const sheet = document.createElement('div');
+      sheet.className = 'wa-list';
+      const title = document.createElement('div');
+      title.className = 'wa-list-title';
+      title.textContent = i18n.verOpciones || 'Ver opciones';
+      sheet.appendChild(title);
+      for (const op of ops) {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'wa-row';
+        const t = document.createElement('span');
+        t.className = 'wa-row-title';
+        t.textContent = op.etiqueta;
+        b.appendChild(t);
+        if (op.descripcion) {
+          const d = document.createElement('span');
+          d.className = 'wa-row-desc';
+          d.textContent = op.descripcion;
+          b.appendChild(d);
+        }
+        b.addEventListener('click', () => send(op.valor));
+        sheet.appendChild(b);
+      }
+      wrap.appendChild(sheet);
     }
-    wrap.appendChild(chips);
   }
   logEl.appendChild(wrap);
   logEl.scrollTop = logEl.scrollHeight;

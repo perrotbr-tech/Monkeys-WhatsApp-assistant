@@ -22,6 +22,7 @@ export const i18n = {
   verComo: 'Ver como:',
   valoresDemo: 'Valores demostrativos para este prototipo',
   valoresPublicados: 'Valores según planes publicados · sujetos a cambio',
+  verOpciones: 'Ver opciones',
   restaurarDemo: 'Restaurar demo',
   restaurarPregunta: '¿Restaurar los datos originales de la demo?',
   confirmar: 'Confirmar',
