@@ -171,7 +171,8 @@ test('Crosstraining 18:00 llena no crea reserva', () => {
   const id = conversacion.id;
   engine.procesar(id, '2');
   const r = engine.procesar(id, 'Crosstraining Lunes 18:00');
-  assert.match(r.mensajes[0].texto, /AGOTADA/i);
+  const blob = `${r.mensajes[0].texto} ${(r.mensajes[0].opciones || []).map((o) => o.etiqueta).join(' ')}`;
+  assert.match(blob, /completa|espera/i);
   assert.equal(engine.listarReservas().length, 0);
 });
 

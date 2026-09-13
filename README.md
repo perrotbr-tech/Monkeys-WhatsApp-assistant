@@ -70,6 +70,7 @@ Abre http://localhost:3000 o http://localhost:3000?t=soma
 - **F** Login `dueno@soma.demo` → Dashboard → AUTOMATIZACIONES → Ejecutar ciclo mensual (demo) → acciones con nombres de SOMA
 - **G** SOMA: Ver clases pregunta día (Hoy · Mañana · Otro día) y disciplina; lista corto de ese cruce (máx. 6 líneas). Ver planes agrupa por familia (CrossTraining · Small Group · HappyFLEX · Kids · Pases), de a 4, con el rótulo de valores publicados. Reservar Crosstraining 18:00 → `SOMA-YYYY-0001`; preguntar Kinesiología → deriva al equipo; Musculación → acceso libre sin reserva
 - **H** SOMA: socio con plan reserva y el bot dice “Te quedan X cupos este mes”. Si agotó el mes, rechaza y crea `tarea_equipo` (motivo cupos agotados), sin precios ni upgrade. “¿Cuántos cupos me quedan?” responde restantes y que se renuevan el 1 de cada mes. MONKEYS no aplica cupos por plan.
+- **I** Reserva WhatsApp: disciplina → Hoy/Mañana/Otro día → horarios de ese cruce (≤ 10). Nunca una lista de toda la semana. El simulador pinta botones (≤ 3) o lista (4–10).
 
 ## Automatizaciones
 

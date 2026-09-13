@@ -154,6 +154,9 @@ test('ver planes agrupa por familia, de a 4, y ningún texto sugiere upgrade', (
   engine.procesar(id, 'ver mas planes');
   engine.procesar(id, 'ver mas planes');
   engine.procesar(id, 'ver mas planes');
+  engine.procesar(id, 'ver mas planes');
+  engine.procesar(id, 'ver mas planes');
+  engine.procesar(id, 'ver mas planes');
   const blob = textosBot(engine, id).join('\n');
   assert.match(blob, /Small Group/);
   assert.match(blob, /HappyFLEX/);
@@ -183,7 +186,7 @@ test('monkeys sigue sin cupos por plan y con precios demo', () => {
   const id = start.conversacion.id;
   engine.procesar(id, 'Félix García');
   engine.procesar(id, 'reservar mi cupo');
-  engine.procesar(id, 'Spinning');
+  engine.procesar(id, 'Spinning Lunes 19:00');
   engine.procesar(id, 'Ana Demo');
   engine.procesar(id, '912345678');
   engine.procesar(id, 'omitir');
