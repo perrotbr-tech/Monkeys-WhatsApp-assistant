@@ -27,21 +27,21 @@ const OBJETIVOS = [
 const DIAS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
 
 const MENU_MONKEYS = [
-  { etiqueta: '1 🏋️ Ver clases', valor: '1' },
-  { etiqueta: '2 📅 Reservar mi cupo', valor: '2' },
-  { etiqueta: '3 🔥 Probar una clase GRATIS', valor: '3' },
-  { etiqueta: '4 💪 Ver planes', valor: '4' },
-  { etiqueta: '5 🔎 Consultar mi reserva', valor: '5' },
-  { etiqueta: '6 👋 Hablar con el equipo', valor: '6' },
+  { etiqueta: '1 🏋️ Ver clases', valor: 'ver clases' },
+  { etiqueta: '2 📅 Reservar mi cupo', valor: 'reservar mi cupo' },
+  { etiqueta: '3 🔥 Probar una clase GRATIS', valor: 'probar una clase' },
+  { etiqueta: '4 💪 Ver planes', valor: 'ver planes' },
+  { etiqueta: '5 🔎 Consultar mi reserva', valor: 'consultar' },
+  { etiqueta: '6 👋 Hablar con el equipo', valor: 'hablar con el equipo' },
 ];
 
 const MENU_SOMA = [
-  { etiqueta: '1 Ver clases', valor: '1' },
-  { etiqueta: '2 Reservar mi cupo', valor: '2' },
-  { etiqueta: '3 Probar una clase', valor: '3' },
-  { etiqueta: '4 Ver planes', valor: '4' },
-  { etiqueta: '5 Consultar mi reserva', valor: '5' },
-  { etiqueta: '6 Hablar con el equipo', valor: '6' },
+  { etiqueta: '1 Ver clases', valor: 'ver clases' },
+  { etiqueta: '2 Reservar mi cupo', valor: 'reservar mi cupo' },
+  { etiqueta: '3 Probar una clase', valor: 'probar una clase' },
+  { etiqueta: '4 Ver planes', valor: 'ver planes' },
+  { etiqueta: '5 Consultar mi reserva', valor: 'consultar' },
+  { etiqueta: '6 Hablar con el equipo', valor: 'hablar con el equipo' },
 ];
 
 const IA_LINEA = {
