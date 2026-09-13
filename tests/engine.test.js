@@ -54,7 +54,7 @@ test('reserva disponible genera GYM-2026-0001', () => {
   const id = conversacion.id;
   engine.procesar(id, 'Félix García');
   engine.procesar(id, '2');
-  engine.procesar(id, 'Spinning');
+  engine.procesar(id, 'Spinning Lunes 19:00');
   engine.procesar(id, 'Ana Demo');
   engine.procesar(id, '912345678');
   engine.procesar(id, 'omitir');
@@ -71,8 +71,9 @@ test('clase agotada rechazada', () => {
   const id = conversacion.id;
   engine.procesar(id, 'Alta Vista');
   engine.procesar(id, '2');
-  const r = engine.procesar(id, 'Cross Training');
-  assert.match(r.mensajes[0].texto, /AGOTADA/);
+  const r = engine.procesar(id, 'Cross Training Jueves 19:30');
+  const blob = `${r.mensajes[0].texto} ${(r.mensajes[0].opciones || []).map((o) => o.etiqueta).join(' ')}`;
+  assert.match(blob, /completa|espera/i);
   assert.equal(engine.listarReservas().length, 0);
 });
 
@@ -82,13 +83,13 @@ test('reserva duplicada rechazada', () => {
   const id = conversacion.id;
   engine.procesar(id, 'Félix García');
   engine.procesar(id, '2');
-  engine.procesar(id, 'Spinning');
+  engine.procesar(id, 'Spinning Lunes 19:00');
   engine.procesar(id, 'Ana Demo');
   engine.procesar(id, '912345678');
   engine.procesar(id, 'omitir');
   engine.procesar(id, 'confirmar');
   engine.procesar(id, '2');
-  engine.procesar(id, 'Spinning');
+  engine.procesar(id, 'Spinning Lunes 19:00');
   engine.procesar(id, 'Ana Demo');
   engine.procesar(id, '912345678');
   engine.procesar(id, 'omitir');

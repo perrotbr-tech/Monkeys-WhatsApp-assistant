@@ -3,15 +3,18 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>MONKEYS · Fitness Community</title>
+  <title>Forkza AI</title>
+  <link rel="icon" href="./brand/favicon.svg" type="image/svg+xml" />
+  <link rel="manifest" href="./manifest.webmanifest" />
   <link rel="stylesheet" href="./styles.css" />
 </head>
 <body>
-  <div class="banner">Prototipo demostrativo · datos ficticios</div>
-  <header class="topbar">
+  <div class="banner" id="banner-demo">Prototipo demostrativo · datos ficticios</div>
+
+  <header class="topbar" id="header-tenant">
     <div class="brand-mini">
-      <span class="brand-mini-title">MONKEYS</span>
-      <span class="brand-mini-sub">FITNESS COMMUNITY</span>
+      <span class="brand-mini-title" id="brand-mini-title">FORKZA</span>
+      <span class="brand-mini-sub" id="brand-mini-sub"></span>
     </div>
     <nav class="nav">
       <a href="#asistente" id="nav-asistente" class="nav-link is-active">ASISTENTE</a>
@@ -20,11 +23,49 @@
     </nav>
   </header>
 
+  <header class="topbar forkza-bar hidden" id="header-forkza">
+    <div class="forkza-brand">
+      <img src="./brand/simbolo_F_blanco.svg" alt="" width="32" height="32" />
+      <span class="forkza-word">FORKZA <span class="forkza-ai">AI</span></span>
+    </div>
+    <div class="forkza-tenant" id="forkza-tenant-name"></div>
+  </header>
+
+  <section id="view-missing" class="missing hidden">
+    <h1>Gimnasio no encontrado</h1>
+    <p>Ese enlace no corresponde a un gimnasio activo. Elige un demo:</p>
+    <p>
+      <a href="?t=monkeys">MONKEYS</a>
+      ·
+      <a href="?t=soma">SOMA</a>
+    </p>
+  </section>
+
+  <section id="view-login" class="login hidden">
+    <h1 id="login-title">Acceso del equipo</h1>
+    <form id="login-form">
+      <label>
+        Correo
+        <input id="login-email" type="email" autocomplete="username" required />
+      </label>
+      <label>
+        Clave
+        <input id="login-pass" type="password" autocomplete="current-password" required />
+      </label>
+      <p id="login-error" class="login-error" hidden></p>
+      <button type="submit" id="login-submit">Entrar</button>
+    </form>
+    <div id="login-demo-help" class="login-help hidden">
+      <p>Acceso de demostración</p>
+      <ul id="login-demo-list"></ul>
+    </div>
+  </section>
+
   <main id="view-asistente" class="layout">
     <section class="hero" aria-hidden="false">
-      <p class="wordmark">MONKEYS</p>
-      <p class="wordmark-sub">FITNESS COMMUNITY</p>
-      <h1>ENTRENA. MUÉVETE. SÉ PARTE DE LA COMUNIDAD.</h1>
+      <p class="wordmark" id="hero-wordmark">FORKZA</p>
+      <p class="wordmark-sub" id="hero-bajada"></p>
+      <h1 id="hero-claim">ENTRENA. MUÉVETE. SÉ PARTE DE LA COMUNIDAD.</h1>
       <p class="lead">Clases, reservas y atención en un solo lugar.</p>
       <div class="shapes" aria-hidden="true">
         <span class="shape shape-bar"></span>
@@ -37,8 +78,8 @@
     <section class="chat" id="chat-panel">
       <header class="chat-header">
         <div>
-          <strong>MONKEYS</strong>
-          <span class="chat-sub">Fitness Community</span>
+          <strong id="chat-name">FORKZA</strong>
+          <span class="chat-sub" id="chat-sub"></span>
         </div>
         <div class="chat-status">
           <span class="dot" aria-hidden="true"></span>
@@ -48,14 +89,14 @@
       </header>
       <div class="chat-log" id="chat-log"></div>
       <div class="chat-input-row">
-        <input id="chat-input" type="text" maxlength="500" autocomplete="off" placeholder="Escribe un mensaje" />
+        <input id="chat-input" type="text" maxlength="2000" autocomplete="off" placeholder="Escribe un mensaje" />
         <button id="chat-send" type="button">Enviar</button>
       </div>
     </section>
   </main>
 
   <section id="view-dashboard" class="dashboard hidden">
-    <h1>MONKEYS · PANEL DE GESTIÓN</h1>
+    <h1 id="dash-title">PANEL DE GESTIÓN</h1>
     <div class="cards" id="dash-cards"></div>
     <div class="filters" id="dash-filters"></div>
     <section class="auto-box">
@@ -76,7 +117,7 @@
   </section>
 
   <section id="view-auto" class="dashboard hidden">
-    <h1>MONKEYS · AUTOMATIZACIONES</h1>
+    <h1 id="auto-title">AUTOMATIZACIONES</h1>
     <div class="agent-cards" id="auto-cards"></div>
     <div class="auto-actions-bar">
       <button type="button" id="btn-run-cycle">Ejecutar ciclo mensual (demo)</button>
@@ -109,7 +150,10 @@
     <p id="msg-body"></p>
   </aside>
 
-  <footer class="foot">Desarrollado por Perrot Tech</footer>
+  <footer class="foot">
+    <img class="sello" src="./brand/sello_impulsado_por_oscuro.svg" alt="Impulsado por Forkza AI" height="28" />
+    <p class="tenant-switch" id="tenant-switch"></p>
+  </footer>
   <script type="module" src="./app.js"></script>
 </body>
 </html>

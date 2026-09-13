@@ -180,6 +180,7 @@ function tareaSilencioso(socio, fecha) {
 function baseAccion({ socio, fecha, tipo, prioridad, motivo, texto }) {
   return {
     id: null,
+    tenantId: socio.tenantId || null,
     agente: 'retencion',
     tipo,
     socioId: socio.id,

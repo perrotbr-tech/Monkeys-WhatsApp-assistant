@@ -20,24 +20,35 @@
 
 import { clonar } from './store.js';
 import { clonarDemo } from '../data/demo.js';
-import { FECHA_DEMO, dayKey, parseFecha } from './dates.js';
+import { fechaHoy, dayKey, parseFecha } from './dates.js';
 import { crearAgenteRetencion, clasificarSocios } from './agents/retencion.js';
+import { crearAgenteCobranza } from './agents/cobranza.js';
+import { crearAgenteReactivacion } from './agents/reactivacion.js';
+import { crearAgenteRecordatorio } from './agents/recordatorio.js';
+import { crearAgenteReferidos } from './agents/referidos.js';
 import { textoValido } from '../data/templates.js';
+import { TENANT_DEFAULT } from '../data/tenants.js';
 
-const AGENTES = [crearAgenteRetencion()];
+const AGENTES = [
+  crearAgenteRetencion(),
+  crearAgenteCobranza(),
+  crearAgenteReactivacion(),
+  crearAgenteRecordatorio(),
+  crearAgenteReferidos(),
+];
 
-export function crearAutomation(datosIniciales) {
-  let state = extraer(datosIniciales || clonarDemo());
+export function crearAutomation(datosIniciales, tenantId = TENANT_DEFAULT) {
+  let state = extraer(datosIniciales || clonarDemo(tenantId), tenantId);
 
   function contexto() {
-    const demo = clonarDemo();
     return {
+      tenantId: state.tenantId,
       socios: state.socios,
       asistencias: state.asistencias,
-      clases: demo.classes,
+      clases: state.classes,
       campanias: state.automation.campanias,
       referidos: state.referidos || [],
-      planes: demo.plans,
+      planes: state.plans,
     };
   }
 
@@ -45,10 +56,10 @@ export function crearAutomation(datosIniciales) {
     if (fechaRef && typeof fechaRef === 'object' && !(fechaRef instanceof Date) && fechaRef.fechaRef) {
       return parseFecha(fechaRef.fechaRef);
     }
-    return parseFecha(fechaRef || FECHA_DEMO);
+    return parseFecha(fechaRef || fechaHoy());
   }
 
-  function ejecutarCiclo(fechaRef = FECHA_DEMO, agentesFiltro = null) {
+  function ejecutarCiclo(fechaRef = fechaHoy(), agentesFiltro = null) {
     const fecha = resolverFecha(fechaRef);
     const dia = dayKey(fecha);
     const ctx = contexto();
@@ -66,8 +77,11 @@ export function crearAutomation(datosIniciales) {
         if (acc.texto && !textoValido(acc.texto, { allowDollar: acc.agente === 'cobranza' })) {
           continue;
         }
+        const dup = acciones.some((x) => x.agente === acc.agente && x.socioId === acc.socioId && x.tipo === 'mensaje');
+        if (acc.tipo === 'mensaje' && dup) continue;
+        acc.tenantId = state.tenantId;
         state.automation.nextActionSeq += 1;
-        acc.id = `act-${state.automation.nextActionSeq}`;
+        acc.id = `act-${state.tenantId}-${state.automation.nextActionSeq}`;
         acc.estado = acc.tipo === 'mensaje' ? 'enviado' : 'pendiente';
         acciones.push(acc);
       }
@@ -96,7 +110,7 @@ export function crearAutomation(datosIniciales) {
     return clonar(campania);
   }
 
-  function summary(fechaRef = FECHA_DEMO) {
+  function summary(fechaRef = fechaHoy()) {
     const porAgente = {};
     const porTipo = { mensaje: 0, tarea_equipo: 0 };
     const porEstado = { pendiente: 0, enviado: 0, hecho: 0 };
@@ -105,11 +119,19 @@ export function crearAutomation(datosIniciales) {
       porTipo[a.tipo] = (porTipo[a.tipo] || 0) + 1;
       porEstado[a.estado] = (porEstado[a.estado] || 0) + 1;
     }
+    const ultimo = [...(state.automation.campanias || [])].sort((a, b) => (a.fecha < b.fecha ? 1 : -1))[0];
+    const delCiclo = (ultimo && ultimo.acciones) || [];
     const indicadores = {};
     const ctx = contexto();
     const fecha = resolverFecha(fechaRef);
     for (const ag of AGENTES) {
-      indicadores[ag.id] = ag.indicadores ? ag.indicadores(ctx, fecha) : {};
+      const deAg = delCiclo.filter((x) => x.agente === ag.id);
+      const avisoAcc = deAg.find((x) => x.texto) || deAg.find((x) => x.motivo);
+      indicadores[ag.id] = {
+        ...(ag.indicadores ? ag.indicadores(ctx, fecha) : {}),
+        accionesUltimoCiclo: deAg.length,
+        aviso: avisoAcc ? (avisoAcc.texto || avisoAcc.motivo || '') : '',
+      };
     }
     return {
       porAgente,
@@ -155,11 +177,11 @@ export function crearAutomation(datosIniciales) {
     return state.socios.find((s) => s.id === id) || null;
   }
 
-  function clasificar(fechaRef = FECHA_DEMO) {
+  function clasificar(fechaRef = fechaHoy()) {
     return clasificarSocios(state.socios, state.asistencias, resolverFecha(fechaRef));
   }
 
-  function resumen(fechaRef = FECHA_DEMO) {
+  function resumen(fechaRef = fechaHoy()) {
     const s = summary(fechaRef);
     return {
       ...s,
@@ -188,16 +210,19 @@ export function crearAutomation(datosIniciales) {
     socioPorId,
     exportar() {
       return {
+        tenantId: state.tenantId,
         socios: clonar(state.socios),
         asistencias: clonar(state.asistencias),
+        classes: clonar(state.classes),
+        plans: clonar(state.plans),
         automation: clonar(state.automation),
       };
     },
     hidratar(datos) {
-      state = extraer(datos);
+      state = extraer(datos, state.tenantId);
     },
     reset() {
-      state = extraer(clonarDemo());
+      state = extraer(clonarDemo(state.tenantId), state.tenantId);
     },
     agentes() {
       return AGENTES.map((a) => a.id);
@@ -205,14 +230,18 @@ export function crearAutomation(datosIniciales) {
   };
 }
 
-function extraer(datos) {
-  const seed = clonarDemo();
+function extraer(datos, tenantId = TENANT_DEFAULT) {
+  const src = (datos && datos.byTenant && datos.byTenant[tenantId]) ? datos.byTenant[tenantId] : datos;
+  const seed = clonarDemo(tenantId);
   return {
-    socios: clonar(datos.socios || seed.socios),
-    asistencias: clonar(datos.asistencias || seed.asistencias),
-    referidos: clonar(datos.referidos || []),
-    automation: clonar(datos.automation || seed.automation),
+    tenantId,
+    socios: clonar(src.socios || seed.socios),
+    asistencias: clonar(src.asistencias || seed.asistencias),
+    classes: clonar(src.classes || seed.classes),
+    plans: clonar(src.plans || seed.plans),
+    referidos: clonar(src.referidos || []),
+    automation: clonar(src.automation || seed.automation),
   };
 }
 
-export { AGENTES, FECHA_DEMO };
+export { AGENTES, fechaHoy };

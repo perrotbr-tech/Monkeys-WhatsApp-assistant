@@ -1,12 +1,12 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { crearDatosRetencion } from '../data/socios.js';
-import { crearAutomation, FECHA_DEMO } from '../engine/automation.js';
+import { crearAutomation, fechaHoy } from '../engine/automation.js';
 import { clonarDemo } from '../data/demo.js';
 import { textoValido } from '../data/templates.js';
 
-function ciclo(fecha = FECHA_DEMO) {
-  const auto = crearAutomation(crearDatosRetencion());
+function ciclo(fecha = fechaHoy()) {
+  const auto = crearAutomation(crearDatosRetencion(fecha));
   auto.ejecutarCiclo(fecha);
   return auto;
 }
@@ -56,7 +56,7 @@ test('silencioso genera tarea_equipo y no mensaje', () => {
   const silenciosos = auto.clasificarSocios().filter((s) => s.segmento === 'silencioso');
   const acciones = auto.listarAcciones({ agente: 'retencion' });
   for (const s of silenciosos) {
-    const deSocio = acciones.filter((a) => a.socioId === s.socioId && a.fechaISO.slice(0, 10) === FECHA_DEMO);
+    const deSocio = acciones.filter((a) => a.socioId === s.socioId && a.fechaISO.slice(0, 10) === fechaHoy());
     assert.equal(deSocio.length, 1);
     assert.equal(deSocio[0].tipo, 'tarea_equipo');
     assert.equal(deSocio[0].prioridad, 'alta');
@@ -77,28 +77,30 @@ test('textos de retencion no contienen llaves ni la palabra promo', () => {
 });
 
 test('dos ejecuciones el mismo dia no duplican campana', () => {
-  const auto = crearAutomation(crearDatosRetencion());
-  const r1 = auto.ejecutarCiclo(FECHA_DEMO);
-  const r2 = auto.ejecutarCiclo(FECHA_DEMO);
+  const fecha = fechaHoy();
+  const auto = crearAutomation(crearDatosRetencion(fecha));
+  const r1 = auto.ejecutarCiclo(fecha);
+  const r2 = auto.ejecutarCiclo(fecha);
   assert.equal(r1.replaced, false);
   assert.equal(r2.replaced, true);
-  const delDia = auto.listarAcciones().filter((a) => a.fechaISO.slice(0, 10) === FECHA_DEMO);
+  const delDia = auto.listarAcciones().filter((a) => a.fechaISO.slice(0, 10) === fecha);
   const deRetencion = delDia.filter((a) => a.agente === 'retencion');
   const ids = new Set(deRetencion.map((a) => a.socioId));
   assert.equal(deRetencion.length, ids.size);
 });
 
 test('reset restaura socios, asistencias y campana inicial', () => {
-  const auto = crearAutomation(crearDatosRetencion());
-  auto.ejecutarCiclo(FECHA_DEMO);
+  const fecha = fechaHoy();
+  const auto = crearAutomation(crearDatosRetencion(fecha));
+  auto.ejecutarCiclo(fecha);
   auto.setEstado(auto.listarAcciones()[0].id, 'hecho');
   auto.reset();
-  const seed = crearDatosRetencion();
+  const seed = crearDatosRetencion(fecha);
   const st = auto.exportar();
   assert.equal(st.socios.length, seed.socios.length);
   assert.equal(st.asistencias.length, seed.asistencias.length);
   assert.equal(st.automation.campanias.length, seed.automation.campanias.length);
-  assert.equal(st.automation.campanias[0].id, 'camp-2026-09-01');
+  assert.match(st.automation.campanias[0].id, /^camp-monkeys-\d{4}-\d{2}-\d{2}$/);
   const hechos = st.automation.acciones.filter((a) => a.estado === 'hecho');
   assert.equal(hechos.length, 0);
 });
@@ -120,7 +122,7 @@ test('recuperados este mes no es cero en el estado inicial', () => {
 test('constante genera mensaje y regular no genera accion', () => {
   const auto = ciclo();
   const c = auto.clasificarSocios();
-  const acciones = auto.listarAcciones({ agente: 'retencion' }).filter((a) => a.fechaISO.slice(0, 10) === FECHA_DEMO);
+  const acciones = auto.listarAcciones({ agente: 'retencion' }).filter((a) => a.fechaISO.slice(0, 10) === fechaHoy());
   for (const s of c.filter((x) => x.segmento === 'constante')) {
     const a = acciones.find((x) => x.socioId === s.socioId);
     assert.equal(a.tipo, 'mensaje');
