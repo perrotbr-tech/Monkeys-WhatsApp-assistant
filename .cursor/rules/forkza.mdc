@@ -5,6 +5,14 @@ alwaysApply: true
 # Contexto
 FORKZA AI: plataforma multi-gimnasio (agenda, entrenamientos, socios, pagos, asistencia) con asistente conversacional (Agente IA + Bots), automatizaciones mensuales y panel. Primer tenant: monkeys. Se vende por suscripción en Chile y LATAM.
 
+# Regla de contexto antes de orientar o ejecutar
+- Antes de proponer, estimar o ejecutar, leer `docs/contexto/00_INDICE_CONTEXTO_VIVO.md` y los bloques pertinentes.
+- Verificar rama, commit, PR, documentación, código y plataforma; la conversación no es fuente única de verdad.
+- Ejecutar comprobaciones pertinentes y distinguir `implementado`, `diseñado` y `objetivo`.
+- Si la realidad cambió, actualizar primero `docs/contexto/` y su registro.
+- Cada archivo de contexto puede contener como máximo 7.000 caracteres; al superar el límite, crear el siguiente bloque numerado.
+- Si una fuente necesaria no está accesible, declarar la limitación antes de orientar y no inventar su contenido.
+
 # Arquitectura (obligatoria)
 - Node 20 + Express + JavaScript plano con módulos ES. Sin TypeScript, sin React, sin bundler, sin CDN externos. Cero pasos de build.
 - /engine: reglas de negocio puras e isomórficas. Prohibido document, window, fetch, fs, localStorage.
