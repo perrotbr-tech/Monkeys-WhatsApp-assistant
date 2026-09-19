@@ -24,3 +24,10 @@ AAAA-MM-DD — título
 
 No eliminar entradas anteriores. Si una conclusión queda obsoleta, agregar una nueva entrada que la reemplace y actualizar el bloque temático correspondiente.
 
+## 2026-09-19 — Consolidación del maestro v2
+
+- Rama y PR: `docs/maestro-forkza-v2`, PR #8, basada en PR #7.
+- Fuentes: seis documentos maestros de PR #6 y contexto auditado de PR #7.
+- Cambios: cifras actualizadas a 67/68; autenticación confirmada en verde; E0 exige 68/68; Forja Training etiquetado como diseño no implementado.
+- Decisión: PR #6 se cerró sin fusión por quedar sustituido. La cadena vigente es PR #5 → PR #7 → PR #8.
+- Impacto: Cursor debe leer primero `docs/contexto/`, después `docs/forkza/`, y ejecutar únicamente la etapa expresamente autorizada.
