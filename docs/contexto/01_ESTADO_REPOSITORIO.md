@@ -15,7 +15,9 @@ Fecha de corte: 2026-09-19.
 
 - PR #4, abierto: `cursor/multi-gimnasio-soma-dd14` hacia `main`. Introduce multi-gimnasio, SOMA, chat, reservas, cupos y automatización.
 - PR #5, abierto: `cursor/socios-pagos-7236` hacia la rama de PR #4. Añade socios, membresías y pagos. Es la base funcional acumulada más avanzada.
-- PR #6, abierto: `docs/forkza-forja-master-v1` hacia `main`. Contiene seis documentos de arquitectura y comandos maestros, pero no incluye el código de PR #4/#5.
+- PR #6, cerrado sin fusión: versión documental inicial basada en `main`; fue sustituido por PR #8.
+- PR #7, abierto: `docs/contexto-vivo-forkza` hacia PR #5. Incorpora este contexto y la regla obligatoria de revisión previa.
+- PR #8, abierto: `docs/maestro-forkza-v2` hacia PR #7. Contiene los seis documentos maestros corregidos sobre la base funcional auditada.
 - PR #2 y #3: fusionados.
 - PR #1: cerrado sin fusión.
 
@@ -36,7 +38,7 @@ Las pruebas de autenticación sí pasan. Por tanto, las referencias documentales
 
 ## Documentos maestros revisados
 
-PR #6 contiene:
+PR #8 contiene:
 
 - `00_INSTRUCCIONES_CURSOR_FORKZA_FORJA.md`
 - `01_ARQUITECTURA_COMPARTIDA_FORKZA_FORJA.md`
@@ -45,9 +47,8 @@ PR #6 contiene:
 - `04_PLAN_EJECUCION_POR_ETAPAS.md`
 - `05_PROMPT_CURSOR_ETAPA_0.md`
 
-Los documentos tienen una dirección funcional útil, pero su línea base de pruebas debe actualizarse a 67/68 y eliminar la supuesta falla vigente de autenticación. También deben aplicarse sobre PR #5 o una rama de integración descendiente, no directamente sobre `main`, para no perder el código acumulado.
+Los documentos ya registran la línea base de 67/68, confirman autenticación en verde y fijan 68/68 como puerta de E0. PR #8 desciende de PR #7, que a su vez desciende de PR #5, por lo que conserva código, contexto y maestro en una sola cadena revisable.
 
 ## Restricción operativa actual
 
-No fusionar PR #4, #5 o #6 automáticamente. Antes de una integración se debe definir una única rama de consolidación, actualizar los documentos contra la base real y superar las pruebas deterministas.
-
+No fusionar PR #4, #5, #7 o #8 automáticamente. La ejecución de E0 debe partir de la cadena consolidada y superar las pruebas deterministas antes de cualquier migración funcional.
