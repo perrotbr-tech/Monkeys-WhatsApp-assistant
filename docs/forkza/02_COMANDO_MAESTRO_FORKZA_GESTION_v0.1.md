@@ -1,6 +1,6 @@
 # Forkza Gestión — Comando maestro funcional
 
-**Versión:** 0.2  
+**Versión:** 0.1 · revisión 2  
 **Fecha:** 19 de septiembre de 2026  
 **Estado:** alcance inicial basado en el repositorio verificado.
 
