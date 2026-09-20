@@ -62,7 +62,7 @@ Cursor debe volver a verificar commits y pruebas al comenzar, porque el reposito
 
 ## 5. Política de ramas
 
-- Etapa 0 parte desde `cursor/socios-pagos-7236` hacia una rama nueva de integración.
+- Etapa 0 parte desde `docs/maestro-forkza-v2`, rama consolidada que ya contiene PR #5, contexto vivo y maestro actualizado.
 - Nombre sugerido: `integration/forkza-core-baseline`.
 - `cursor/multi-gimnasio-soma-dd14` no se fusiona por separado porque ya es ancestro.
 - `main` se mantiene intacta hasta revisión y aprobación humana.
