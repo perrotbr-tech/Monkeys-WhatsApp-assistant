@@ -38,3 +38,13 @@ No eliminar entradas anteriores. Si una conclusión queda obsoleta, agregar una 
 - Hallazgo: crear E0 directamente desde PR #5 excluiría el contexto vivo y el maestro actualizado.
 - Corrección: E0 debe partir del HEAD de `docs/maestro-forkza-v2` y crear desde allí `integration/forkza-core-baseline`.
 - Alcance: solo documentación; ninguna funcionalidad fue modificada.
+
+## 2026-09-20 — E0 cerrada: línea base 68/68
+
+- Rama y commit origen: `docs/maestro-forkza-v2` @ `062b0f0`.
+- Rama de integración: `integration/forkza-core-baseline`.
+- Ancestros verificados: PR #4 (`f721818`) ⊂ PR #5 (`b03fd73`) ⊂ `docs/maestro-forkza-v2`.
+- Archivo modificado: `tests/tenant-isolation.test.js` (inyección de `fechaRef`).
+- Pruebas: `npm test` → 68/68; `tests/auth.test.js` → 6/6.
+- Hechos: la falla de “crosstraining mañana” era dependencia del reloj, no defecto del motor.
+- Decisión: E0 lista para revisión humana; no ejecutar E1 sin aprobación.

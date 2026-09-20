@@ -4,7 +4,7 @@
 
 ### Pruebas no deterministas
 
-El caso “Crosstraining mañana” depende del día real. Debe inyectarse una fecha fija o expresar la expectativa según la grilla. También quedan usos directos de reloj en salida de WhatsApp, creación de acciones y algunos códigos/fechas.
+El caso “Crosstraining mañana” quedó determinista en E0 mediante `fechaRef` inyectado en el test. Persisten usos directos de reloj en salida de WhatsApp, creación de acciones y algunos códigos/fechas; E1 debe introducir `Clock` inyectable de forma sistemática.
 
 ### Posible cruce de tenant en pagos demo
 

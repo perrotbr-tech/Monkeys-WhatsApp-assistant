@@ -1,15 +1,16 @@
 # Estado verificado del repositorio
 
-Fecha de corte: 2026-09-19.
+Fecha de corte: 2026-09-20.
 
 ## Repositorio y base
 
 - Repositorio: `perrotbr-tech/Monkeys-WhatsApp-assistant`.
 - `main`: `73dec396f0935cbc8eeb706e200fdb9fe8562875`.
-- Rama funcional más avanzada: `cursor/socios-pagos-7236`.
-- Commit auditado: `b03fd73db94589431209cf9a68f95e08f58a631d`.
-- La rama funcional está 16 commits por delante de `main` y contiene el trabajo de PR #4.
-- Diferencia contra `main`: 62 archivos, 6.337 inserciones y 778 eliminaciones.
+- Rama funcional más avanzada: `cursor/socios-pagos-7236` @ `b03fd73`.
+- Rama documental consolidada: `docs/maestro-forkza-v2` @ `062b0f0`.
+- Rama de integración E0: `integration/forkza-core-baseline` (creada desde el HEAD de `docs/maestro-forkza-v2`).
+- PR #4 (`cursor/multi-gimnasio-soma-dd14` @ `f721818`) es ancestro de PR #5; no fusionar por separado.
+- Diferencia de PR #5 contra `main`: 62 archivos, 6.337 inserciones y 778 eliminaciones.
 
 ## Pull requests relevantes
 
@@ -23,18 +24,16 @@ Fecha de corte: 2026-09-19.
 
 ## Resultado reproducido
 
-Comandos ejecutados sobre el commit auditado:
+E0 sobre `integration/forkza-core-baseline` (Node v22.14.0, npm 10.9.7):
 
 ```bash
 npm ci
 npm test
 ```
 
-Resultado real: 68 pruebas, 67 aprobadas y 1 fallida.
+Resultado: 68 pruebas, 68 aprobadas, 0 fallidas. Autenticación en verde (6/6 en `tests/auth.test.js`).
 
-Falla única: `tests/tenant-isolation.test.js`, caso «crosstraining mañana no repregunta día ni disciplina». La fecha real de ejecución fue sábado 2026-09-19; “mañana” cae domingo y los datos demo no ofrecen clases ese día. El motor responde correctamente que no hay Crosstraining, mientras el test espera una lista. El caso depende del reloj del sistema y no fija una fecha.
-
-Las pruebas de autenticación sí pasan. Por tanto, las referencias documentales a 61/63, 63/63 o dos fallas ya no representan el estado actual.
+Causa raíz corregida: el caso «crosstraining mañana…» no inyectaba `fechaRef`. Con el reloj real (sábado), “mañana” cae domingo y la grilla demo no tiene Crosstraining. Corrección mínima: fixture `fechaRef = '2026-09-14'` (mismo patrón que `dates.test.js` / `whatsapp-out.test.js`). Expectativas del test intactas.
 
 ## Documentos maestros revisados
 
@@ -51,4 +50,4 @@ Los documentos ya registran la línea base de 67/68, confirman autenticación en
 
 ## Restricción operativa actual
 
-No fusionar PR #4, #5, #7 o #8 automáticamente. La ejecución de E0 debe partir de la cadena consolidada y superar las pruebas deterministas antes de cualquier migración funcional.
+No fusionar PR #4, #5, #7 o #8 automáticamente. E0 cerró con 68/68 en `integration/forkza-core-baseline`. No avanzar a E1 sin aprobación humana.
