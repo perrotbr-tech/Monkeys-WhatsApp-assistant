@@ -134,7 +134,10 @@ test('chat soma responde horarios y planes', () => {
 });
 
 test('crosstraining mañana no repregunta día ni disciplina', () => {
-  const engine = crearEngine(clonarDemo('soma'), 'soma');
+  // Fixture fijo: lunes 2026-09-14 ⇒ «mañana» es martes con Crosstraining en la grilla demo.
+  // Sin fechaRef el caso depende del reloj real (p. ej. sábado ⇒ domingo sin clases).
+  const fechaRef = '2026-09-14';
+  const engine = crearEngine(clonarDemo('soma', fechaRef), 'soma', { fechaRef });
   const { conversacion } = engine.iniciar();
   const r = engine.procesar(conversacion.id, 'crosstraining mañana');
   assert.equal(/Para qué día|Qué disciplina/i.test(r.mensajes[0].texto), false);
