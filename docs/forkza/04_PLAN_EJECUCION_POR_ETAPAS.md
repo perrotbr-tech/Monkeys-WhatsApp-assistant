@@ -23,12 +23,12 @@
 
 ### Objetivo
 
-Crear una rama de integración desde `cursor/socios-pagos-7236`, confirmar que incluye PR #4 y corregir exclusivamente la única prueba fallida reproducida.
+Crear una rama de integración desde `docs/maestro-forkza-v2`, confirmar que su historia contiene PR #5 y PR #4, y corregir exclusivamente la única prueba fallida reproducida.
 
 ### Alcance
 
 - verificar commits y ancestros;
-- crear `integration/forkza-core-baseline`;
+- crear `integration/forkza-core-baseline` desde el HEAD verificado de `docs/maestro-forkza-v2`;
 - reproducir 68 pruebas;
 - corregir dependencia del día real mediante control de fecha o fixture;
 - confirmar que `tests/auth.test.js` permanece en verde;
