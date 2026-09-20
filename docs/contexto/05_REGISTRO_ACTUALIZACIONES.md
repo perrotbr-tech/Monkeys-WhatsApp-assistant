@@ -31,3 +31,10 @@ No eliminar entradas anteriores. Si una conclusión queda obsoleta, agregar una 
 - Cambios: cifras actualizadas a 67/68; autenticación confirmada en verde; E0 exige 68/68; Forja Training etiquetado como diseño no implementado.
 - Decisión: PR #6 se cerró sin fusión por quedar sustituido. La cadena vigente es PR #5 → PR #7 → PR #8.
 - Impacto: Cursor debe leer primero `docs/contexto/`, después `docs/forkza/`, y ejecutar únicamente la etapa expresamente autorizada.
+
+## 2026-09-20 — Corrección de base para E0
+
+- Fuente: revisión cruzada del prompt E0 con la cadena PR #5 → PR #7 → PR #8.
+- Hallazgo: crear E0 directamente desde PR #5 excluiría el contexto vivo y el maestro actualizado.
+- Corrección: E0 debe partir del HEAD de `docs/maestro-forkza-v2` y crear desde allí `integration/forkza-core-baseline`.
+- Alcance: solo documentación; ninguna funcionalidad fue modificada.
