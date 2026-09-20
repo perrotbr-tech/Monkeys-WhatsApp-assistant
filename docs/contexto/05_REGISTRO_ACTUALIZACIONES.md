@@ -48,3 +48,10 @@ No eliminar entradas anteriores. Si una conclusión queda obsoleta, agregar una 
 - Pruebas: `npm test` → 68/68; `tests/auth.test.js` → 6/6.
 - Hechos: la falla de “crosstraining mañana” era dependencia del reloj, no defecto del motor.
 - Decisión: E0 lista para revisión humana; no ejecutar E1 sin aprobación.
+
+## 2026-09-20 — Limpieza documental posterior a E0
+
+- Rama: `integration/forkza-core-baseline` (PR #9).
+- Archivos: `01_ESTADO_REPOSITORIO.md`, `04_RIESGOS_BRECHAS_Y_DECISIONES.md`, `05_REGISTRO_ACTUALIZACIONES.md`.
+- Hechos: se actualizaron referencias de PR (incluye #9 abierto con cierre E0 y 68/68); PR #6 marcado como cerrado sin fusión y sustituido por #8; decisión pendiente de consolidación actualizada a PR #4, #5, #7, #8 y #9.
+- Alcance: solo documentación; ningún cambio funcional.

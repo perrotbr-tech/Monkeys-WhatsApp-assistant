@@ -27,7 +27,7 @@ El JSON local y `localStorage` sirven para demo, no para concurrencia, auditorí
 - Mercado Pago tiene contrato/adaptador, pero falta integración productiva segura.
 - La escritura JSON es síncrona y de proceso único.
 - No hay observabilidad, auditoría inmutable, colas ni política de respaldo.
-- Los documentos maestros de PR #6 usan cifras de pruebas obsoletas.
+- PR #6 quedó cerrado sin fusión y sustituido por PR #8; sus cifras de pruebas obsoletas ya no son una brecha vigente.
 
 ## Decisiones confirmadas
 
@@ -49,7 +49,7 @@ El JSON local y `localStorage` sirven para demo, no para concurrencia, auditorí
 - Política de consentimiento, retención y eliminación de datos sensibles.
 - Estrategia real de WhatsApp, pagos y almacenamiento de archivos.
 - Alcance exacto del primer MVP de Forja Training.
-- Orden de consolidación o cierre de PR #4, #5 y #6.
+- Orden de consolidación o cierre de PR #4, #5, #7, #8 y #9.
 
 ## Regla de interpretación
 
