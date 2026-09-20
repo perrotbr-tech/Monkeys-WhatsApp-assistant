@@ -21,7 +21,7 @@ Fecha de corte: 2026-09-20.
 - PR #7, abierto: `docs/contexto-vivo-forkza` hacia PR #5. Incorpora este contexto y la regla obligatoria de revisión previa.
 - PR #8, abierto: `docs/maestro-forkza-v2` hacia PR #7. Contiene los seis documentos maestros corregidos sobre la base funcional auditada.
 - PR #9, abierto: `integration/forkza-core-baseline` hacia PR #8. Contiene el cierre de E0; suite verificada con 68/68 pruebas.
-- E1A (Clock): rama `cursor/e1a-clock-deterministico-fb93` hacia `integration/forkza-core-baseline`. No declara E1 completa.
+- E1A (Clock): PR #10, `cursor/e1a-clock-deterministico-fb93` hacia `integration/forkza-core-baseline`. No declara E1 completa.
 - PR #2 y #3: fusionados.
 - PR #1: cerrado sin fusión.
 

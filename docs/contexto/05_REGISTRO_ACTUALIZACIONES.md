@@ -59,7 +59,7 @@ No eliminar entradas anteriores. Si una conclusión queda obsoleta, agregar una 
 ## 2026-09-20 — E1A: Clock determinístico
 
 - Rama base: `integration/forkza-core-baseline` @ `ffc52fdd2dd64930090be9f0017220f5e4406608`.
-- Rama de trabajo: `cursor/e1a-clock-deterministico-fb93`.
+- Rama de trabajo: `cursor/e1a-clock-deterministico-fb93` (PR #10).
 - Archivos: `engine/clock.js` (nuevo); cableado en `dates`, `auth`, `conversation`, `automation`, `store`, `store-local`, `whatsapp-out`, `server/index.js`; pruebas en `tests/clock.test.js` y fixtures fijos en automation/dates/tenant-isolation/store-local.
 - Pruebas: `npm test` → 75/75 (68 previas + 7 nuevas); `git diff --check` limpio.
 - Hechos: producción usa reloj sistema por defecto; tests inyectan fijo/simulado; bloqueos auth sin `Date.now` real; zona tenant conservada.
