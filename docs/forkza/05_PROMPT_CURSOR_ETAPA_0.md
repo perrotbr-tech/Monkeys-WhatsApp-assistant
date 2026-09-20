@@ -6,14 +6,14 @@ Ejecuta exclusivamente la **Etapa E0 — Consolidación y línea base** definida
 
 ## Objetivo
 
-Preparar una rama de integración segura desde `cursor/socios-pagos-7236`, comprobar que contiene `cursor/multi-gimnasio-soma-dd14` y dejar la suite completa en verde antes de cualquier migración, renombre o implementación de Forja.
+Preparar una rama de integración segura desde `docs/maestro-forkza-v2`, comprobar que su historia contiene PR #5 y `cursor/multi-gimnasio-soma-dd14`, y dejar la suite completa en verde antes de cualquier migración, renombre o implementación de Forja.
 
 ## Instrucciones obligatorias
 
 1. Verifica el estado remoto y registra commits exactos de `main`, PR #4 y PR #5.
 2. Comprueba mediante Git que la rama de PR #4 es ancestro de PR #5.
 3. No fusiones PR #4 por separado.
-4. Crea una rama nueva desde PR #5 con nombre `integration/forkza-core-baseline` o informa antes si ya existe.
+4. Confirma que la rama actual es `docs/maestro-forkza-v2` y crea desde su HEAD una rama nueva llamada `integration/forkza-core-baseline`; informa antes si ya existe.
 5. Ejecuta la suite completa sin modificar código y registra el resultado inicial.
 6. Confirma que autenticación continúa en verde e investiga la única falla reproducida: `crosstraining mañana no repregunta día ni disciplina`.
 7. Corrige su causa temporal con el cambio mínimo y técnicamente correcto.
