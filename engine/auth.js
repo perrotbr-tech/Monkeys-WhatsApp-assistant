@@ -1,6 +1,7 @@
 import { createHmac, timingSafeEqual, randomBytes } from 'node:crypto';
 import bcrypt from 'bcryptjs';
 import { USUARIOS_DEMO, CLAVE_DEMO } from '../data/tenants.js';
+import { relojActivo } from './clock.js';
 
 export const LOCK_MS = 10 * 60 * 1000;
 export const MAX_FALLOS = 5;
@@ -12,7 +13,7 @@ export function claveLock(tenantId, email) {
   return `${tenantId}:${String(email || '').trim().toLowerCase()}`;
 }
 
-export function estadoBloqueo(tenantId, email, now = Date.now()) {
+export function estadoBloqueo(tenantId, email, now = relojActivo().now()) {
   const row = locks.get(claveLock(tenantId, email));
   if (!row) return { fallos: 0, lockedUntil: 0, bloqueado: false };
   if (row.lockedUntil && row.lockedUntil > now) return { ...row, bloqueado: true };
@@ -23,7 +24,7 @@ export function estadoBloqueo(tenantId, email, now = Date.now()) {
   return { ...row, bloqueado: false };
 }
 
-export function registrarFallo(tenantId, email, now = Date.now()) {
+export function registrarFallo(tenantId, email, now = relojActivo().now()) {
   const k = claveLock(tenantId, email);
   const prev = locks.get(k) || { fallos: 0, lockedUntil: 0 };
   const fallos = prev.fallos + 1;
@@ -103,7 +104,7 @@ export function parseCookies(header) {
   return out;
 }
 
-export function intentarLogin({ tenantId, email, password, usuarios, now = Date.now() }) {
+export function intentarLogin({ tenantId, email, password, usuarios, now = relojActivo().now() }) {
   const lock = estadoBloqueo(tenantId, email, now);
   if (lock.bloqueado) {
     return { ok: false, error: 'bloqueado', status: 429, lock };

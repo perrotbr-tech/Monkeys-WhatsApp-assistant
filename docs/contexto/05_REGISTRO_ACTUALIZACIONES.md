@@ -55,3 +55,12 @@ No eliminar entradas anteriores. Si una conclusión queda obsoleta, agregar una 
 - Archivos: `01_ESTADO_REPOSITORIO.md`, `04_RIESGOS_BRECHAS_Y_DECISIONES.md`, `05_REGISTRO_ACTUALIZACIONES.md`.
 - Hechos: se actualizaron referencias de PR (incluye #9 abierto con cierre E0 y 68/68); PR #6 marcado como cerrado sin fusión y sustituido por #8; decisión pendiente de consolidación actualizada a PR #4, #5, #7, #8 y #9.
 - Alcance: solo documentación; ningún cambio funcional.
+
+## 2026-09-20 — E1A: Clock determinístico
+
+- Rama base: `integration/forkza-core-baseline` @ `ffc52fdd2dd64930090be9f0017220f5e4406608`.
+- Rama de trabajo: `cursor/e1a-clock-deterministico-fb93`.
+- Archivos: `engine/clock.js` (nuevo); cableado en `dates`, `auth`, `conversation`, `automation`, `store`, `store-local`, `whatsapp-out`, `server/index.js`; pruebas en `tests/clock.test.js` y fixtures fijos en automation/dates/tenant-isolation/store-local.
+- Pruebas: `npm test` → 75/75 (68 previas + 7 nuevas); `git diff --check` limpio.
+- Hechos: producción usa reloj sistema por defecto; tests inyectan fijo/simulado; bloqueos auth sin `Date.now` real; zona tenant conservada.
+- Decisión: E1A lista para revisión; E1B (Store) no iniciada; sin merge.

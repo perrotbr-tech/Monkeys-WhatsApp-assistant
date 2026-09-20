@@ -5,8 +5,9 @@ import { CLAVE_DEMO } from '../data/tenants.js';
 
 test('StoreLocal con localStorage simulado no cruza datos entre tenants', async () => {
   const storage = crearStorageMemoria();
-  const soma = crearStoreLocal('soma', storage);
-  const monkeys = crearStoreLocal('monkeys', storage);
+  const fechaRef = '2026-09-14';
+  const soma = crearStoreLocal('soma', storage, { fechaRef });
+  const monkeys = crearStoreLocal('monkeys', storage, { fechaRef });
 
   const start = await soma.iniciarConversacion();
   const id = start.conversacion.id;

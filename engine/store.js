@@ -1,6 +1,7 @@
 import { clonarDemo, clonarMundo, clonar } from '../data/demo.js';
 import { buscarTenant, listarTenants, TENANT_DEFAULT } from '../data/tenants.js';
 import { anioDe, fechaHoy, dayKey, ymKey } from './dates.js';
+import { relojActivo } from './clock.js';
 import { planSomaPorId } from '../data/planes-soma.js';
 import { normalizarTelefono, nombreValido } from './identidad.js';
 import {
@@ -45,8 +46,8 @@ export function combinarPersistencia(eng, aut) {
   };
 }
 
-function anioCodigo(fechaRef) {
-  return anioDe(fechaRef || fechaHoy());
+function anioCodigo(fechaRef, clock = relojActivo()) {
+  return anioDe(fechaRef || fechaHoy(undefined, clock));
 }
 
 function toWorld(datosIniciales) {
@@ -79,7 +80,9 @@ function stampSlice(slice, tenantId) {
   return slice;
 }
 
-export function crearMemoria(datosIniciales) {
+export function crearMemoria(datosIniciales, opts = {}) {
+  const clock = opts.clock || relojActivo();
+  const hoy = (zona) => fechaHoy(zona, clock);
   let state = toWorld(datosIniciales);
 
   function ensure(tenantId) {
@@ -203,7 +206,7 @@ export function crearMemoria(datosIniciales) {
     const prefix = (tenant && tenant.codigoPrefix) || String(tenantId).toUpperCase();
     const seq = s.nextBookingSeq || 1;
     s.nextBookingSeq = seq + 1;
-    return `${prefix}-${anioCodigo()}-${String(seq).padStart(4, '0')}`;
+    return `${prefix}-${anioCodigo(undefined, clock)}-${String(seq).padStart(4, '0')}`;
   }
 
   function buscarSocioPorTelefono(tenantId, telefono) {
@@ -247,7 +250,7 @@ export function crearMemoria(datosIniciales) {
 
   function refrescarMembresias(tenantId, fechaRef) {
     const s = requireSlice(tenantId);
-    const fecha = fechaRef || fechaHoy();
+    const fecha = fechaRef || hoy();
     ensureArr(s, 'membresias');
     s.membresias = s.membresias.map((m) => refrescarMembresia(m, fecha));
     return s.membresias;
@@ -292,7 +295,7 @@ export function crearMemoria(datosIniciales) {
       medio: medio || 'transferencia',
       periodoInicio: membresia.inicio,
       periodoFin: membresia.fin,
-      fechaISO: new Date().toISOString(),
+      fechaISO: clock.iso(),
       linkUrl: null,
       linkReferencia: null,
       concepto: plan.nombre,
@@ -330,7 +333,7 @@ export function crearMemoria(datosIniciales) {
     return mem;
   }
 
-  function altaSocio(tenantId, datos, fechaRef = fechaHoy()) {
+  function altaSocio(tenantId, datos, fechaRef = hoy()) {
     const s = requireSlice(tenantId);
     const tel = normalizarTelefono(datos.telefono);
     if (!nombreValido(datos.nombre)) return { ok: false, error: 'nombre inválido' };
@@ -387,7 +390,7 @@ export function crearMemoria(datosIniciales) {
     return { ok: true, socio: clonar(socio) };
   }
 
-  function bajaSocio(tenantId, id, motivo, fechaRef = fechaHoy()) {
+  function bajaSocio(tenantId, id, motivo, fechaRef = hoy()) {
     const socio = getSocio(tenantId, id);
     if (!socio) return { ok: false, error: 'socio no encontrado' };
     socio.estado = 'baja';
@@ -410,7 +413,7 @@ export function crearMemoria(datosIniciales) {
     return { ok: true, socio: clonar(socio) };
   }
 
-  function importarSociosCsv(tenantId, csv, fechaRef = fechaHoy()) {
+  function importarSociosCsv(tenantId, csv, fechaRef = hoy()) {
     const s = requireSlice(tenantId);
     const tenant = getTenant(tenantId);
     const { rows } = parseCsv(csv);
@@ -438,7 +441,7 @@ export function crearMemoria(datosIniciales) {
     return { ok: errores.length === 0, creados, errores, total: rows.length };
   }
 
-  function marcarPagado(tenantId, pagoId, referencia, fechaRef = fechaHoy()) {
+  function marcarPagado(tenantId, pagoId, referencia, fechaRef = hoy()) {
     const s = requireSlice(tenantId);
     const pago = (s.pagos || []).find((p) => p.id === pagoId);
     if (!pago) return { ok: false, error: 'pago no encontrado' };
@@ -450,7 +453,7 @@ export function crearMemoria(datosIniciales) {
     pago.estado = 'pagada';
     pago.referencia = String(referencia || `TR-${pago.id}`).slice(0, 80);
     pago.medio = pago.medio === 'link' || pago.linkUrl ? (pago.medio || 'link') : 'transferencia';
-    pago.fechaPagoISO = new Date().toISOString();
+    pago.fechaPagoISO = clock.iso();
     const mem = aplicarPagoAMembresia(tenantId, pago, fechaRef);
     return { ok: true, pago: clonar(pago), membresia: clonar(mem) };
   }
@@ -509,7 +512,7 @@ export function crearMemoria(datosIniciales) {
     return null;
   }
 
-  function pagarDemo(referencia, fechaRef = fechaHoy()) {
+  function pagarDemo(referencia, fechaRef = hoy()) {
     const hit = buscarPagoEnTenants(referencia);
     if (!hit) return { ok: false, error: 'pago no encontrado' };
     return marcarPagado(hit.tenantId, hit.pago.id, referencia, fechaRef);
@@ -526,7 +529,7 @@ export function crearMemoria(datosIniciales) {
     return { ok: true, pago: clonar(pago), evento: ev };
   }
 
-  function conciliacionMes(tenantId, fechaRef = fechaHoy()) {
+  function conciliacionMes(tenantId, fechaRef = hoy()) {
     const ym = ymKey(fechaRef);
     const pagos = listarPagos(tenantId).filter((p) => String(p.fechaISO || '').slice(0, 7) === ym || String(p.periodoInicio || '').startsWith(ym));
     const sum = (estado) => pagos.filter((p) => p.estado === estado).reduce((n, p) => n + (p.monto || 0), 0);
@@ -547,7 +550,7 @@ export function crearMemoria(datosIniciales) {
     };
   }
 
-  function exportarPagosCsv(tenantId, fechaRef = fechaHoy()) {
+  function exportarPagosCsv(tenantId, fechaRef = hoy()) {
     const ym = ymKey(fechaRef);
     const conc = conciliacionMes(tenantId, fechaRef);
     const pagos = listarPagos(tenantId).filter((p) => String(p.fechaISO || '').slice(0, 7) === ym || String(p.periodoInicio || '').startsWith(ym));
@@ -558,7 +561,7 @@ export function crearMemoria(datosIniciales) {
     return { csv: `${lines.join('\n')}\n`, conciliacion: conc };
   }
 
-  function fichaSocio(tenantId, id, fechaRef = fechaHoy()) {
+  function fichaSocio(tenantId, id, fechaRef = hoy()) {
     const socio = getSocio(tenantId, id);
     if (!socio) return null;
     refrescarMembresias(tenantId, fechaRef);
@@ -585,7 +588,7 @@ export function crearMemoria(datosIniciales) {
     });
   }
 
-  function resumenMembresiaChat(tenantId, telefono, fechaRef = fechaHoy()) {
+  function resumenMembresiaChat(tenantId, telefono, fechaRef = hoy()) {
     const socio = buscarSocioPorTelefono(tenantId, telefono);
     if (!socio || socio.estado === 'baja') return { ok: false, error: 'No encontramos un plan asociado a ese teléfono.' };
     const ficha = fichaSocio(tenantId, socio.id, fechaRef);
@@ -610,7 +613,7 @@ export function crearMemoria(datosIniciales) {
     return (t && t.datosBancarios) || 'Transferencia (ficticia, demo): Banco Estado · 00000000 · Prototipo demostrativo.';
   }
 
-  function responderPagarChat(tenantId, telefono, fechaRef = fechaHoy()) {
+  function responderPagarChat(tenantId, telefono, fechaRef = hoy()) {
     const socio = buscarSocioPorTelefono(tenantId, telefono);
     if (!socio || socio.estado === 'baja') return { ok: false, error: 'No encontramos un plan asociado a ese teléfono.' };
     const s = requireSlice(tenantId);
@@ -640,7 +643,7 @@ export function crearMemoria(datosIniciales) {
     };
   }
 
-  function filtrarSocios(tenantId, filtro = {}, fechaRef = fechaHoy()) {
+  function filtrarSocios(tenantId, filtro = {}, fechaRef = hoy()) {
     refrescarMembresias(tenantId, fechaRef);
     const s = requireSlice(tenantId);
     const q = String(filtro.q || '').trim().toLowerCase();
@@ -828,7 +831,7 @@ export function crearMemoria(datosIniciales) {
       tenantId,
       canal: 'simulado',
       estado: accion.tipo === 'mensaje' ? 'enviado' : 'pendiente',
-      fechaISO: new Date().toISOString(),
+      fechaISO: clock.iso(),
       ...accion,
     };
     s.automation.acciones.push(row);

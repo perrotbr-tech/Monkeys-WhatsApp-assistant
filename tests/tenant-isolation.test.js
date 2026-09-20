@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { crearMemoria } from '../engine/store.js';
 import { crearEngine } from '../engine/conversation.js';
-import { crearAutomation, fechaHoy } from '../engine/automation.js';
+import { crearAutomation } from '../engine/automation.js';
 import { clonarDemo, clonarMundo } from '../data/demo.js';
 import { textoValido } from '../data/templates.js';
 import { varsMarca, tenantActivo, buscarTenant } from '../data/tenants.js';
@@ -77,9 +77,10 @@ test('reserva en soma genera código correlativo independiente SOMA-2026-0001', 
 });
 
 test('los 5 agentes producen acciones para soma sin placeholders sin resolver', () => {
-  const auto = crearAutomation(clonarDemo('soma'), 'soma');
-  auto.ejecutarCiclo(fechaHoy());
-  const acciones = auto.listarAcciones().filter((a) => a.fechaISO.slice(0, 10) === fechaHoy());
+  const fecha = '2026-09-14';
+  const auto = crearAutomation(clonarDemo('soma', fecha), 'soma');
+  auto.ejecutarCiclo(fecha);
+  const acciones = auto.listarAcciones().filter((a) => a.fechaISO.slice(0, 10) === fecha);
   const ids = new Set(acciones.map((a) => a.agente));
   for (const ag of ['retencion', 'cobranza', 'reactivacion', 'recordatorio', 'referidos']) {
     assert.equal(ids.has(ag), true, ag);

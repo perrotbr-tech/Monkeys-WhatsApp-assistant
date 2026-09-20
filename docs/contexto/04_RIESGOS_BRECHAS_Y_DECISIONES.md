@@ -2,9 +2,9 @@
 
 ## Prioridad alta
 
-### Pruebas no deterministas
+### Pruebas no deterministas (parcialmente cerrado en E1A)
 
-El caso “Crosstraining mañana” quedó determinista en E0 mediante `fechaRef` inyectado en el test. Persisten usos directos de reloj en salida de WhatsApp, creación de acciones y algunos códigos/fechas; E1 debe introducir `Clock` inyectable de forma sistemática.
+E1A introdujo `engine/clock.js` (`crearRelojSistema` / `crearRelojFijo` / `crearRelojSimulado`, `usarReloj` / `conReloj`) y cableó el reloj en `dates`, `auth`, `conversation`, `automation`, `store`, `store-local`, `whatsapp-out` y `server`. Producción sigue con reloj real por defecto. Persisten `new Date(...)` justificados: construcción de calendario en `parseFecha` y restas de fechas ISO en `store.js` (no leen el reloj de pared). Fuera de alcance E1A: timestamps de UI en `app.js`. Pendiente E1B: contrato Store y conformidad JSON/localStorage.
 
 ### Posible cruce de tenant en pagos demo
 
@@ -16,7 +16,7 @@ La ruta de webhook no demuestra verificación de firma, protección contra repet
 
 ### Persistencia
 
-El JSON local y `localStorage` sirven para demo, no para concurrencia, auditoría, recuperación ni aislamiento robusto de producción. La migración a almacenamiento transaccional requiere repositorios y migraciones.
+El JSON local y `localStorage` sirven para demo, no para concurrencia, auditoría, recuperación ni aislamiento robusto de producción. La migración a almacenamiento transaccional requiere repositorios y migraciones (E1B+).
 
 ## Prioridad media
 
@@ -40,6 +40,7 @@ El JSON local y `localStorage` sirven para demo, no para concurrencia, auditorí
 - El test de bienestar aplica a todas las modalidades.
 - La planificación y el registro admiten campos comunes y específicos por modalidad.
 - La implementación debe hacerse por etapas verificables, sin reemplazo total del prototipo.
+- E1 se ejecuta en subetapas: E1A Clock (esta) y E1B Store (siguiente, no iniciada).
 
 ## Decisiones aún abiertas
 
@@ -54,4 +55,3 @@ El JSON local y `localStorage` sirven para demo, no para concurrencia, auditorí
 ## Regla de interpretación
 
 “Implementado” exige evidencia en código y prueba reproducible. “Diseñado” indica especificación sin implementación. “Objetivo” indica dirección arquitectónica aún no materializada. Estas etiquetas no deben intercambiarse en instrucciones futuras.
-

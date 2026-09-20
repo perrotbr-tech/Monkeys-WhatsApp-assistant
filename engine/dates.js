@@ -1,8 +1,10 @@
 /** Utilidades de fecha. Zona por tenant (Chile: America/Santiago). Sin DOM. */
 
+import { relojActivo } from './clock.js';
+
 export const ZONA_DEFAULT = 'America/Santiago';
 
-export function fechaEnZona(date = new Date(), zona = ZONA_DEFAULT) {
+export function fechaEnZona(date = relojActivo().date(), zona = ZONA_DEFAULT) {
   const fmt = new Intl.DateTimeFormat('en-CA', {
     timeZone: zona || ZONA_DEFAULT,
     year: 'numeric',
@@ -12,8 +14,13 @@ export function fechaEnZona(date = new Date(), zona = ZONA_DEFAULT) {
   return fmt.format(date);
 }
 
-export function fechaHoy(zona = ZONA_DEFAULT) {
-  return fechaEnZona(new Date(), zona);
+/**
+ * Día calendario "hoy" según el Clock activo (o el inyectado) y la zona del tenant.
+ * @param {string} [zona]
+ * @param {{ now: Function, date: Function, iso: Function }} [clock]
+ */
+export function fechaHoy(zona = ZONA_DEFAULT, clock = relojActivo()) {
+  return fechaEnZona(clock.date(), zona);
 }
 
 export function fechaDesdeQuery(search) {

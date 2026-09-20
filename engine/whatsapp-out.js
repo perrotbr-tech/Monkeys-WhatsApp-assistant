@@ -1,5 +1,7 @@
 /** Salida única de mensajes del bot, representable en WhatsApp Cloud API. */
 
+import { relojActivo } from './clock.js';
+
 export const LIMITE_LINEAS = 6;
 export const LIMITE_CHARS = 400;
 export const LIMITE_LEGAL_CHARS = 1000;
@@ -84,7 +86,7 @@ export function formatearRespuesta({ texto, opciones = [], ia = false, legal = f
     tipoOpciones,
     ia: Boolean(ia),
     legal: Boolean(legal),
-    hora: hora || new Date().toISOString(),
+    hora: hora || relojActivo().iso(),
   };
   const v = validarMensaje(msg, { legal });
   if (!v.ok) {

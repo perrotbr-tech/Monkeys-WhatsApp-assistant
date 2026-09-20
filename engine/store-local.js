@@ -2,15 +2,18 @@ import { crearEngine } from './conversation.js';
 import { crearAutomation } from './automation.js';
 import { clonarDemo } from '../data/demo.js';
 import { fechaHoy } from './dates.js';
+import { relojActivo } from './clock.js';
 import { USUARIOS_DEMO, CLAVE_DEMO } from '../data/tenants.js';
 import { combinarPersistencia } from './store.js';
+import { LOCK_MS, MAX_FALLOS } from './auth.js';
 
 export function claveEstado(tenantId) {
   return `forkza_demo_state_${tenantId}`;
 }
 
 export function crearStoreLocal(tenantId, storage, opts = {}) {
-  const fechaRef = opts.fechaRef || fechaHoy();
+  const clock = opts.clock || relojActivo();
+  const fechaRef = opts.fechaRef || fechaHoy(undefined, clock);
   const KEY = claveEstado(tenantId);
   const LEGACY = tenantId === 'monkeys' ? 'monkeys_demo_state' : null;
   let datos = clonarDemo(tenantId, fechaRef);
@@ -26,8 +29,8 @@ export function crearStoreLocal(tenantId, storage, opts = {}) {
   } catch {
     datos = clonarDemo(tenantId, fechaRef);
   }
-  const engine = crearEngine(datos, tenantId, { fechaRef });
-  const auto = crearAutomation(datos, tenantId);
+  const engine = crearEngine(datos, tenantId, { fechaRef, clock });
+  const auto = crearAutomation(datos, tenantId, { clock });
 
   function persist() {
     const merged = combinarPersistencia(engine.exportar(), auto.exportar());
@@ -144,14 +147,15 @@ export function crearStoreLocal(tenantId, storage, opts = {}) {
       try { lock = JSON.parse(storage.getItem(lockKey) || '{}'); } catch { lock = {}; }
       const k = `${tenantId}:${String(email || '').trim().toLowerCase()}`;
       const row = lock[k] || { fallos: 0, lockedUntil: 0 };
-      if (row.lockedUntil && row.lockedUntil > Date.now()) return { ok: false, error: 'bloqueado', status: 429 };
+      const now = clock.now();
+      if (row.lockedUntil && row.lockedUntil > now) return { ok: false, error: 'bloqueado', status: 429 };
       const user = USUARIOS_DEMO.find((u) => u.tenantId === tenantId && u.email.toLowerCase() === String(email || '').trim().toLowerCase());
       if (!user || password !== CLAVE_DEMO) {
         row.fallos += 1;
-        if (row.fallos >= 5) row.lockedUntil = Date.now() + 10 * 60 * 1000;
+        if (row.fallos >= MAX_FALLOS) row.lockedUntil = now + LOCK_MS;
         lock[k] = row;
         storage.setItem(lockKey, JSON.stringify(lock));
-        return { ok: false, error: row.fallos >= 5 ? 'bloqueado' : 'credenciales', status: row.fallos >= 5 ? 429 : 401 };
+        return { ok: false, error: row.fallos >= MAX_FALLOS ? 'bloqueado' : 'credenciales', status: row.fallos >= MAX_FALLOS ? 429 : 401 };
       }
       delete lock[k];
       storage.setItem(lockKey, JSON.stringify(lock));

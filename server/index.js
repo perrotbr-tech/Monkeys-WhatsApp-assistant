@@ -8,6 +8,7 @@ import { crearEngine } from '../engine/conversation.js';
 import { crearAutomation } from '../engine/automation.js';
 import { crearMemoria, combinarPersistencia } from '../engine/store.js';
 import { fechaHoy, fechaDesdeQuery } from '../engine/dates.js';
+import { relojActivo } from '../engine/clock.js';
 import {
   COOKIE, parseCookies, firmarSesion, leerSesion, cookieSesion, cookieLogout,
   intentarLogin, usuariosConHash, hashClave, resetLocks,
@@ -52,16 +53,23 @@ function loadState() {
   return parsed;
 }
 
-export function crearApp({ mundo = null, persist = true, sessionSecret = SESSION_SECRET, pagosOpts = null } = {}) {
+export function crearApp({
+  mundo = null,
+  persist = true,
+  sessionSecret = SESSION_SECRET,
+  pagosOpts = null,
+  clock = null,
+} = {}) {
+  const reloj = clock || relojActivo();
   let state = mundo ? clonar(mundo) : loadState();
-  const memoria = crearMemoria(state);
+  const memoria = crearMemoria(state, { clock: reloj });
   const engines = {
-    monkeys: crearEngine({ memoria }, 'monkeys'),
-    soma: crearEngine({ memoria }, 'soma'),
+    monkeys: crearEngine({ memoria }, 'monkeys', { clock: reloj }),
+    soma: crearEngine({ memoria }, 'soma', { clock: reloj }),
   };
   const autos = {
-    monkeys: crearAutomation(memoria.sliceExport('monkeys'), 'monkeys'),
-    soma: crearAutomation(memoria.sliceExport('soma'), 'soma'),
+    monkeys: crearAutomation(memoria.sliceExport('monkeys'), 'monkeys', { clock: reloj }),
+    soma: crearAutomation(memoria.sliceExport('soma'), 'soma', { clock: reloj }),
   };
   const usuarios = usuariosConHash(HASH_DEMO);
   const secret = sessionSecret;
@@ -107,7 +115,7 @@ export function crearApp({ mundo = null, persist = true, sessionSecret = SESSION
 
   function fechaDeReq(req) {
     const q = (req.query && req.query.fecha) || (req.body && req.body.fecha);
-    return fechaDesdeQuery(`fecha=${q || ''}`) || fechaHoy(req.tenant && req.tenant.zonaHoraria);
+    return fechaDesdeQuery(`fecha=${q || ''}`) || fechaHoy(req.tenant && req.tenant.zonaHoraria, reloj);
   }
 
   function requireTenant(req, res, next) {
@@ -163,9 +171,10 @@ export function crearApp({ mundo = null, persist = true, sessionSecret = SESSION
       email,
       password,
       usuarios,
+      now: reloj.now(),
     });
     if (!r.ok) return res.status(r.status).json({ error: r.error });
-    const token = firmarSesion({ ...r.usuario, iat: Date.now() }, secret);
+    const token = firmarSesion({ ...r.usuario, iat: reloj.now() }, secret);
     res.setHeader('Set-Cookie', cookieSesion(token));
     res.json({ ok: true, usuario: r.usuario });
   });

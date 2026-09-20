@@ -12,6 +12,7 @@ import { i18n } from '../data/i18n.js';
 import { crearIntentService, INTENCIONES, normalizar } from './intent.js';
 import { crearMemoria, clonar, normalizarTelefono, nombreValido } from './store.js';
 import { fechaHoy, addDays, weekdayEs, dayNum } from './dates.js';
+import { relojActivo } from './clock.js';
 import {
   extraerRelDia, extraerDisciplina, disciplinasDe, filtrarClases, lineaHorario,
   paginar, agruparPlanes, etiquetaDia, diaSemanaDeRel,
@@ -59,12 +60,27 @@ const IA_LINEA = {
 };
 
 export function crearEngine(datosIniciales, tenantId = TENANT_DEFAULT, opts = {}) {
+  const clock = opts.clock || relojActivo();
   const memoria = datosIniciales && datosIniciales.memoria
     ? datosIniciales.memoria
-    : crearMemoria(datosIniciales || clonarDemo(tenantId, opts.fechaRef));
+    : crearMemoria(datosIniciales || clonarDemo(tenantId, opts.fechaRef), { clock });
   const tid = tenantId;
   const intent = crearIntentService();
-  let fechaRef = opts.fechaRef || fechaHoy((memoria.getTenant(tid) || {}).zonaHoraria);
+  let fechaRef = opts.fechaRef || fechaHoy((memoria.getTenant(tid) || {}).zonaHoraria, clock);
+
+  function ahora() {
+    return clock.iso();
+  }
+
+  function botMsg(texto, opciones = [], ia = false, extra = {}) {
+    return formatearRespuesta({
+      texto,
+      opciones,
+      ia,
+      legal: extra.legal,
+      hora: ahora(),
+    });
+  }
 
   function fecha() {
     return fechaRef;
@@ -1177,16 +1193,6 @@ function publicConv(conv) {
   });
 }
 
-function botMsg(texto, opciones = [], ia = false, extra = {}) {
-  return formatearRespuesta({
-    texto,
-    opciones,
-    ia,
-    legal: extra.legal,
-    hora: ahora(),
-  });
-}
-
 function sedesOps(lista) {
   return lista.map((s) => ({ etiqueta: `📍 ${s.nombre}`, valor: s.nombre }));
 }
@@ -1231,8 +1237,4 @@ function lineaPlan(p) {
   const bits = [p.nombre, p.precio];
   if (p.cuposMes) bits.push(`${p.cuposMes} cupos/mes`);
   return `• ${bits.join(' · ')}`;
-}
-
-function ahora() {
-  return new Date().toISOString();
 }

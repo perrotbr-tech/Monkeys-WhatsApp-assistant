@@ -21,6 +21,7 @@
 import { clonar } from './store.js';
 import { clonarDemo } from '../data/demo.js';
 import { fechaHoy, dayKey, parseFecha } from './dates.js';
+import { relojActivo } from './clock.js';
 import { crearAgenteRetencion, clasificarSocios } from './agents/retencion.js';
 import { crearAgenteCobranza } from './agents/cobranza.js';
 import { crearAgenteReactivacion } from './agents/reactivacion.js';
@@ -37,7 +38,9 @@ const AGENTES = [
   crearAgenteReferidos(),
 ];
 
-export function crearAutomation(datosIniciales, tenantId = TENANT_DEFAULT) {
+export function crearAutomation(datosIniciales, tenantId = TENANT_DEFAULT, opts = {}) {
+  const clock = opts.clock || relojActivo();
+  const hoy = () => fechaHoy(undefined, clock);
   let state = extraer(datosIniciales || clonarDemo(tenantId), tenantId);
 
   function contexto() {
@@ -58,10 +61,10 @@ export function crearAutomation(datosIniciales, tenantId = TENANT_DEFAULT) {
     if (fechaRef && typeof fechaRef === 'object' && !(fechaRef instanceof Date) && fechaRef.fechaRef) {
       return parseFecha(fechaRef.fechaRef);
     }
-    return parseFecha(fechaRef || fechaHoy());
+    return parseFecha(fechaRef || hoy());
   }
 
-  function ejecutarCiclo(fechaRef = fechaHoy(), agentesFiltro = null) {
+  function ejecutarCiclo(fechaRef = hoy(), agentesFiltro = null) {
     const fecha = resolverFecha(fechaRef);
     const dia = dayKey(fecha);
     const ctx = contexto();
@@ -112,7 +115,7 @@ export function crearAutomation(datosIniciales, tenantId = TENANT_DEFAULT) {
     return clonar(campania);
   }
 
-  function summary(fechaRef = fechaHoy()) {
+  function summary(fechaRef = hoy()) {
     const porAgente = {};
     const porTipo = { mensaje: 0, tarea_equipo: 0 };
     const porEstado = { pendiente: 0, enviado: 0, hecho: 0 };
@@ -179,11 +182,11 @@ export function crearAutomation(datosIniciales, tenantId = TENANT_DEFAULT) {
     return state.socios.find((s) => s.id === id) || null;
   }
 
-  function clasificar(fechaRef = fechaHoy()) {
+  function clasificar(fechaRef = hoy()) {
     return clasificarSocios(state.socios, state.asistencias, resolverFecha(fechaRef));
   }
 
-  function resumen(fechaRef = fechaHoy()) {
+  function resumen(fechaRef = hoy()) {
     const s = summary(fechaRef);
     return {
       ...s,
