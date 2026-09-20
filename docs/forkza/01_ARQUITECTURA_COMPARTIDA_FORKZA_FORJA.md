@@ -35,7 +35,7 @@ Estado verificado el 19 de septiembre de 2026:
 
 1. Evolucionar como **monolito modular** en esta fase.
 2. No crear microservicios antes de estabilizar límites, contratos y modelo de datos.
-3. Utilizar la rama `cursor/socios-pagos-7236` como base de una rama de integración, no fusionarla directamente a `main`.
+3. Utilizar `docs/maestro-forkza-v2` como base de la rama de integración; esta rama desciende de PR #5 e incorpora contexto y documentación actualizados.
 4. Corregir primero la dependencia temporal de la única prueba fallida y lograr 68/68.
 5. No implementar Forja sobre `main` ni directamente sobre datos demo.
 6. No renombrar el repositorio o la URL pública durante la estabilización inicial.
