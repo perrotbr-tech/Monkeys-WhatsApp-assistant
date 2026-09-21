@@ -679,3 +679,181 @@ test('[localStorage] guardarTenant(soma, snapshotMonkeys) → error sin escritur
     h.cleanup();
   }
 });
+
+// --- Regresión B3/B4: validación de escritura sin sanitizar ---
+
+test('[localStorage] B3 guardar(world) clave SOMA / slice MONKEYS → error y storage intacto', () => {
+  const factory = crearFactory('localStorage');
+  const h = factory.create();
+  try {
+    assert.equal(h.loadOrThrow().ok, true);
+    const beforeSoma = h.getTenantRaw('soma');
+    const beforeMonkeys = h.getTenantRaw('monkeys');
+    const world = crearWorldSnapshotV1(clonarMundo(FECHA_FIJA));
+    world.byTenant.soma.tenantId = 'monkeys';
+    assert.throws(() => h.adapter.guardar(world));
+    assert.equal(h.getTenantRaw('soma'), beforeSoma);
+    assert.equal(h.getTenantRaw('monkeys'), beforeMonkeys);
+  } finally {
+    h.cleanup();
+  }
+});
+
+test('[json] B3 guardar(world) clave SOMA / slice MONKEYS → error y archivo intacto', () => {
+  const factory = crearFactory('json');
+  const h = factory.create();
+  try {
+    assert.equal(h.loadOrThrow().ok, true);
+    const before = h.getRawWorldText();
+    const world = crearWorldSnapshotV1(clonarMundo(FECHA_FIJA));
+    world.byTenant.soma.tenantId = 'monkeys';
+    assert.throws(() => h.adapter.guardar(world));
+    assert.equal(h.getRawWorldText(), before);
+  } finally {
+    h.cleanup();
+  }
+});
+
+test('[localStorage] B4 guardarTenant V1 sin data → error y clave intacta', () => {
+  const factory = crearFactory('localStorage');
+  const h = factory.create();
+  try {
+    assert.equal(h.loadOrThrow().ok, true);
+    const before = h.getTenantRaw('soma');
+    assert.throws(
+      () => h.adapter.guardarTenant('soma', { schemaVersion: 1, tenantId: 'soma' }),
+      (err) => err && err.code === 'PERSISTENCIA_CORRUPTA',
+    );
+    assert.equal(h.getTenantRaw('soma'), before);
+  } finally {
+    h.cleanup();
+  }
+});
+
+test('[localStorage] B4 guardarTenant V1 con data incompleta → error y clave intacta', () => {
+  const factory = crearFactory('localStorage');
+  const h = factory.create();
+  try {
+    assert.equal(h.loadOrThrow().ok, true);
+    const before = h.getTenantRaw('soma');
+    const incomplete = {
+      schemaVersion: 1,
+      tenantId: 'soma',
+      data: { tenantId: 'soma', socios: [] },
+    };
+    assert.throws(
+      () => h.adapter.guardarTenant('soma', incomplete),
+      (err) => err && err.code === 'PERSISTENCIA_CORRUPTA',
+    );
+    assert.equal(h.getTenantRaw('soma'), before);
+  } finally {
+    h.cleanup();
+  }
+});
+
+test('[json] B3 WorldSnapshotV1 incompleto al guardar → error sin escritura', () => {
+  const factory = crearFactory('json');
+  const h = factory.create();
+  try {
+    assert.equal(h.loadOrThrow().ok, true);
+    const before = h.getRawWorldText();
+    const world = crearWorldSnapshotV1(clonarMundo(FECHA_FIJA));
+    delete world.byTenant.soma.socios;
+    assert.throws(() => h.adapter.guardar(world));
+    assert.equal(h.getRawWorldText(), before);
+  } finally {
+    h.cleanup();
+  }
+});
+
+test('[localStorage] B3 WorldSnapshotV1 incompleto al guardar → error sin escritura', () => {
+  const factory = crearFactory('localStorage');
+  const h = factory.create();
+  try {
+    assert.equal(h.loadOrThrow().ok, true);
+    const beforeSoma = h.getTenantRaw('soma');
+    const world = crearWorldSnapshotV1(clonarMundo(FECHA_FIJA));
+    delete world.byTenant.soma.membresias;
+    assert.throws(() => h.adapter.guardar(world));
+    assert.equal(h.getTenantRaw('soma'), beforeSoma);
+  } finally {
+    h.cleanup();
+  }
+});
+
+test('[json] WorldSnapshotV1 válido continúa guardándose', () => {
+  const factory = crearFactory('json');
+  const h = factory.create();
+  try {
+    assert.equal(h.loadOrThrow().ok, true);
+    const world = crearWorldSnapshotV1(clonarMundo(FECHA_FIJA));
+    world.byTenant.soma.socios = [];
+    const snap = h.adapter.guardar(world);
+    assert.equal(snap.schemaVersion, 1);
+    assert.equal(snap.byTenant.soma.socios.length, 0);
+    const reloaded = JSON.parse(h.getRawWorldText());
+    assert.equal(esWorldSnapshotV1(reloaded), true);
+    assert.equal(reloaded.byTenant.soma.socios.length, 0);
+  } finally {
+    h.cleanup();
+  }
+});
+
+test('[localStorage] TenantSnapshotV1 válido continúa guardándose', () => {
+  const factory = crearFactory('localStorage');
+  const h = factory.create();
+  try {
+    assert.equal(h.loadOrThrow().ok, true);
+    const snap = sliceCompleto('soma');
+    snap.data.socios = [];
+    h.adapter.guardarTenant('soma', snap);
+    const stored = JSON.parse(h.getTenantRaw('soma'));
+    assert.equal(esTenantSnapshotV1(stored, 'soma'), true);
+    assert.equal(stored.data.socios.length, 0);
+  } finally {
+    h.cleanup();
+  }
+});
+
+test('[localStorage] Bootstrap y migración V0→V1 continúan funcionando', () => {
+  const factory = crearFactory('localStorage');
+  // bootstrap vacío
+  const hEmpty = factory.create({ seedText: null });
+  try {
+    const r = hEmpty.loadOrThrow();
+    assert.equal(r.ok, true);
+    assert.equal(r.carga.bootstrapped, true);
+    assert.ok(hEmpty.memoria().listarSocios('soma').length > 0);
+  } finally {
+    hEmpty.cleanup();
+  }
+  // V0 → V1
+  const v0 = clonarDemo('soma', FECHA_FIJA);
+  v0.socios = [{
+    id: 'sm-b34',
+    tenantId: 'soma',
+    nombre: 'Migrate B34',
+    telefono: '+56976666666',
+    sedeId: 'SOMA Antofagasta',
+    planId: 'ct-2',
+    estado: 'activo',
+    fechaIngreso: FECHA_FIJA,
+    cuposUsadosMes: 0,
+  }];
+  delete v0.membresias;
+  const h = factory.create({
+    seedLocal: {
+      [claveEstadoV1('soma')]: JSON.stringify(v0),
+      [claveEstadoV1('monkeys')]: JSON.stringify(clonarDemo('monkeys', FECHA_FIJA)),
+    },
+  });
+  try {
+    const r = h.loadOrThrow();
+    assert.equal(r.ok, true);
+    assert.equal(r.carga.migrated, true);
+    assert.equal(h.memoria().listarSocios('soma')[0].nombre, 'Migrate B34');
+    assert.equal(esTenantSnapshotV1(JSON.parse(h.getTenantRaw('soma')), 'soma'), true);
+  } finally {
+    h.cleanup();
+  }
+});

@@ -9,8 +9,8 @@ import { basename, dirname, join } from 'node:path';
 import { fechaHoy } from '../dates.js';
 import { relojActivo } from '../clock.js';
 import { CARGA, PersistenciaError, CODIGOS } from './estados.js';
-import { crearWorldSnapshotV1 } from './snapshots.js';
 import { parsearJsonSeguro, resolverCarga, bootstrapMundo } from './cargar.js';
+import { prepararMundoParaEscritura } from './escritura.js';
 
 /**
  * @param {{ filePath: string, clock?: object, fechaRef?: string }} opts
@@ -31,12 +31,13 @@ export function crearAdaptadorJson(opts) {
   }
 
   /**
-   * Escritura segura: serializa completo a temporal del mismo directorio
-   * y solo entonces reemplaza el archivo definitivo.
+   * Escritura segura: valida el mundo original, serializa a temporal del mismo
+   * directorio y solo entonces reemplaza el archivo definitivo.
+   * No usa crearWorldSnapshotV1 como sanitizador de un V1 inválido.
    * @param {object} world
    */
   function escribirAtomico(world) {
-    const snap = crearWorldSnapshotV1(world);
+    const snap = prepararMundoParaEscritura(world);
     let serialized;
     try {
       serialized = `${JSON.stringify(snap, null, 2)}\n`;

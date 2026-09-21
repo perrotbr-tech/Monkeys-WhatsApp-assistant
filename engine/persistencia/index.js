@@ -40,3 +40,9 @@ export {
 
 export { crearAdaptadorJson } from './json.js';
 export { crearAdaptadorLocal } from './local.js';
+export {
+  assertMundoEscritura,
+  assertTenantEscritura,
+  prepararMundoParaEscritura,
+  envelopeTenantEscritura,
+} from './escritura.js';
