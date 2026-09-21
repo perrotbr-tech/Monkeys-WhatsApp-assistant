@@ -27,8 +27,10 @@ test('StoreLocal con localStorage simulado no cruza datos entre tenants', async 
 
   const somaRaw = JSON.parse(storage.getItem(claveEstado('soma')));
   const monRaw = JSON.parse(storage.getItem(claveEstado('monkeys')));
-  assert.equal((somaRaw.bookings || []).some((b) => b.codigo === 'SOMA-2026-0001'), true);
-  assert.equal((monRaw.bookings || []).some((b) => String(b.codigo).startsWith('SOMA-')), false);
+  const somaData = somaRaw.data || somaRaw;
+  const monData = monRaw.data || monRaw;
+  assert.equal((somaData.bookings || []).some((b) => b.codigo === 'SOMA-2026-0001'), true);
+  assert.equal((monData.bookings || []).some((b) => String(b.codigo).startsWith('SOMA-')), false);
 });
 
 test('StoreLocal conserva cuposUsadosMes y la tarea de cupos agotados al persistir', async () => {
@@ -47,9 +49,10 @@ test('StoreLocal conserva cuposUsadosMes y la tarea de cupos agotados al persist
   const done = await store.enviarMensaje(id, 'confirmar');
   assert.match(done.mensajes[0].texto, /Ya usaste los/);
   const raw = JSON.parse(storage.getItem(claveEstado('soma')));
-  const guardado = raw.socios.find((s) => s.id === socio.id);
+  const data = raw.data || raw;
+  const guardado = data.socios.find((s) => s.id === socio.id);
   assert.equal(guardado.cuposUsadosMes, plan.cuposMes);
-  assert.equal((raw.automation.acciones || []).some((a) => a.motivo === 'cupos agotados'), true);
+  assert.equal((data.automation.acciones || []).some((a) => a.motivo === 'cupos agotados'), true);
 
   const reloaded = crearStoreLocal('soma', storage, { fechaRef: '2026-09-14' });
   const otra = reloaded.engine.memoria.buscarSocioPorTelefono('soma', '+56962000001');
