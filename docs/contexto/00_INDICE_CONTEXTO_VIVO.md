@@ -2,8 +2,8 @@
 
 Estado de referencia: 2026-09-21
 Repositorio: `perrotbr-tech/Monkeys-WhatsApp-assistant`
-Base funcional: `main` @ `0e20df0e7382ed373c65a2f506540a2e3f7a24d7` (PR #13 squash merge; E0+E1+E2)
-Etapa cerrada: E2 — identidad estable y configuración de tenant. Próxima etapa no iniciada: E3.
+Base funcional E2: `main` @ `4504c9b99eca9614f241f29276e806604a607f2e` (descendiente de E2 `0e20df0`)
+Etapa en curso: E3 — Forkza Core y fronteras. Subetapa cerrada en rama: E3A.
 
 ## Propósito
 

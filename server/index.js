@@ -133,6 +133,10 @@ export function crearApp({
   function requireAuth(req, res, next) {
     const s = sesionDe(req);
     if (!s || s.tenantId !== req.tenant.id) return res.status(401).json({ error: 'unauthorized' });
+    // E3A: seleccionar tenant en UI no autoriza; la sesión debe coincidir con el workspace.
+    if (s.workspaceId && s.workspaceId !== req.tenant.id) {
+      return res.status(401).json({ error: 'unauthorized' });
+    }
     req.usuario = s;
     next();
   }
@@ -182,7 +186,16 @@ export function crearApp({
   app.get('/api/me', requireTenant, (req, res) => {
     const s = sesionDe(req);
     if (!s || s.tenantId !== req.tenant.id) return res.status(401).json({ error: 'unauthorized' });
-    res.json({ usuario: { email: s.email, nombre: s.nombre, rol: s.rol, tenantId: s.tenantId } });
+    res.json({
+      usuario: {
+        email: s.email,
+        nombre: s.nombre,
+        rol: s.rol,
+        tenantId: s.tenantId,
+        userId: s.userId,
+        workspaceId: s.workspaceId,
+      },
+    });
   });
 
   app.post('/api/conversations', requireTenant, (req, res) => {

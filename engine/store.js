@@ -11,6 +11,7 @@ import {
 import { parseCsv, validarFilaSocio, prepararSocio, PLANTILLA_CSV_SOCIOS } from './socios-admin.js';
 import { proveedorDe, modoPasarela } from './services/pagos.js';
 import { migrarSedesSliceV1aV2 } from './persistencia/migraciones.js';
+import { aplicarContratoAccion } from '../core/contracts/accion.js';
 
 export { normalizarTelefono, nombreValido, PLANTILLA_CSV_SOCIOS };
 
@@ -883,7 +884,7 @@ export function crearMemoria(datosIniciales, opts = {}) {
     const sedeId = resolverSedeId(tenant, accion && (accion.sedeId || accion.sede))
       || (accion && accion.sedeId)
       || null;
-    const row = {
+    const borrador = {
       id: `act-${s.automation.nextActionSeq}`,
       tenantId,
       canal: 'simulado',
@@ -892,6 +893,10 @@ export function crearMemoria(datosIniciales, opts = {}) {
       ...accion,
       sedeId,
     };
+    const row = aplicarContratoAccion(borrador, {
+      origenTipo: borrador.origenTipo || 'agente',
+      origenId: borrador.origenId || borrador.agente || 'store',
+    });
     s.automation.acciones.push(row);
     return clonar(row);
   }

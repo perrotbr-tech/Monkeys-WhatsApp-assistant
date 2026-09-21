@@ -62,3 +62,17 @@ No eliminar entradas anteriores. Si una conclusión queda obsoleta, agregar una 
 - `main` @ `0e20df0e7382ed373c65a2f506540a2e3f7a24d7` contiene E2 y revisiones B1–B5.
 - Verificación previa al merge: `npm ci` + `npm test` → 152/152; `git diff --check` limpio; contexto bajo 7.000 caracteres.
 - E0, E1 y E2 terminadas. E3 y Forja Training no iniciados.
+
+## 2026-09-21 — PR #14/#15 docs post-E2
+
+- #14: cierre documental E2 tras merge. #15: precisa base funcional E2.
+- `main` @ `4504c9b99eca9614f241f29276e806604a607f2e`. Sin PR abiertos. 152/152.
+
+## 2026-09-21 — E3A: contratos Forkza Core y fronteras
+
+- Rama: `cursor/e3-forkza-core-boundaries-ac33` desde `main` @ `4504c9b`.
+- Nuevo `core/` ESM: identity, organizations (puente tenantId→workspaceId), authorization (RBAC deny-by-default), features (`gestion:true`/`forja:false`), contracts/acción, audit (AuditSink memoria).
+- Adaptadores: sesión/`GET /api/me` aditivos (`userId`,`workspaceId`); `baseAccion`/`crearAccion` con metadatos; features en tenants.
+- Sin Snapshot V3, sin migración masiva, sin RBAC en todas las rutas, sin Forja UI.
+- Pruebas: 152 previas + E3A (`tests/e3a-core-boundaries.test.js`, incl. dependencias Core) → suite en verde.
+- E3 iniciada; E3A lista en PR draft de E3. E3B/E3C/Forja no iniciados. Sin merge.

@@ -11,36 +11,51 @@
 
 ## Capas reales
 
-### Datos y configuración de tenant (E2)
+### Core (E3A)
 
-`data/tenants.js` define el contrato único de configuración: `tenantId`/`slug`/nombre visible, idioma, zona, marca, `codigoPrefix`, sedes con `sedeId` estable + nombre, menú, capacidades (cupos, trial, emoji), textos y `aliasHistoricos`. Sin lógica de negocio en el objeto. Catálogo registrable (`registrarTenant`) para tenants adicionales sin tocar motor/servidor.
+`core/` — contratos puros ESM: `identity/`, `organizations/`, `authorization/`, `audit/`, `contracts/`, `features/`.
+No importa `engine/`, `data/demo.js`, `server/`, `app.js`, ni futuros `gestion/`/`forja/`.
+Prueba negativa de dependencias en `tests/e3a-core-boundaries.test.js`.
 
-`data/demo.js` construye slices vía builders registrados por `tenantId`, no por `if (slug === …)`.
+Compatibilidad: `workspaceId === tenantId` para MONKEYS/SOMA; `tenantId` se conserva como alias hasta E3B.
+
+### Datos
+
+`data/` define tenants (incl. `features: { gestion, forja }`), planes, clases, socios, membresías, pagos, plantillas, i18n y demo. Dos tenants demo: MONKEYS y SOMA.
 
 ### Dominio
 
-`engine/` contiene reglas para conversación, intención, catálogo, fechas, socios, membresías, pagos, autenticación, automatización y salida WhatsApp. Reloj inyectable (`engine/clock.js`). Conversación lee menús/capacidades desde config; sin bifurcaciones `tid === "soma"|"monkeys"`.
+`engine/` — conversación, intención, catálogo, fechas, socios, membresías, pagos, auth, automatización, WhatsApp-out. Clock inyectable (`engine/clock.js`). Acciones pasan por contrato Core (destinatario/origen) sin cambiar textos ni agentes.
 
-### Persistencia (E1B + E2)
+### Persistencia (E1B/E2)
 
-- Contrato en `engine/persistencia/`: estados de carga, `WorldSnapshotV1`/`TenantSnapshotV1` (históricos), `WorldSnapshotV2`/`TenantSnapshotV2` (actual, `schemaVersion: 2`).
-- Migración `V0→V1→V2` y `migrateV1toV2`: nombres de sede → `sedeId` estable; idempotente; rechaza ambiguos/corruptos sin sobrescribir.
-- Claves localStorage `forkza_demo_state_<tenant>`; legacy `monkeys_demo_state` solo como compatibilidad histórica.
-- Adaptadores JSON/localStorage; demo solo en vacío, reset o migración de campo documentada.
+Contrato en `engine/persistencia/`: V1 histórico, V2 actual con `sedeId`. Adaptadores JSON y localStorage. Semántica V1/V2 intacta en E3A (sin Snapshot V3).
 
 ### API
 
-`server/index.js` construye `engines`/`autos` recorriendo `idsTenantsActivos()`. Sin propiedades manuales `.monkeys`/`.soma`.
+`server/index.js` — salud, tema, login/sesión (`userId`+`workspaceId` aditivos), conversaciones, clases, planes, reservas, leads, automatización, socios, CSV y pagos.
 
 ### Interfaz
 
-SPA con selector de tenants desde `listarTenants()`. Rutas hash; API o modo local. Marca por CSS variables.
+SPA hash; API o local. Asistente, panel, socios, pagos, automatizaciones. Marca por tenant (CSS). Sin pestañas de rol.
 
 ## Seguridad y tenancy
 
-- Tenant por encabezado/parámetro; entidades con `tenantId`; sedes/planes por ID estable.
-- Sesión cookie `HttpOnly`, `SameSite=Lax`, HMAC; bloqueo tras cinco fallos.
+- Tenant por encabezado/parámetro; entidades con `tenantId`.
+- Sesión cookie HttpOnly; login enriquece `userId`/`workspaceId` sin quitar campos previos.
+- RBAC contractual en Core; aplicación plena a rutas = E3C.
+- Bloqueo tras cinco fallos.
+
+## Automatización e IA
+
+Comprensión determinista local; sin LLM. Agentes → acciones con `destinatarioRol` (`socio`/`equipo`) y `origenDominio: gestion`.
 
 ## Diferencias frente al objetivo
 
-La regla menciona `/server/store/*` y `/channels/*` como objetivo. Hoy: `engine/persistencia/*`, `engine/store.js`. `workspaceId` transversal = E3. Forja Training no implementado.
+Regla `.cursor/rules/forkza.mdc` menciona `/server/store/*` y `/channels/*` como objetivo. Hoy: `engine/persistencia/*`, `engine/store.js`. Forja Training no implementado (`features.forja: false`).
+
+## Prácticas observadas
+
+- Lógica de negocio separada del DOM en gran parte.
+- Clock inyectable en motor/persistencia; UI puede usar reloj de pared.
+- Sin Postgres/SQL, colas, ni almacenamiento de archivos productivo.

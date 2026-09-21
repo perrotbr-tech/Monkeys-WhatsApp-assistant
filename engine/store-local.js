@@ -3,8 +3,8 @@ import { crearAutomation } from './automation.js';
 import { fechaHoy } from './dates.js';
 import { relojActivo } from './clock.js';
 import { USUARIOS_DEMO, CLAVE_DEMO } from '../data/tenants.js';
+import { enriquecerUsuarioSesion, LOCK_MS, MAX_FALLOS } from './auth.js';
 import { combinarPersistencia } from './store.js';
-import { LOCK_MS, MAX_FALLOS } from './auth.js';
 import {
   crearAdaptadorLocal,
   claveEstadoV1,
@@ -157,7 +157,7 @@ export function crearStoreLocal(tenantId, storage, opts = {}) {
       }
       delete lock[k];
       storage.setItem(lockKey, JSON.stringify(lock));
-      const usuario = { email: user.email, nombre: user.nombre, rol: user.rol, tenantId: user.tenantId };
+      const usuario = enriquecerUsuarioSesion(user);
       storage.setItem('forkza_session', JSON.stringify(usuario));
       return { ok: true, usuario };
     },

@@ -55,6 +55,7 @@
  * @property {MenuOpcion[]} menu
  * @property {CapacidadesTenant} capacidades
  * @property {AliasHistoricos} aliasHistoricos
+ * @property {{ gestion: boolean, forja: boolean }} features
  */
 
 const MENU_BASE = Object.freeze([
@@ -124,6 +125,7 @@ const TENANTS_BASE = [
         'Alta Vista': 'alta-vista',
       },
     },
+    features: { gestion: true, forja: false },
   },
   {
     id: 'soma',
@@ -186,6 +188,7 @@ const TENANTS_BASE = [
         Antofagasta: 'soma-antofagasta',
       },
     },
+    features: { gestion: true, forja: false },
   },
 ];
 
@@ -205,6 +208,10 @@ function clonarTenant(t) {
     aliasHistoricos: {
       localStorageKeys: [...((t.aliasHistoricos && t.aliasHistoricos.localStorageKeys) || [])],
       sedes: { ...((t.aliasHistoricos && t.aliasHistoricos.sedes) || {}) },
+    },
+    features: {
+      gestion: !(t.features && t.features.gestion === false),
+      forja: !!(t.features && t.features.forja === true),
     },
   };
 }
@@ -330,6 +337,15 @@ export function capacidadesDe(tenant) {
     textoTrialNombre: c.textoTrialNombre || 'Clase de prueba. ¿Cuál es tu nombre?',
     prefijoSocioId: c.prefijoSocioId || 's',
     servicios: Array.isArray(c.servicios) ? [...c.servicios] : [],
+  };
+}
+
+/** Features de módulo del workspace (E3A). Adaptador fuera de core. */
+export function featuresTenant(tenant) {
+  const f = (tenant && tenant.features) || {};
+  return {
+    gestion: f.gestion !== false,
+    forja: f.forja === true,
   };
 }
 
