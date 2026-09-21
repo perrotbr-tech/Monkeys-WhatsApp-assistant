@@ -124,6 +124,84 @@ test('StoreLocal libera bloqueo al avanzar el reloj simulado', async () => {
   assert.equal(ok.ok, true);
 });
 
+test('conReloj conserva el reloj en callback síncrono', () => {
+  const fixed = 1_111_111_111_111;
+  const outer = relojActivo();
+  const observed = conReloj(crearRelojFijo(fixed), () => relojActivo().now());
+  assert.equal(observed, fixed);
+  assert.equal(relojActivo(), outer);
+});
+
+test('conReloj conserva el reloj después de await', async () => {
+  const fixed = 1_234_567_890;
+  const outer = relojActivo();
+  const observed = await conReloj(crearRelojFijo(fixed), async () => {
+    await Promise.resolve();
+    return relojActivo().now();
+  });
+  assert.equal(observed, fixed);
+  assert.equal(relojActivo(), outer);
+});
+
+test('conReloj restaura tras excepción síncrona', () => {
+  const outer = relojActivo();
+  const fixed = crearRelojFijo(2_222_222_222_222);
+  assert.throws(
+    () => conReloj(fixed, () => {
+      throw new Error('boom-sync');
+    }),
+    /boom-sync/,
+  );
+  assert.equal(relojActivo(), outer);
+  assert.notEqual(relojActivo().now(), fixed.now());
+});
+
+test('conReloj restaura tras rechazo async', async () => {
+  const outer = relojActivo();
+  const fixed = crearRelojFijo(3_333_333_333_333);
+  await assert.rejects(
+    () => conReloj(fixed, async () => {
+      await Promise.resolve();
+      throw new Error('boom-async');
+    }),
+    /boom-async/,
+  );
+  assert.equal(relojActivo(), outer);
+  assert.notEqual(relojActivo().now(), fixed.now());
+});
+
+test('conReloj restaura el reloj anterior tras éxito', () => {
+  const base = crearRelojFijo(4_000_000_000_000);
+  usarReloj(base);
+  const nested = crearRelojFijo(4_000_000_000_001);
+  const seen = conReloj(nested, () => relojActivo().now());
+  assert.equal(seen, 4_000_000_000_001);
+  assert.equal(relojActivo().now(), 4_000_000_000_000);
+});
+
+test('conReloj anidado conserva y restaura cada nivel', async () => {
+  const outer = crearRelojFijo(5_000_000_000_000);
+  const mid = crearRelojFijo(5_000_000_000_100);
+  const inner = crearRelojFijo(5_000_000_000_200);
+  usarReloj(outer);
+
+  const result = await conReloj(mid, async () => {
+    assert.equal(relojActivo().now(), mid.now());
+    const innerSeen = await conReloj(inner, async () => {
+      await Promise.resolve();
+      assert.equal(relojActivo().now(), inner.now());
+      return relojActivo().now();
+    });
+    assert.equal(innerSeen, inner.now());
+    assert.equal(relojActivo().now(), mid.now());
+    await Promise.resolve();
+    return relojActivo().now();
+  });
+
+  assert.equal(result, mid.now());
+  assert.equal(relojActivo().now(), outer.now());
+});
+
 test('crearApp con Clock fijo firma iat determinístico', async () => {
   const fixed = 1_725_000_000_000;
   const clock = crearRelojFijo(fixed);

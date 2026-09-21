@@ -73,12 +73,30 @@ export function usarReloj(clock) {
   return prev;
 }
 
-/** Ejecuta fn con un reloj temporal y restaura el anterior. */
+function esThenable(value) {
+  return value != null
+    && (typeof value === 'object' || typeof value === 'function')
+    && typeof value.then === 'function';
+}
+
+/**
+ * Ejecuta fn con un reloj temporal y restaura el anterior.
+ * Si fn devuelve una Promise, el reloj se conserva hasta que termine (resolve o reject).
+ * Soporta llamadas anidadas: cada nivel restaura el reloj que encontró al entrar.
+ */
 export function conReloj(clock, fn) {
   const prev = usarReloj(clock);
   try {
-    return fn();
-  } finally {
+    const result = fn();
+    if (esThenable(result)) {
+      return Promise.resolve(result).finally(() => {
+        usarReloj(prev);
+      });
+    }
     usarReloj(prev);
+    return result;
+  } catch (err) {
+    usarReloj(prev);
+    throw err;
   }
 }
