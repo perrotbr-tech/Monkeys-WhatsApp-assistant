@@ -3,7 +3,7 @@ import { mkdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { clonarMundo, clonar } from '../data/demo.js';
-import { TENANT_DEFAULT, tenantActivo, varsMarca, USUARIOS_DEMO } from '../data/tenants.js';
+import { TENANT_DEFAULT, tenantActivo, varsMarca, USUARIOS_DEMO, idsTenantsActivos, listarTenants } from '../data/tenants.js';
 import { crearEngine } from '../engine/conversation.js';
 import { crearAutomation } from '../engine/automation.js';
 import { crearMemoria, combinarPersistencia } from '../engine/store.js';
@@ -52,14 +52,20 @@ export function crearApp({
   }
 
   const memoria = crearMemoria(state, { clock: reloj });
-  const engines = {
-    monkeys: crearEngine({ memoria }, 'monkeys', { clock: reloj }),
-    soma: crearEngine({ memoria }, 'soma', { clock: reloj }),
-  };
-  const autos = {
-    monkeys: crearAutomation(memoria.sliceExport('monkeys'), 'monkeys', { clock: reloj }),
-    soma: crearAutomation(memoria.sliceExport('soma'), 'soma', { clock: reloj }),
-  };
+  /** Engines y automatizaciones: un registro por tenant del catálogo (sin hardcode). */
+  const engines = Object.create(null);
+  const autos = Object.create(null);
+
+  function reiniciarMotores() {
+    for (const key of Object.keys(engines)) delete engines[key];
+    for (const key of Object.keys(autos)) delete autos[key];
+    for (const id of idsTenantsActivos()) {
+      engines[id] = crearEngine({ memoria }, id, { clock: reloj });
+      autos[id] = crearAutomation(memoria.sliceExport(id), id, { clock: reloj });
+    }
+  }
+
+  reiniciarMotores();
   const usuarios = usuariosConHash(HASH_DEMO);
   const secret = sessionSecret;
 
@@ -215,10 +221,7 @@ export function crearApp({
   app.post('/api/demo/reset', requireTenant, requireAuth, (req, res) => {
     const seed = adapter ? adapter.reset() : clonarMundo();
     memoria.hidratar(seed);
-    engines.monkeys = crearEngine({ memoria }, 'monkeys', { clock: reloj });
-    engines.soma = crearEngine({ memoria }, 'soma', { clock: reloj });
-    autos.monkeys = crearAutomation(memoria.sliceExport('monkeys'), 'monkeys', { clock: reloj });
-    autos.soma = crearAutomation(memoria.sliceExport('soma'), 'soma', { clock: reloj });
+    reiniciarMotores();
     if (persist && !adapter) saveState();
     res.json({ ok: true });
   });

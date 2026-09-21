@@ -1,5 +1,5 @@
 /**
- * Clasificación de carga y resolución segura (vacío / V0 / V1 / corrupto).
+ * Clasificación de carga y resolución segura (vacío / V0 / V1 / V2 / corrupto).
  */
 
 import { clonar, clonarMundo, clonarDemo } from '../../data/demo.js';
@@ -9,15 +9,18 @@ import { relojActivo } from '../clock.js';
 import { CARGA, PersistenciaError, CODIGOS } from './estados.js';
 import {
   SCHEMA_VERSION,
-  crearWorldSnapshotV1,
-  crearTenantSnapshotV1,
+  SCHEMA_VERSION_V1,
+  crearWorldSnapshotV2,
+  crearTenantSnapshotV2,
   esWorldSnapshotV1,
   esTenantSnapshotV1,
+  esWorldSnapshotV2,
+  esTenantSnapshotV2,
   sliceDe,
-  validarSliceV1,
+  validarSliceV2,
   coherenciaTenantIds,
 } from './snapshots.js';
-import { migrateV0toV1 } from './migraciones.js';
+import { migrateV0toV1, migrateV1toV2, migrateToCurrent } from './migraciones.js';
 
 /**
  * Parsea texto JSON. Fallo de parse → corrupto (no demo).
@@ -62,15 +65,20 @@ export function clasificarDocumento(value, kind, opts = {}) {
   if (typeof value !== 'object' || Array.isArray(value)) return CARGA.CORRUPTO;
 
   const version = value.schemaVersion;
-  if (version != null && version !== SCHEMA_VERSION) {
+  if (version != null
+    && version !== SCHEMA_VERSION
+    && version !== SCHEMA_VERSION_V1) {
     return CARGA.CORRUPTO;
   }
 
   if (kind === 'world') {
-    // schemaVersion: 1 nunca se trata como V0 ni se completa silenciosamente
     if (version === SCHEMA_VERSION) {
       if (Object.prototype.hasOwnProperty.call(value, 'data')) return CARGA.CORRUPTO;
-      return esWorldSnapshotV1(value) ? CARGA.V1_VALIDO : CARGA.CORRUPTO;
+      return esWorldSnapshotV2(value) ? CARGA.V2_VALIDO : CARGA.CORRUPTO;
+    }
+    if (version === SCHEMA_VERSION_V1) {
+      if (Object.prototype.hasOwnProperty.call(value, 'data')) return CARGA.CORRUPTO;
+      return esWorldSnapshotV1(value) ? CARGA.V1_MIGABLE : CARGA.CORRUPTO;
     }
     if (value.byTenant && typeof value.byTenant === 'object' && !Array.isArray(value.byTenant)) {
       if (Object.prototype.hasOwnProperty.call(value, 'data') && value.data != null) {
@@ -81,31 +89,25 @@ export function clasificarDocumento(value, kind, opts = {}) {
     return CARGA.CORRUPTO;
   }
 
-  // tenant — schemaVersion: 1 nunca degrada a V0
+  // tenant
   if (version === SCHEMA_VERSION) {
     if (Object.prototype.hasOwnProperty.call(value, 'byTenant')) return CARGA.CORRUPTO;
-    return esTenantSnapshotV1(value, opts.expectedTenantId) ? CARGA.V1_VALIDO : CARGA.CORRUPTO;
+    return esTenantSnapshotV2(value, opts.expectedTenantId) ? CARGA.V2_VALIDO : CARGA.CORRUPTO;
+  }
+  if (version === SCHEMA_VERSION_V1) {
+    if (Object.prototype.hasOwnProperty.call(value, 'byTenant')) return CARGA.CORRUPTO;
+    return esTenantSnapshotV1(value, opts.expectedTenantId) ? CARGA.V1_MIGABLE : CARGA.CORRUPTO;
   }
   if (Object.prototype.hasOwnProperty.call(value, 'byTenant')) return CARGA.CORRUPTO;
-  // V0 tenant = slice plano (sin schemaVersion)
   return CARGA.V0_MIGABLE;
 }
 
 /**
- * Resuelve un documento ya parseado a snapshot V1, bootstrap o error.
+ * Resuelve un documento ya parseado a snapshot actual (V2), bootstrap o error.
  * Nunca reemplaza datos corruptos con demo.
  *
  * @param {object|null|undefined} value
  * @param {{ kind: 'world'|'tenant', tenantId?: string, fechaRef?: string, clock?: object }} opts
- * @returns {{
- *   status: string,
- *   snapshot?: object,
- *   world?: object,
- *   slice?: object,
- *   migrated?: boolean,
- *   bootstrapped?: boolean,
- *   error?: PersistenciaError,
- * }}
  */
 export function resolverCarga(value, opts) {
   const kind = opts.kind;
@@ -115,7 +117,7 @@ export function resolverCarga(value, opts) {
 
   if (status === CARGA.VACIO) {
     if (kind === 'world') {
-      const world = crearWorldSnapshotV1(clonarMundo(fechaRef));
+      const world = crearWorldSnapshotV2(clonarMundo(fechaRef));
       return { status, snapshot: world, world, bootstrapped: true };
     }
     const tenantId = opts.tenantId;
@@ -125,7 +127,7 @@ export function resolverCarga(value, opts) {
         error: new PersistenciaError(CODIGOS.CORRUPTO, 'tenant vacío sin tenantId'),
       };
     }
-    const snap = crearTenantSnapshotV1(tenantId, clonarDemo(tenantId, fechaRef));
+    const snap = crearTenantSnapshotV2(tenantId, clonarDemo(tenantId, fechaRef));
     return {
       status,
       snapshot: snap,
@@ -138,7 +140,9 @@ export function resolverCarga(value, opts) {
     return {
       status,
       error: new PersistenciaError(
-        value && value.schemaVersion != null && value.schemaVersion !== SCHEMA_VERSION
+        value && value.schemaVersion != null
+          && value.schemaVersion !== SCHEMA_VERSION
+          && value.schemaVersion !== SCHEMA_VERSION_V1
           ? CODIGOS.INCOMPATIBLE
           : CODIGOS.CORRUPTO,
         'snapshot corrupto o incompatible',
@@ -146,11 +150,10 @@ export function resolverCarga(value, opts) {
     };
   }
 
-  if (status === CARGA.V1_VALIDO) {
-    // Carga V1: clonar sin normalizar ni rellenar campos
+  if (status === CARGA.V2_VALIDO || status === CARGA.V1_VALIDO) {
     if (kind === 'world') {
       const world = clonar(value);
-      return { status, snapshot: world, world, migrated: false, bootstrapped: false };
+      return { status: CARGA.V2_VALIDO, snapshot: world, world, migrated: false, bootstrapped: false };
     }
     const snap = clonar(value);
     const coh = coherenciaTenantIds({
@@ -158,14 +161,14 @@ export function resolverCarga(value, opts) {
       envelope: snap.tenantId,
       slice: snap.data && snap.data.tenantId,
     });
-    if (!coh.ok || !validarSliceV1(snap.data, snap.tenantId).ok) {
+    if (!coh.ok || !validarSliceV2(snap.data, snap.tenantId).ok) {
       return {
         status: CARGA.CORRUPTO,
-        error: new PersistenciaError(CODIGOS.CORRUPTO, 'TenantSnapshotV1 incoherente o incompleto'),
+        error: new PersistenciaError(CODIGOS.CORRUPTO, 'TenantSnapshotV2 incoherente o incompleto'),
       };
     }
     return {
-      status,
+      status: CARGA.V2_VALIDO,
       snapshot: snap,
       slice: clonar(snap.data),
       migrated: false,
@@ -173,14 +176,24 @@ export function resolverCarga(value, opts) {
     };
   }
 
-  // V0_MIGABLE — normalización solo aquí / bootstrap
+  // V0_MIGABLE o V1_MIGABLE
   try {
-    const snapshot = migrateV0toV1(value, {
-      kind,
-      tenantId: opts.tenantId,
-      fechaRef,
-      clock,
-    });
+    let snapshot;
+    if (status === CARGA.V1_MIGABLE) {
+      snapshot = migrateV1toV2(value, {
+        kind,
+        tenantId: opts.tenantId,
+        fechaRef,
+        clock,
+      });
+    } else {
+      snapshot = migrateToCurrent(value, {
+        kind,
+        tenantId: opts.tenantId,
+        fechaRef,
+        clock,
+      });
+    }
     if (kind === 'world') {
       return {
         status,
@@ -198,44 +211,40 @@ export function resolverCarga(value, opts) {
       bootstrapped: false,
     };
   } catch (err) {
+    const code = err && err.code === CODIGOS.AMBIGUO ? CODIGOS.AMBIGUO : CODIGOS.CORRUPTO;
     return {
       status: CARGA.CORRUPTO,
-      error: new PersistenciaError(CODIGOS.CORRUPTO, 'migración V0→V1 fallida', { cause: err }),
+      error: new PersistenciaError(code, 'migración a V2 fallida', { cause: err }),
     };
   }
 }
 
 /**
  * Bootstrap explícito de mundo demo (reset).
- * @param {{ fechaRef?: string, clock?: object }} [opts]
  */
 export function bootstrapMundo(opts = {}) {
   const clock = opts.clock || relojActivo();
   const fechaRef = opts.fechaRef || fechaHoy(undefined, clock);
-  return crearWorldSnapshotV1(clonarMundo(fechaRef));
+  return crearWorldSnapshotV2(clonarMundo(fechaRef));
 }
 
 /**
  * Bootstrap explícito de tenant demo (reset).
- * @param {string} tenantId
- * @param {{ fechaRef?: string, clock?: object }} [opts]
  */
 export function bootstrapTenant(tenantId, opts = {}) {
   const clock = opts.clock || relojActivo();
   const fechaRef = opts.fechaRef || fechaHoy(undefined, clock);
-  return crearTenantSnapshotV1(tenantId, clonarDemo(tenantId, fechaRef));
+  return crearTenantSnapshotV2(tenantId, clonarDemo(tenantId, fechaRef));
 }
 
 /**
- * Compone un WorldSnapshotV1 a partir de slices por tenant.
- * @param {Record<string, object>} byTenantSlices
- * @param {object[]} [tenants]
+ * Compone un WorldSnapshotV2 a partir de slices por tenant.
  */
 export function componerMundo(byTenantSlices, tenants) {
-  return crearWorldSnapshotV1({
+  return crearWorldSnapshotV2({
     tenants: tenants || listarTenants(),
     byTenant: byTenantSlices,
   });
 }
 
-export { CARGA, PersistenciaError, CODIGOS };
+export { CARGA, PersistenciaError, CODIGOS, migrateV0toV1, migrateV1toV2 };

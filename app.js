@@ -1,5 +1,5 @@
 import { fechaHoy, fechaDesdeQuery } from './engine/dates.js';
-import { TENANT_DEFAULT, tenantActivo, varsMarca, USUARIOS_DEMO, CLAVE_DEMO } from './data/tenants.js';
+import { TENANT_DEFAULT, tenantActivo, varsMarca, USUARIOS_DEMO, CLAVE_DEMO, listarTenants, nombreSede, capacidadesDe } from './data/tenants.js';
 import { crearStoreLocal } from './engine/store-local.js';
 import { i18n } from './data/i18n.js';
 
@@ -97,15 +97,14 @@ function paintTenant(t) {
   sw.replaceChildren();
   if (t.demo) {
     sw.appendChild(document.createTextNode('Ver como: '));
-    const a1 = document.createElement('a');
-    a1.href = '?t=monkeys';
-    a1.textContent = 'MONKEYS';
-    const a2 = document.createElement('a');
-    a2.href = '?t=soma';
-    a2.textContent = 'SOMA';
-    sw.appendChild(a1);
-    sw.appendChild(document.createTextNode(' · '));
-    sw.appendChild(a2);
+    const demos = listarTenants().filter((x) => x.demo && x.activo);
+    demos.forEach((other, i) => {
+      if (i > 0) sw.appendChild(document.createTextNode(' · '));
+      const a = document.createElement('a');
+      a.href = `?t=${encodeURIComponent(other.slug)}`;
+      a.textContent = other.marca.wordmark || other.nombre;
+      sw.appendChild(a);
+    });
   }
 }
 
@@ -747,7 +746,7 @@ async function renderSocios() {
   for (const s of socios) {
     const tr = document.createElement('tr');
     const mem = s.membresia || {};
-    for (const cell of [s.nombre, s.telefono, s.sedeId, s.planNombre || s.planId, s.estado, mem.fin || '—']) {
+    for (const cell of [s.nombre, s.telefono, nombreSede(tenant, s.sedeId) || s.sedeId, s.planNombre || s.planId, s.estado, mem.fin || '—']) {
       tr.appendChild(el('td', null, cell));
     }
     tr.addEventListener('click', () => {
@@ -771,13 +770,13 @@ async function pintarFicha(id) {
   box.replaceChildren();
   const s = ficha.socio;
   box.appendChild(el('h2', null, s.nombre));
-  box.appendChild(el('p', null, `${s.telefono} · ${s.sedeId}`));
+  box.appendChild(el('p', null, `${s.telefono} · ${nombreSede(tenant, s.sedeId) || s.sedeId}`));
   box.appendChild(el('p', null, `Estado socio: ${s.estado}`));
   if (ficha.plan) box.appendChild(el('p', null, `Plan: ${ficha.plan.nombre}`));
   if (ficha.membresia) {
     box.appendChild(el('p', null, `Membresía ${ficha.membresia.estado}: ${ficha.membresia.inicio} a ${ficha.membresia.fin}`));
   }
-  if (tenant.id === 'soma' && ficha.cuposRestantes != null) {
+  if (capacidadesDe(tenant).cuposPorPlan && ficha.cuposRestantes != null) {
     box.appendChild(el('p', null, `Cupos del mes: ${ficha.cuposRestantes} de ${ficha.cuposMes}`));
   }
   box.appendChild(el('h3', null, 'Pagos'));
@@ -845,9 +844,9 @@ async function fillSelectsSocio(socio) {
   sedeSel.replaceChildren();
   for (const s of tenant.sedes || []) {
     const o = document.createElement('option');
-    o.value = s.nombre;
+    o.value = s.id;
     o.textContent = s.nombre;
-    if (socio && socio.sedeId === s.nombre) o.selected = true;
+    if (socio && (socio.sedeId === s.id || socio.sedeId === s.nombre)) o.selected = true;
     sedeSel.appendChild(o);
   }
   const plans = await store.listarPlanes();

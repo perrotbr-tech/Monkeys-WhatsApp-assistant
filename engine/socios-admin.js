@@ -48,8 +48,15 @@ export function matchPlan(plans, raw) {
 export function matchSede(sedes, raw) {
   const key = String(raw || '').trim().toLowerCase();
   if (!key) return null;
-  const hit = (sedes || []).find((s) => String(s.nombre || s).toLowerCase() === key || String(s.id || '').toLowerCase() === key);
-  return hit ? (hit.nombre || hit) : null;
+  const hit = (sedes || []).find((s) => {
+    if (typeof s === 'string') return s.toLowerCase() === key;
+    if (String(s.id || '').toLowerCase() === key) return true;
+    if (String(s.nombre || '').toLowerCase() === key) return true;
+    return (s.alias || []).some((a) => String(a).toLowerCase() === key);
+  });
+  if (!hit) return null;
+  if (typeof hit === 'string') return hit;
+  return hit.id || hit.nombre || null;
 }
 
 export function validarFilaSocio(row, { plans, sedes, telefonos }) {

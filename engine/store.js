@@ -1,5 +1,5 @@
 import { clonarDemo, clonarMundo, clonar } from '../data/demo.js';
-import { buscarTenant, listarTenants, TENANT_DEFAULT } from '../data/tenants.js';
+import { buscarTenant, listarTenants, TENANT_DEFAULT, mismaSede, nombreSede, resolverSedeId, capacidadesDe } from '../data/tenants.js';
 import { anioDe, fechaHoy, dayKey, ymKey } from './dates.js';
 import { relojActivo } from './clock.js';
 import { planSomaPorId } from '../data/planes-soma.js';
@@ -141,13 +141,20 @@ export function crearMemoria(datosIniciales, opts = {}) {
 
   function listarClases(tenantId, sede) {
     const s = requireSlice(tenantId);
-    const rows = s.classes.map((c) => ({
-      ...c,
-      tenantId,
-      disponibles: c.reservable === false ? null : Math.max(0, c.capacity - c.reserved),
-      agotada: c.reservable !== false && c.capacity > 0 && c.reserved >= c.capacity,
-    }));
-    return sede ? rows.filter((c) => c.sede === sede) : rows;
+    const tenant = getTenant(tenantId);
+    const rows = s.classes.map((c) => {
+      const sedeId = resolverSedeId(tenant, c.sedeId || c.sede) || c.sedeId || c.sede;
+      return {
+        ...c,
+        tenantId,
+        sedeId,
+        sede: nombreSede(tenant, sedeId),
+        disponibles: c.reservable === false ? null : Math.max(0, c.capacity - c.reserved),
+        agotada: c.reservable !== false && c.capacity > 0 && c.reserved >= c.capacity,
+      };
+    });
+    if (!sede) return rows;
+    return rows.filter((c) => mismaSede(tenant, c.sedeId || c.sede, sede));
   }
 
   function getClase(tenantId, id) {
@@ -233,8 +240,8 @@ export function crearMemoria(datosIniciales, opts = {}) {
     if (!planId) return null;
     const fromSlice = (requireSlice(tenantId).plans || []).find((p) => p.id === planId);
     if (fromSlice) return fromSlice;
-    if (tenantId === 'soma') return planSomaPorId(planId);
-    return null;
+    // Respaldo de catálogo SOMA solo por id de plan conocido (compatibilidad histórica).
+    return planSomaPorId(planId) || null;
   }
 
   function ensureArr(s, key) {
@@ -244,7 +251,8 @@ export function crearMemoria(datosIniciales, opts = {}) {
 
   function siguienteSocioId(tenantId) {
     const s = requireSlice(tenantId);
-    const prefix = tenantId === 'soma' ? 'sm' : 's';
+    const tenant = getTenant(tenantId);
+    const prefix = capacidadesDe(tenant).prefijoSocioId || 's';
     s.nextSocioSeq = (s.nextSocioSeq || 100) + 1;
     return `${prefix}${s.nextSocioSeq}`;
   }
@@ -355,12 +363,14 @@ export function crearMemoria(datosIniciales, opts = {}) {
     const plan = planDe(tenantId, datos.planId) || (s.plans || [])[0];
     if (!plan) return { ok: false, error: 'plan inexistente' };
     const tenant = getTenant(tenantId);
-    const sedeOk = (tenant.sedes || []).some((x) => x.nombre === datos.sedeId);
+    const sedeId = resolverSedeId(tenant, datos.sedeId) || datos.sedeId;
+    const sedeOk = sedeId && (tenant.sedes || []).some((x) => x.id === sedeId);
     if (!sedeOk) return { ok: false, error: 'sede inexistente' };
     const socio = prepararSocio(tenantId, siguienteSocioId(tenantId), {
       ...datos,
       telefono: tel,
       planId: plan.id,
+      sedeId,
     }, fechaRef);
     s.socios.push(socio);
     const mem = crearMembresia({
@@ -615,7 +625,7 @@ export function crearMemoria(datosIniciales, opts = {}) {
       mem ? `Vigencia: ${mem.inicio} a ${mem.fin} (${mem.estado}).` : 'Sin membresía activa.',
       `Pago: ${pagoEstado === 'pagada' ? 'al día' : pagoEstado}.`,
     ];
-    if (tenantId === 'soma' && ficha.cuposRestantes != null) {
+    if (tenantId && capacidadesDe(getTenant(tenantId)).cuposPorPlan && ficha.cuposRestantes != null) {
       lines.push(`Cupos restantes este mes: ${ficha.cuposRestantes} de ${ficha.cuposMes}.`);
     }
     return { ok: true, texto: lines.join('\n'), ficha };
@@ -661,7 +671,7 @@ export function crearMemoria(datosIniciales, opts = {}) {
     const s = requireSlice(tenantId);
     const q = String(filtro.q || '').trim().toLowerCase();
     return (s.socios || []).filter((socio) => {
-      if (filtro.sede && socio.sedeId !== filtro.sede) return false;
+      if (filtro.sede && !mismaSede(getTenant(tenantId), socio.sedeId, filtro.sede)) return false;
       if (filtro.plan && socio.planId !== filtro.plan) return false;
       if (filtro.estadoSocio && socio.estado !== filtro.estadoSocio) return false;
       const mem = membresiaVigenteDe(s.membresias, socio.id, fechaRef);
@@ -708,7 +718,8 @@ export function crearMemoria(datosIniciales, opts = {}) {
     }
 
     const socio = buscarSocioPorTelefono(tenantId, tel);
-    const plan = tenantId === 'soma' ? planDe(tenantId, socio) : null;
+    const caps = capacidadesDe(getTenant(tenantId));
+    const plan = caps.cuposPorPlan ? planDe(tenantId, socio) : null;
     if (socio && socio.estado !== 'baja' && plan) {
       const usados = socio.cuposUsadosMes || 0;
       if (plan.cuposMes != null && usados >= plan.cuposMes) {
@@ -758,6 +769,10 @@ export function crearMemoria(datosIniciales, opts = {}) {
     }
 
     clase.reserved += 1;
+    const tenant = getTenant(tenantId);
+    const sedeId = resolverSedeId(tenant, sede || clase.sedeId || clase.sede)
+      || clase.sedeId
+      || null;
     const booking = {
       tenantId,
       codigo: siguienteCodigo(tenantId),
@@ -766,7 +781,8 @@ export function crearMemoria(datosIniciales, opts = {}) {
       email: email || null,
       claseId: clase.id,
       clase: clase.nombre,
-      sede: sede || clase.sede,
+      sedeId,
+      sede: nombreSede(tenant, sedeId) || sede || clase.sede,
       dia: clase.dia,
       hora: clase.hora,
       estado: 'confirmada',
@@ -800,21 +816,33 @@ export function crearMemoria(datosIniciales, opts = {}) {
 
   function crearLead(tenantId, lead) {
     const s = requireSlice(tenantId);
+    const tenant = getTenant(tenantId);
     const id = `lead-${tenantId}-${s.nextLeadSeq || 1}`;
     s.nextLeadSeq = (s.nextLeadSeq || 1) + 1;
-    const row = { id, estado: 'nuevo', tenantId, ...lead };
+    const sedeId = resolverSedeId(tenant, lead.sedeId || lead.sede) || lead.sedeId || null;
+    const row = {
+      id,
+      estado: 'nuevo',
+      tenantId,
+      ...lead,
+      sedeId,
+      sede: nombreSede(tenant, sedeId) || lead.sede || null,
+    };
     s.leads.push(row);
     return clonar(row);
   }
 
   function crearConversacion(tenantId, base = {}) {
     const s = requireSlice(tenantId);
+    const tenant = getTenant(tenantId);
     const id = `conv-${tenantId}-${s.nextConvSeq || 1}`;
     s.nextConvSeq = (s.nextConvSeq || 1) + 1;
+    const sedeId = resolverSedeId(tenant, base.sedeId || base.sede) || base.sedeId || null;
     const conv = {
       id,
       tenantId,
       sede: null,
+      sedeId: null,
       status: 'active',
       paso: 'pick_sede',
       data: {},
@@ -823,6 +851,8 @@ export function crearMemoria(datosIniciales, opts = {}) {
       motivo: null,
       messages: [],
       ...base,
+      sedeId,
+      sede: nombreSede(tenant, sedeId) || base.sede || null,
     };
     s.conversations.push(conv);
     return conv;

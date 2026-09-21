@@ -2,49 +2,52 @@
 
 ## Prioridad alta
 
-### Pruebas no deterministas (cerrado en E1A; E1B usa Clock fijo)
-
-E1A introdujo `engine/clock.js` y lo cableó en dominio/auth/server. E1B usa exclusivamente ese Clock en adaptadores y en la suite de conformidad. Persisten `new Date(...)` justificados en parseo de calendario y restas ISO. Timestamps de UI en `app.js` siguen fuera de alcance.
-
 ### Posible cruce de tenant en pagos demo
 
-Las rutas públicas de pago pueden buscar la referencia en todos los tenants. Si una referencia se conoce, podría consultarse o marcarse un pago de otro tenant. Fuera de alcance E1; pendiente post-consolidación.
+Las rutas públicas de pago pueden buscar la referencia en todos los tenants. Fuera de alcance E2; pendiente post-E2.
 
 ### Webhook de pagos
 
 Sin verificación de firma, replay ni idempotencia. No listo para producción.
 
-### Persistencia (E1B implementada; todavía no productiva)
+### Persistencia demo (E1B/E2)
 
-Contrato versionado JSON/localStorage con migración V0→V1, escritura atómica y rechazo de corruptos. Sigue siendo demo: sin concurrencia multi-proceso, auditoría inmutable ni recuperación productiva. Postgres/Supabase fuera de alcance.
+Contrato V2 con migración y rechazo de corruptos. Sigue siendo demo: sin concurrencia multi-proceso, auditoría inmutable ni recuperación productiva. Postgres/Supabase fuera de alcance.
 
 ## Prioridad media
 
-- Motores y usuarios demo estáticos para dos tenants; sin aprovisionamiento real.
+- Usuarios demo estáticos; sin aprovisionamiento real (E2 registra tenants por config, no usuarios productivos).
 - Interfaz sin RBAC granular.
 - Sin adaptador WhatsApp Cloud API aunque la salida respeta límites.
 - Mercado Pago con contrato/adaptador, sin integración productiva segura.
 - Escritura JSON de proceso único.
 - Sin observabilidad, colas ni política de respaldo formal.
+- UI (`app.js`) aún puede usar reloj de pared en timestamps visibles.
+
+## Cerrado en E0–E2
+
+- E0: línea base 68/68 (dependencia de fecha en chat).
+- E1A: Clock determinístico.
+- E1B: Store, snapshots V1, conformidad JSON/localStorage.
+- PR #12 fusionado en `main` @ `cf24445`.
+- E2: contrato de tenant, IDs estables de sede, registro dinámico, Snapshot V2, migración V1→V2.
 
 ## Decisiones confirmadas
 
 - Nombre paraguas: FORKZA IA; módulos Forkza Gestión y Forja Training.
 - Multi-tenant desde el núcleo; coach conserva control.
-- Implementación por etapas verificables.
-- E1A Clock y E1B Store aprobadas; E1 técnicamente completa en `integration/forkza-e1-complete` (129/129); consolidación pendiente de revisión y merge hacia `main`.
-- Snapshots estrictos: `WorldSnapshotV1` (`schemaVersion`, `tenants`, `byTenant`) y `TenantSnapshotV1` (`schemaVersion`, `tenantId`, `data`); sin opcionales ambiguos.
+- MONKEYS/SOMA son configuración de tenant, no identidad global del producto.
+- Snapshots: V1 histórico; V2 actual con `sedeId` estable. No se altera el significado de V1.
 - Demo solo en vacío, reset explícito o migración de campo documentada.
-- SliceV1 estricto en carga y escritura simétrica: V1 incompleto o con identidad cruzada → error/corrupto sin sanitizar ni sobrescribir.
-- Consolidación E0–E1 en PR #12 (`integration/forkza-e1-complete` → `main`, draft) desde el tip E1B; no fusionar PR apilados (#4–#11) por separado. E2 y Forja Training no iniciados.
+- Excepciones literales `monkeys`/`soma` solo en migración histórica (p. ej. clave `monkeys_demo_state`), documentadas.
 
 ## Decisiones aún abiertas
 
 - Base de datos y proveedor de despliegue.
 - Modelo final de RBAC y alcance por sede/equipo.
+- `workspaceId` transversal (E3).
 - Contrato Gestión ↔ Training; WhatsApp/pagos/archivos productivos.
 - Alcance del primer MVP de Forja Training.
-- Momento de cierre/sustitución formal de los PR apilados tras merge del consolidado.
 
 ## Regla de interpretación
 

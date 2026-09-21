@@ -11,52 +11,36 @@
 
 ## Capas reales
 
-### Datos
+### Datos y configuración de tenant (E2)
 
-`data/` define tenants, planes, clases, socios, membresías, pagos, plantillas, traducciones y datos demo. Existen dos tenants demo: MONKEYS y SOMA.
+`data/tenants.js` define el contrato único de configuración: `tenantId`/`slug`/nombre visible, idioma, zona, marca, `codigoPrefix`, sedes con `sedeId` estable + nombre, menú, capacidades (cupos, trial, emoji), textos y `aliasHistoricos`. Sin lógica de negocio en el objeto. Catálogo registrable (`registrarTenant`) para tenants adicionales sin tocar motor/servidor.
+
+`data/demo.js` construye slices vía builders registrados por `tenantId`, no por `if (slug === …)`.
 
 ### Dominio
 
-`engine/` contiene reglas para conversación, intención, catálogo, fechas, socios, membresías, pagos, autenticación, automatización y salida compatible con WhatsApp. El reloj es inyectable vía `engine/clock.js` (E1A).
+`engine/` contiene reglas para conversación, intención, catálogo, fechas, socios, membresías, pagos, autenticación, automatización y salida WhatsApp. Reloj inyectable (`engine/clock.js`). Conversación lee menús/capacidades desde config; sin bifurcaciones `tid === "soma"|"monkeys"`.
 
-### Persistencia (E1B)
+### Persistencia (E1B + E2)
 
-- Contrato en `engine/persistencia/`: estados de carga (vacío, V0 migrable, V1 válido, corrupto), `WorldSnapshotV1`, `TenantSnapshotV1`, `migrateV0toV1`.
-- Adaptador JSON (`persistencia/json.js`): ruta inyectable, escritura atómica temp→rename.
-- Adaptador localStorage (`persistencia/local.js`): clave `forkza_demo_state_<tenant>`; migra `monkeys_demo_state`.
-- `engine/store.js`: motor de dominio en memoria (hidratar mundo ≠ hidratar tenant).
-- `engine/store-local.js` y `server/index.js` delegan carga/guardado a los adaptadores.
-- Demo solo en bootstrap vacío, reset explícito o migración de campo documentada. Snapshot corrupto → error; no se reemplaza con demo.
-- Carga V1 exige SliceV1 completo (campos de `CAMPOS_SLICE` presentes y tipados) y coherencia de `tenantId` entre clave, envelope y slice; no se normaliza ni rellena un V1 inválido.
-- Escritura (`guardar` / `guardarTenant`): valida el documento original antes de persistir; un V1 inválido no se sanitiza con `crearWorldSnapshotV1`/`normalizarSlice`.
+- Contrato en `engine/persistencia/`: estados de carga, `WorldSnapshotV1`/`TenantSnapshotV1` (históricos), `WorldSnapshotV2`/`TenantSnapshotV2` (actual, `schemaVersion: 2`).
+- Migración `V0→V1→V2` y `migrateV1toV2`: nombres de sede → `sedeId` estable; idempotente; rechaza ambiguos/corruptos sin sobrescribir.
+- Claves localStorage `forkza_demo_state_<tenant>`; legacy `monkeys_demo_state` solo como compatibilidad histórica.
+- Adaptadores JSON/localStorage; demo solo en vacío, reset o migración de campo documentada.
 
 ### API
 
-`server/index.js` sirve frontend y 35 rutas API. Incluye salud, tema, login/sesión, conversaciones, clases, planes, reservas, leads, automatización, socios, importación CSV y pagos.
+`server/index.js` construye `engines`/`autos` recorriendo `idsTenantsActivos()`. Sin propiedades manuales `.monkeys`/`.soma`.
 
 ### Interfaz
 
-La SPA usa rutas hash y puede operar contra API o en modo local. Presenta asistente, panel, socios, pagos y automatizaciones. La marca se inyecta por tenant mediante variables CSS.
+SPA con selector de tenants desde `listarTenants()`. Rutas hash; API o modo local. Marca por CSS variables.
 
-## Seguridad y tenancy existente
+## Seguridad y tenancy
 
-- El tenant se resuelve por encabezado/parámetro según la ruta.
-- Entidades principales incluyen `tenantId` y los stores mantienen partición por tenant.
-- Las vistas internas requieren sesión; el asistente público no.
-- Sesión en cookie `HttpOnly`, `SameSite=Lax`, firmada por HMAC.
-- Hay bloqueo temporal tras cinco intentos fallidos.
+- Tenant por encabezado/parámetro; entidades con `tenantId`; sedes/planes por ID estable.
+- Sesión cookie `HttpOnly`, `SameSite=Lax`, HMAC; bloqueo tras cinco fallos.
 
-## Automatización e IA
+## Diferencias frente al objetivo
 
-Comprensión determinista local; sin LLM. Los agentes generan acciones por reglas. Tras bootstrap, los datos persistidos son la fuente de verdad (`automation.extraer` ya no rellena desde demo).
-
-## Diferencias frente a la arquitectura objetivo
-
-La regla `.cursor/rules/forkza.mdc` menciona `/server/store/*` y `/channels/*` como objetivo. Hoy: `engine/persistencia/*`, `engine/store.js`, `engine/store-local.js`. Forja Training no está implementado.
-
-## Prácticas observadas
-
-- Lógica de negocio separada del DOM en gran parte.
-- Respuestas con límites compatibles con WhatsApp.
-- Clock inyectable en motor y persistencia; UI (`app.js`) aún puede usar reloj de pared.
-- Sin Postgres/SQL, colas, RBAC granular ni almacenamiento de archivos productivo.
+La regla menciona `/server/store/*` y `/channels/*` como objetivo. Hoy: `engine/persistencia/*`, `engine/store.js`. `workspaceId` transversal = E3. Forja Training no implementado.
