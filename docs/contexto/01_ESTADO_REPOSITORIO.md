@@ -19,7 +19,7 @@ Fecha de corte: 2026-09-21.
 | #5 | Cerrado como sustituido | Socios/pagos; contenido en #12 |
 | #6 | Cerrado previamente | Docs maestros sustituidos por #8 |
 | #7–#11 | Cerrados como sustituidos | Contexto, maestro, E0, E1A, E1B → #12 |
-| #13 | Draft | E2 identidad/tenant config; revisión B1–B4 en curso |
+| #13 | Draft | E2 identidad/tenant config; revisión B1–B5 |
 | E2 | Draft pendiente | Un PR hacia `main`; sin merge automático |
 
 ## Resultado base (pre-E2)
