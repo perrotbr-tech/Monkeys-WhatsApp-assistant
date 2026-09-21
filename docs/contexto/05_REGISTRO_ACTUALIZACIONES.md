@@ -91,3 +91,10 @@ No eliminar entradas anteriores. Si una conclusión queda obsoleta, agregar una 
 - Pruebas: `npm ci` + `npm test` → 129/129; `git diff --check` limpio.
 - Hechos: validar original antes de persistir; V1 inválido no se completa; storage/archivo intactos ante error.
 - Decisión: E1B escritura alineada con carga; E1 no completa; sin merge ni E2.
+
+## 2026-09-21 — Consolidación E0+E1
+
+- Rama: `integration/forkza-e1-complete` desde E1B `5eaf8e2` (52 ahead / 0 behind de `main` `73dec39`).
+- Incluye históricamente PR #4, #5, #7, #8, #9, #10 y #11; E0 `ffc52fd`, E1A `a306438`, E1B `5eaf8e2`.
+- Pruebas: `npm ci` + `npm test` → 129/129; smoke API/tenants/persistencia/migración/Clock OK.
+- Docs: `01`, `04`, `05`. Sin cambio funcional. E1 técnicamente completa; consolidación pendiente de revisión/merge. E2 y Forja Training no iniciados; PR previos abiertos.

@@ -8,13 +8,13 @@ E1A introdujo `engine/clock.js` y lo cableó en dominio/auth/server. E1B usa exc
 
 ### Posible cruce de tenant en pagos demo
 
-Las rutas públicas de pago pueden buscar la referencia en todos los tenants. Si una referencia se conoce, podría consultarse o marcarse un pago de otro tenant. Fuera de alcance E1B.
+Las rutas públicas de pago pueden buscar la referencia en todos los tenants. Si una referencia se conoce, podría consultarse o marcarse un pago de otro tenant. Fuera de alcance E1; pendiente post-consolidación.
 
 ### Webhook de pagos
 
 Sin verificación de firma, replay ni idempotencia. No listo para producción.
 
-### Persistencia (E1B implementada; límites de demo)
+### Persistencia (E1B implementada; todavía no productiva)
 
 Contrato versionado JSON/localStorage con migración V0→V1, escritura atómica y rechazo de corruptos. Sigue siendo demo: sin concurrencia multi-proceso, auditoría inmutable ni recuperación productiva. Postgres/Supabase fuera de alcance.
 
@@ -32,11 +32,11 @@ Contrato versionado JSON/localStorage con migración V0→V1, escritura atómica
 - Nombre paraguas: FORKZA IA; módulos Forkza Gestión y Forja Training.
 - Multi-tenant desde el núcleo; coach conserva control.
 - Implementación por etapas verificables.
-- E1 en subetapas: E1A Clock (revisión) y E1B Store (esta; pendiente de revisión humana). E1 no se declara completa.
-- Snapshots estrictos: `WorldSnapshotV1` (`schemaVersion`, `tenants`, `byTenant`) y `TenantSnapshotV1` (`schemaVersion`, `tenantId`, `data`); sin `byTenant`/`data` opcionales en el mismo formato.
+- E1A Clock y E1B Store aprobadas; E1 técnicamente completa en `integration/forkza-e1-complete` (129/129); consolidación pendiente de revisión y merge hacia `main`.
+- Snapshots estrictos: `WorldSnapshotV1` (`schemaVersion`, `tenants`, `byTenant`) y `TenantSnapshotV1` (`schemaVersion`, `tenantId`, `data`); sin opcionales ambiguos.
 - Demo solo en vacío, reset explícito o migración de campo documentada.
-- SliceV1 estricto en carga: campos obligatorios tipados; `tenantId` coherente en clave/envelope/slice; V1 incompleto o cruzado → corrupto sin sobrescribir ni normalizar.
-- Escritura simétrica: `guardar(world)` y `guardarTenant` rechazan V1 incompleto o con identidad cruzada; no sanitizan antes de validar.
+- SliceV1 estricto en carga y escritura simétrica: V1 incompleto o con identidad cruzada → error/corrupto sin sanitizar ni sobrescribir.
+- Consolidación E0–E1 en un único PR hacia `main` desde el tip E1B; no fusionar PR apilados (#4–#11) por separado. E2 y Forja Training no iniciados.
 
 ## Decisiones aún abiertas
 
@@ -44,7 +44,7 @@ Contrato versionado JSON/localStorage con migración V0→V1, escritura atómica
 - Modelo final de RBAC y alcance por sede/equipo.
 - Contrato Gestión ↔ Training; WhatsApp/pagos/archivos productivos.
 - Alcance del primer MVP de Forja Training.
-- Orden de consolidación de PR #4, #5, #7, #8, #9, #10 y E1B.
+- Momento de cierre/sustitución formal de los PR apilados tras merge del consolidado.
 
 ## Regla de interpretación
 
