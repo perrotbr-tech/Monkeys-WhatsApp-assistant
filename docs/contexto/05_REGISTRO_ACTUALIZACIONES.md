@@ -82,3 +82,12 @@ No eliminar entradas anteriores. Si una conclusión queda obsoleta, agregar una 
 - Pruebas: `npm ci` + `npm test` → 120/120; `git diff --check` limpio.
 - Hechos: V1 inválido → `corrupt` sin escritura; `socios: []` válido; V0 sigue migrando; `guardarTenant` rechaza cruce.
 - Decisión: E1B corregida en el mismo PR; E1 no completa; sin merge ni E2.
+
+## 2026-09-21 — E1B fix: escritura sin sanitizar (B3/B4)
+
+- Rama: `cursor/e1b-store-persistencia-f516` (PR #11).
+- Brechas: B3 (`guardar(world)` normalizaba `tenantId` cruzado); B4 (`guardarTenant` trataba V1 sin `data` como slice plano).
+- Archivos: `engine/persistencia/escritura.js`; `json.js`; `local.js`; regresión en `tests/store-conformidad.test.js`.
+- Pruebas: `npm ci` + `npm test` → 129/129; `git diff --check` limpio.
+- Hechos: validar original antes de persistir; V1 inválido no se completa; storage/archivo intactos ante error.
+- Decisión: E1B escritura alineada con carga; E1 no completa; sin merge ni E2.
