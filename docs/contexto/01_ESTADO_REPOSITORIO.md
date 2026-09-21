@@ -31,7 +31,9 @@ npm test
 git diff --check
 ```
 
-Resultado: 111 pruebas, 111 aprobadas, 0 fallidas (81 previas + 30 de conformidad C01–C17). `git diff --check` limpio.
+Resultado: 120 pruebas, 120 aprobadas, 0 fallidas (111 previas + 9 de regresión B1/B2). `git diff --check` limpio.
+
+Corrección posterior en el mismo PR #11: validación estructural estricta de SliceV1 y coherencia de `tenantId` (clave/envelope/slice); V1 incompleto o con identidad cruzada → `corrupt` sin sobrescribir.
 
 ## Documentos maestros
 

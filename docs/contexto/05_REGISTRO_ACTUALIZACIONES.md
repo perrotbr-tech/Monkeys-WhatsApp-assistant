@@ -73,3 +73,12 @@ No eliminar entradas anteriores. Si una conclusión queda obsoleta, agregar una 
 - Pruebas: `npm ci` + `npm test` → 111/111; `git diff --check` limpio.
 - Hechos: vacío→bootstrap V1; V0→migrateV0toV1; V1→carga; corrupto→error sin sobrescribir; sin heurísticas destructivas; Clock E1A en conformidad.
 - Decisión: E1B implementada y pendiente de revisión; E1 no completa; sin merge ni E2.
+
+## 2026-09-21 — E1B fix: integridad V1 y coherencia de tenant
+
+- Rama: `cursor/e1b-store-persistencia-f516` (PR #11).
+- Brechas: B1 (envelope/clave/slice con tenant cruzado aceptado); B2 (V1 incompleto aceptado y rellenado por `normalizarSlice`).
+- Archivos: `engine/persistencia/snapshots.js` (`validarSliceV1`, `coherenciaTenantIds`); `cargar.js`; `local.js` (`assertTenantEscritura`); pruebas de regresión en `tests/store-conformidad.test.js`.
+- Pruebas: `npm ci` + `npm test` → 120/120; `git diff --check` limpio.
+- Hechos: V1 inválido → `corrupt` sin escritura; `socios: []` válido; V0 sigue migrando; `guardarTenant` rechaza cruce.
+- Decisión: E1B corregida en el mismo PR; E1 no completa; sin merge ni E2.

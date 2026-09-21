@@ -35,6 +35,7 @@ Contrato versionado JSON/localStorage con migración V0→V1, escritura atómica
 - E1 en subetapas: E1A Clock (revisión) y E1B Store (esta; pendiente de revisión humana). E1 no se declara completa.
 - Snapshots estrictos: `WorldSnapshotV1` (`schemaVersion`, `tenants`, `byTenant`) y `TenantSnapshotV1` (`schemaVersion`, `tenantId`, `data`); sin `byTenant`/`data` opcionales en el mismo formato.
 - Demo solo en vacío, reset explícito o migración de campo documentada.
+- SliceV1 estricto en carga: campos obligatorios tipados; `tenantId` coherente en clave/envelope/slice; V1 incompleto o cruzado → corrupto sin sobrescribir ni normalizar.
 
 ## Decisiones aún abiertas
 

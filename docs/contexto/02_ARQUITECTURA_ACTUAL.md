@@ -27,6 +27,7 @@
 - `engine/store.js`: motor de dominio en memoria (hidratar mundo ≠ hidratar tenant).
 - `engine/store-local.js` y `server/index.js` delegan carga/guardado a los adaptadores.
 - Demo solo en bootstrap vacío, reset explícito o migración de campo documentada. Snapshot corrupto → error; no se reemplaza con demo.
+- Carga V1 exige SliceV1 completo (campos de `CAMPOS_SLICE` presentes y tipados) y coherencia de `tenantId` entre clave, envelope y slice; no se normaliza ni rellena un V1 inválido.
 
 ### API
 
