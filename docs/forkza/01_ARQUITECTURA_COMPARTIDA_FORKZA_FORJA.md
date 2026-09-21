@@ -1,7 +1,7 @@
 # Arquitectura compartida — Forkza IA y Forja Training
 
-**Versión:** 1.1  
-**Fecha:** 19 de septiembre de 2026  
+**Versión:** 1.1
+**Fecha:** 19 de septiembre de 2026
 **Decisión:** una plataforma tecnológica, dos dominios comerciales activables por separado.
 
 ## 1. Identidad del ecosistema

@@ -1,6 +1,6 @@
 # Instrucciones raíz para Cursor — Forkza IA / Forja Training
 
-**Versión:** 1.1  
+**Versión:** 1.1
 **Fecha:** 19 de septiembre de 2026
 
 ## 1. Orden de lectura obligatorio

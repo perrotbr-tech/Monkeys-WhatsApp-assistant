@@ -1,7 +1,7 @@
 # Contexto vivo de FORKZA IA
 
-Estado de referencia: 2026-09-19  
-Repositorio: `perrotbr-tech/Monkeys-WhatsApp-assistant`  
+Estado de referencia: 2026-09-19
+Repositorio: `perrotbr-tech/Monkeys-WhatsApp-assistant`
 Base funcional auditada: `cursor/socios-pagos-7236` @ `b03fd73db94589431209cf9a68f95e08f58a631d`
 
 ## Propósito
@@ -50,4 +50,3 @@ Si no se puede acceder a una fuente necesaria, se declara la limitación y no se
 ## Alcance de la auditoría inicial
 
 Se inventarió el árbol completo de la rama base. Se leyeron el código fuente, las pruebas, las reglas de Cursor, la configuración y los seis documentos maestros de PR #6. Los binarios e imágenes de marca se inventariaron como activos; `package-lock.json` se validó mediante `npm ci`. No se interpretaron los píxeles ni se revisó manualmente cada línea generada del lockfile.
-

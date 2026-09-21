@@ -1,8 +1,8 @@
 # FORJA TRAINING — Comando maestro funcional para Cursor
 
-**Versión:** 0.3 · revisión 2  
-**Fecha de corte:** 19 de septiembre de 2026  
-**Estado:** Diseño funcional consolidado; implementación todavía no iniciada. Documento vivo, no definitivo.  
+**Versión:** 0.3 · revisión 2
+**Fecha de corte:** 19 de septiembre de 2026
+**Estado:** Diseño funcional consolidado; implementación todavía no iniciada. Documento vivo, no definitivo.
 **Idioma funcional principal:** español.
 
 ---

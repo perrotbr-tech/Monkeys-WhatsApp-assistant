@@ -1,6 +1,6 @@
 # Plan de ejecución por etapas — Forkza IA / Forja Training
 
-**Versión:** 1.1  
+**Versión:** 1.1
 **Regla:** una etapa por tarea de Cursor. Cada etapa requiere revisión humana antes de continuar.
 
 ## Resumen

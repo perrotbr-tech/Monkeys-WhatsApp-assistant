@@ -50,4 +50,3 @@ La planificación proyectada contempla macrociclo, mesociclo, microciclo, sesió
 - Asignación coach-alumno-modalidad.
 
 Las entidades comerciales y deportivas deben referenciar estas identidades compartidas, manteniendo datos sensibles y reglas especializadas dentro de su dominio.
-
