@@ -55,3 +55,10 @@ No eliminar entradas anteriores. Si una conclusión queda obsoleta, agregar una 
 - Pruebas: `tests/e2-brechas-b5.test.js` (B5.1–B5.3); B5.4 = suite completa en verde.
 - Precisión docs: motor/servidor sin bifurcar por marca; literales demo en `data/socios.js` y `data/membresias-demo.js`; legacy `monkeys_demo_state` en migración.
 - Sin merge; E3/Forja no iniciados.
+
+## 2026-09-21 — PR #13 fusionado; E2 cerrada
+
+- PR #13 marcado listo y fusionado mediante squash en `main`.
+- `main` @ `0e20df0e7382ed373c65a2f506540a2e3f7a24d7` contiene E2 y revisiones B1–B5.
+- Verificación previa al merge: `npm ci` + `npm test` → 152/152; `git diff --check` limpio; contexto bajo 7.000 caracteres.
+- E0, E1 y E2 terminadas. E3 y Forja Training no iniciados.
