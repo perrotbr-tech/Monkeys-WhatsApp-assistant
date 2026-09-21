@@ -3,17 +3,18 @@
   "version": "0.2.0",
   "private": true,
   "type": "module",
-  "description": "MONKEYS Fitness Community — prototipo híbrido IA + bot determinístico.",
+  "description": "FORKZA AI — prototipo multi-gimnasio (MONKEYS + SOMA) con asistente híbrido IA + bot.",
   "main": "server/index.js",
   "scripts": {
     "start": "node server/index.js",
-    "test": "node --test tests/engine.test.js tests/automation.test.js"
+    "test": "node --test tests/*.js"
   },
   "engines": {
     "node": ">=20"
   },
   "license": "MIT",
   "dependencies": {
+    "bcryptjs": "^2.4.3",
     "express": "^4.21.2"
   }
 }

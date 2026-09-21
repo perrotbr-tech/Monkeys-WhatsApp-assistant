@@ -1,12 +1,40 @@
-/** Utilidades de fecha UTC (sin DOM). */
+/** Utilidades de fecha. Zona por tenant (Chile: America/Santiago). Sin DOM. */
 
-export const FECHA_DEMO = '2026-09-11';
+import { relojActivo } from './clock.js';
+
+export const ZONA_DEFAULT = 'America/Santiago';
+
+export function fechaEnZona(date = relojActivo().date(), zona = ZONA_DEFAULT) {
+  const fmt = new Intl.DateTimeFormat('en-CA', {
+    timeZone: zona || ZONA_DEFAULT,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  });
+  return fmt.format(date);
+}
+
+/**
+ * Día calendario "hoy" según el Clock activo (o el inyectado) y la zona del tenant.
+ * @param {string} [zona]
+ * @param {{ now: Function, date: Function, iso: Function }} [clock]
+ */
+export function fechaHoy(zona = ZONA_DEFAULT, clock = relojActivo()) {
+  return fechaEnZona(clock.date(), zona);
+}
+
+export function fechaDesdeQuery(search) {
+  const raw = String(search || '');
+  const q = new URLSearchParams(raw.startsWith('?') ? raw.slice(1) : raw).get('fecha');
+  if (q && /^\d{4}-\d{2}-\d{2}$/.test(q)) return q;
+  return null;
+}
 
 export function parseFecha(ref) {
   if (ref instanceof Date) {
     return new Date(Date.UTC(ref.getUTCFullYear(), ref.getUTCMonth(), ref.getUTCDate(), 12, 0, 0));
   }
-  const s = String(ref || FECHA_DEMO).slice(0, 10);
+  const s = String(ref || fechaHoy()).slice(0, 10);
   const [y, m, d] = s.split('-').map(Number);
   return new Date(Date.UTC(y, m - 1, d, 12, 0, 0));
 }
@@ -27,8 +55,28 @@ export function daysAgo(visitISO, fechaRef) {
   return Math.round((e - v) / 86400000);
 }
 
-/** Ventana (fechaRef - days, fechaRef], en días calendario. */
+export function weekdayEs(ref) {
+  const d = parseFecha(ref);
+  return ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'][d.getUTCDay()];
+}
+
+export function dayNum(ref) {
+  return parseFecha(ref).getUTCDate();
+}
+
 export function enVentana(visitISO, fechaRef, days) {
   const ago = daysAgo(visitISO, fechaRef);
   return ago >= 0 && ago < days;
+}
+
+export function anioDe(ref) {
+  return String(parseFecha(ref).getUTCFullYear());
+}
+
+export function diffDays(a, b) {
+  return Math.round((parseFecha(a) - parseFecha(b)) / 86400000);
+}
+
+export function ymKey(ref) {
+  return dayKey(ref).slice(0, 7);
 }
