@@ -1,5 +1,5 @@
 import { fechaHoy, fechaDesdeQuery } from './engine/dates.js';
-import { TENANT_DEFAULT, tenantActivo, varsMarca, USUARIOS_DEMO, CLAVE_DEMO } from './data/tenants.js';
+import { TENANT_DEFAULT, tenantActivo, varsMarca, USUARIOS_DEMO, CLAVE_DEMO, listarTenants, nombreSede, capacidadesDe } from './data/tenants.js';
 import { crearStoreLocal } from './engine/store-local.js';
 import { i18n } from './data/i18n.js';
 
@@ -97,15 +97,14 @@ function paintTenant(t) {
   sw.replaceChildren();
   if (t.demo) {
     sw.appendChild(document.createTextNode('Ver como: '));
-    const a1 = document.createElement('a');
-    a1.href = '?t=monkeys';
-    a1.textContent = 'MONKEYS';
-    const a2 = document.createElement('a');
-    a2.href = '?t=soma';
-    a2.textContent = 'SOMA';
-    sw.appendChild(a1);
-    sw.appendChild(document.createTextNode(' · '));
-    sw.appendChild(a2);
+    const demos = listarTenants().filter((x) => x.demo && x.activo);
+    demos.forEach((other, i) => {
+      if (i > 0) sw.appendChild(document.createTextNode(' · '));
+      const a = document.createElement('a');
+      a.href = `?t=${encodeURIComponent(other.slug)}`;
+      a.textContent = other.marca.wordmark || other.nombre;
+      sw.appendChild(a);
+    });
   }
 }
 
@@ -545,6 +544,11 @@ function sedesFiltro() {
   return ['Todas', ...(tenant.sedes || []).map((s) => s.nombre)];
 }
 
+/** Opciones de sede: valor = ID estable, etiqueta = nombre visible. */
+function sedesOpcionesFiltro() {
+  return (tenant.sedes || []).map((s) => ({ id: s.id, nombre: s.nombre }));
+}
+
 async function renderDashboard() {
   let bookings; let leads; let convs; let classes;
   try {
@@ -665,7 +669,15 @@ async function renderAutomations() {
     }
   };
   makeFilter('agente', 'agente', ['Todos agente', 'retencion', 'cobranza', 'reactivacion', 'recordatorio', 'referidos']);
-  makeFilter('sede', 'sede', ['Todos sede', ...sedesFiltro().filter((s) => s !== 'Todas')]);
+  for (const s of [{ id: '', nombre: 'Todos sede' }, ...sedesOpcionesFiltro()]) {
+    const b = el('button', 'chip', s.nombre);
+    if ((autoFiltro.sede || '') === (s.id || '')) b.style.borderColor = 'var(--color-acento)';
+    b.addEventListener('click', () => {
+      autoFiltro.sede = s.id || '';
+      renderAutomations();
+    });
+    filters.appendChild(b);
+  }
   makeFilter('estado', 'estado', ['Todos estado', 'pendiente', 'enviado', 'hecho']);
 
   const actions = await store.automationActions(autoFiltro);
@@ -677,7 +689,7 @@ async function renderAutomations() {
     tdA.appendChild(pill(a.agente));
     tr.appendChild(tdA);
     tr.appendChild(el('td', null, a.socioNombre || a.socioId || '—'));
-    tr.appendChild(el('td', null, a.sedeId));
+    tr.appendChild(el('td', null, a.sedeNombre || nombreSede(tenant, a.sedeId) || '—'));
     tr.appendChild(el('td', null, a.tipo));
     tr.appendChild(el('td', null, a.prioridad));
     tr.appendChild(el('td', null, a.estado));
@@ -726,9 +738,9 @@ async function renderSocios() {
     b.addEventListener('click', click);
     filters.appendChild(b);
   };
-  for (const s of ['Todas', ...(tenant.sedes || []).map((x) => x.nombre)]) {
-    addChip(s, (sociosFiltro.sede || 'Todas') === s, () => {
-      sociosFiltro.sede = s === 'Todas' ? '' : s;
+  for (const s of [{ id: '', nombre: 'Todas' }, ...sedesOpcionesFiltro()]) {
+    addChip(s.nombre, (sociosFiltro.sede || '') === (s.id || ''), () => {
+      sociosFiltro.sede = s.id || '';
       renderSocios();
     });
   }
@@ -747,7 +759,7 @@ async function renderSocios() {
   for (const s of socios) {
     const tr = document.createElement('tr');
     const mem = s.membresia || {};
-    for (const cell of [s.nombre, s.telefono, s.sedeId, s.planNombre || s.planId, s.estado, mem.fin || '—']) {
+    for (const cell of [s.nombre, s.telefono, nombreSede(tenant, s.sedeId) || s.sedeId, s.planNombre || s.planId, s.estado, mem.fin || '—']) {
       tr.appendChild(el('td', null, cell));
     }
     tr.addEventListener('click', () => {
@@ -771,13 +783,13 @@ async function pintarFicha(id) {
   box.replaceChildren();
   const s = ficha.socio;
   box.appendChild(el('h2', null, s.nombre));
-  box.appendChild(el('p', null, `${s.telefono} · ${s.sedeId}`));
+  box.appendChild(el('p', null, `${s.telefono} · ${nombreSede(tenant, s.sedeId) || s.sedeId}`));
   box.appendChild(el('p', null, `Estado socio: ${s.estado}`));
   if (ficha.plan) box.appendChild(el('p', null, `Plan: ${ficha.plan.nombre}`));
   if (ficha.membresia) {
     box.appendChild(el('p', null, `Membresía ${ficha.membresia.estado}: ${ficha.membresia.inicio} a ${ficha.membresia.fin}`));
   }
-  if (tenant.id === 'soma' && ficha.cuposRestantes != null) {
+  if (capacidadesDe(tenant).cuposPorPlan && ficha.cuposRestantes != null) {
     box.appendChild(el('p', null, `Cupos del mes: ${ficha.cuposRestantes} de ${ficha.cuposMes}`));
   }
   box.appendChild(el('h3', null, 'Pagos'));
@@ -845,9 +857,9 @@ async function fillSelectsSocio(socio) {
   sedeSel.replaceChildren();
   for (const s of tenant.sedes || []) {
     const o = document.createElement('option');
-    o.value = s.nombre;
+    o.value = s.id;
     o.textContent = s.nombre;
-    if (socio && socio.sedeId === s.nombre) o.selected = true;
+    if (socio && (socio.sedeId === s.id || socio.sedeId === s.nombre)) o.selected = true;
     sedeSel.appendChild(o);
   }
   const plans = await store.listarPlanes();
@@ -944,7 +956,8 @@ async function renderPagoDemo(ref) {
 }
 
 function openMsg(a) {
-  document.getElementById('msg-meta').textContent = `${a.socioNombre || ''} · ${a.claseFavorita || ''} · ${a.sedeId}`;
+  const sedeLabel = a.sedeNombre || nombreSede(tenant, a.sedeId) || '';
+  document.getElementById('msg-meta').textContent = `${a.socioNombre || ''} · ${a.claseFavorita || ''} · ${sedeLabel}`;
   document.getElementById('msg-body').textContent = a.texto || a.motivo || '';
   document.getElementById('msg-panel').classList.remove('hidden');
 }

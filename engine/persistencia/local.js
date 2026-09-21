@@ -8,7 +8,7 @@ import { listarTenants } from '../../data/tenants.js';
 import { CARGA, PersistenciaError, CODIGOS } from './estados.js';
 import { sliceDe, SCHEMA_VERSION } from './snapshots.js';
 import {
-  claveEstadoV1, resolverClaveLocal, CLAVE_LOCAL_LEGACY_MONKEYS,
+  claveEstadoV1, resolverClaveLocal, clavesLegacyLocal,
 } from './migraciones.js';
 import {
   parsearJsonSeguro, resolverCarga, bootstrapTenant, bootstrapMundo, componerMundo,
@@ -46,8 +46,8 @@ export function crearAdaptadorLocal(opts) {
     }
     const key = claveEstadoV1(tenantId);
     storage.setItem(key, serialized);
-    if (tenantId === 'monkeys' && storage.getItem(CLAVE_LOCAL_LEGACY_MONKEYS) != null) {
-      storage.removeItem(CLAVE_LOCAL_LEGACY_MONKEYS);
+    for (const legacyKey of clavesLegacyLocal(tenantId)) {
+      if (storage.getItem(legacyKey) != null) storage.removeItem(legacyKey);
     }
     return snap;
   }
@@ -162,8 +162,13 @@ export function crearAdaptadorLocal(opts) {
   }
 
   function leerTextoTenant(tenantId) {
-    return storage.getItem(claveEstadoV1(tenantId))
-      || (tenantId === 'monkeys' ? storage.getItem(CLAVE_LOCAL_LEGACY_MONKEYS) : null);
+    const primary = storage.getItem(claveEstadoV1(tenantId));
+    if (primary != null) return primary;
+    for (const legacyKey of clavesLegacyLocal(tenantId)) {
+      const raw = storage.getItem(legacyKey);
+      if (raw != null) return raw;
+    }
+    return null;
   }
 
   return {

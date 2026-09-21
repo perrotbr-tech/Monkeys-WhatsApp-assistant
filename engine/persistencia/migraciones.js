@@ -1,24 +1,34 @@
 /**
- * Migraciones mínimas V0 → V1.
- * Demo solo se usa para campos faltantes documentados; nunca reemplaza arrays existentes.
+ * Migraciones: V0 → V1 (E1B) y V1 → V2 (E2 identidad estable de sedes).
+ *
+ * Excepciones MONKEYS/SOMA aquí: solo compatibilidad histórica (claves localStorage
+ * y mapas de sedes). No son bifurcaciones de producto.
+ * Demo solo para campos faltantes documentados en V0; nunca reconstruye datos existentes.
  */
 
 import { clonar } from '../../data/demo.js';
-import { listarTenants } from '../../data/tenants.js';
+import { listarTenants, buscarTenant, resolverSedeId, nombreSede } from '../../data/tenants.js';
 import { PLANES_SOMA } from '../../data/planes-soma.js';
 import { crearMembresiasYPagos } from '../../data/membresias-demo.js';
 import { fechaHoy } from '../dates.js';
 import { relojActivo } from '../clock.js';
+import { PersistenciaError, CODIGOS } from './estados.js';
 import {
   SCHEMA_VERSION,
+  SCHEMA_VERSION_V1,
   crearWorldSnapshotV1,
   crearTenantSnapshotV1,
+  crearWorldSnapshotV2,
+  crearTenantSnapshotV2,
   normalizarSlice,
   esWorldSnapshotV1,
   esTenantSnapshotV1,
+  esWorldSnapshotV2,
+  esTenantSnapshotV2,
 } from './snapshots.js';
 
 export const CLAVE_LOCAL_PREFIX = 'forkza_demo_state_';
+/** @deprecated historico E1B — usar aliasHistoricos del tenant monkeys. */
 export const CLAVE_LOCAL_LEGACY_MONKEYS = 'monkeys_demo_state';
 
 /**
@@ -29,40 +39,58 @@ export function claveEstadoV1(tenantId) {
   return `${CLAVE_LOCAL_PREFIX}${tenantId}`;
 }
 
+export const claveEstado = claveEstadoV1;
+
 /**
- * Resuelve la clave a leer (V1 primero; legacy monkeys_demo_state como respaldo).
+ * Claves históricas de localStorage para un tenant (compatibilidad).
+ * @param {string} tenantId
+ * @returns {string[]}
+ */
+export function clavesLegacyLocal(tenantId) {
+  const t = buscarTenant(tenantId);
+  const fromConfig = (t && t.aliasHistoricos && t.aliasHistoricos.localStorageKeys) || [];
+  // Compatibilidad histórica E1B: monkeys_demo_state solo para tenant monkeys.
+  if (tenantId === 'monkeys' && !fromConfig.includes(CLAVE_LOCAL_LEGACY_MONKEYS)) {
+    return [...fromConfig, CLAVE_LOCAL_LEGACY_MONKEYS];
+  }
+  return [...fromConfig];
+}
+
+/**
+ * Resuelve la clave a leer (V1/V2 primero; legacy como respaldo).
  * @param {Storage} storage
  * @param {string} tenantId
  * @returns {{ key: string, legacy: boolean, raw: string|null }}
  */
 export function resolverClaveLocal(storage, tenantId) {
-  const v1 = claveEstadoV1(tenantId);
-  const rawV1 = storage.getItem(v1);
-  if (rawV1 != null && rawV1 !== '') {
-    return { key: v1, legacy: false, raw: rawV1 };
+  const primary = claveEstadoV1(tenantId);
+  const rawPrimary = storage.getItem(primary);
+  if (rawPrimary != null && rawPrimary !== '') {
+    return { key: primary, legacy: false, raw: rawPrimary };
   }
-  if (tenantId === 'monkeys') {
-    const rawLegacy = storage.getItem(CLAVE_LOCAL_LEGACY_MONKEYS);
+  for (const legacyKey of clavesLegacyLocal(tenantId)) {
+    const rawLegacy = storage.getItem(legacyKey);
     if (rawLegacy != null && rawLegacy !== '') {
-      return { key: CLAVE_LOCAL_LEGACY_MONKEYS, legacy: true, raw: rawLegacy };
+      return { key: legacyKey, legacy: true, raw: rawLegacy };
     }
   }
-  return { key: v1, legacy: false, raw: null };
+  return { key: primary, legacy: false, raw: null };
 }
 
 /**
- * Completa cuposMes faltantes en planes SOMA sin reemplazar socios/reservas ni el array de planes.
+ * Completa cuposMes faltantes en planes SOMA sin reemplazar socios/reservas.
+ * Compatibilidad histórica: detecta planes del catálogo SOMA por id, no por marca global.
  * @param {object} slice
  * @returns {{ slice: object, aplicado: boolean }}
  */
 export function migrarCuposMes(slice) {
   const s = clonar(slice);
   let aplicado = false;
-  if (s.tenantId !== 'soma' && !(s.plans || []).some((p) => p && p.tenantId === 'soma')) {
-    return { slice: s, aplicado };
-  }
   if (!Array.isArray(s.plans)) return { slice: s, aplicado };
   const porId = new Map(PLANES_SOMA.map((p) => [p.id, p]));
+  const tieneCanon = s.plans.some((p) => p && porId.has(p.id));
+  // Historico E1B: solo completa cuposMes en planes del catálogo SOMA (por id de plan).
+  if (!tieneCanon) return { slice: s, aplicado };
   s.plans = s.plans.map((plan) => {
     if (!plan || typeof plan !== 'object') return plan;
     if ('cuposMes' in plan) return plan;
@@ -76,7 +104,6 @@ export function migrarCuposMes(slice) {
 
 /**
  * Si faltan membresías, las genera de forma explícita a partir de socios/planes existentes.
- * No reemplaza socios, reservas ni pagos ya presentes.
  * @param {object} slice
  * @param {string} [fechaRef]
  * @returns {{ slice: object, aplicado: boolean }}
@@ -85,7 +112,8 @@ export function migrarMembresiasFaltantes(slice, fechaRef) {
   const s = clonar(slice);
   let aplicado = false;
   if (Array.isArray(s.membresias)) return { slice: s, aplicado };
-  const tenantId = s.tenantId || 'monkeys';
+  const tenantId = s.tenantId;
+  if (!tenantId) return { slice: s, aplicado };
   const socios = Array.isArray(s.socios) ? s.socios : [];
   const plans = Array.isArray(s.plans) ? s.plans : [];
   const finanzas = crearMembresiasYPagos(socios, plans, fechaRef || fechaHoy(undefined, relojActivo()), tenantId);
@@ -97,9 +125,6 @@ export function migrarMembresiasFaltantes(slice, fechaRef) {
 
 /**
  * Aplica migraciones de campo documentadas sobre un slice V0.
- * @param {object} slice
- * @param {string} tenantId
- * @param {{ fechaRef?: string, clock?: object }} [opts]
  */
 export function migrarSliceV0(slice, tenantId, opts = {}) {
   const clock = opts.clock || relojActivo();
@@ -121,9 +146,6 @@ export function migrarSliceV0(slice, tenantId, opts = {}) {
 
 /**
  * Migra un documento V0 (mundo o tenant) a V1.
- * @param {object} raw
- * @param {{ kind: 'world'|'tenant', tenantId?: string, fechaRef?: string, clock?: object }} opts
- * @returns {import('./snapshots.js').WorldSnapshotV1|import('./snapshots.js').TenantSnapshotV1}
  */
 export function migrateV0toV1(raw, opts) {
   const kind = opts.kind;
@@ -150,4 +172,126 @@ export function migrateV0toV1(raw, opts) {
   throw new Error(`migrateV0toV1_kind_unknown:${kind}`);
 }
 
-export { SCHEMA_VERSION };
+const CAMPOS_CON_SEDE = Object.freeze([
+  'classes', 'bookings', 'leads', 'conversations', 'socios', 'asistencias',
+]);
+
+/**
+ * Transforma nombres históricos de sede a sedeId estable en un slice.
+ * Idempotente. Rechaza valores ambiguos/irresolubles.
+ *
+ * @param {object} slice
+ * @param {string} tenantId
+ * @returns {object}
+ */
+export function migrarSedesSliceV1aV2(slice, tenantId) {
+  const tenant = buscarTenant(tenantId);
+  if (!tenant) {
+    throw new PersistenciaError(CODIGOS.AMBIGUO, `tenant desconocido en migración: ${tenantId}`);
+  }
+  const s = clonar(slice);
+  s.tenantId = tenantId;
+
+  function fijarSede(row) {
+    if (!row || typeof row !== 'object') return row;
+    const crudo = row.sedeId != null && row.sedeId !== '' ? row.sedeId : row.sede;
+    if (crudo == null || crudo === '') {
+      // Sin sede: válido (p.ej. conversación sin asignar)
+      return row;
+    }
+    const id = resolverSedeId(tenant, crudo);
+    if (!id) {
+      throw new PersistenciaError(
+        CODIGOS.AMBIGUO,
+        `sede irresoluble en migración: tenant=${tenantId} valor=${crudo}`,
+      );
+    }
+    return {
+      ...row,
+      sedeId: id,
+      sede: nombreSede(tenant, id),
+    };
+  }
+
+  for (const campo of CAMPOS_CON_SEDE) {
+    if (!Array.isArray(s[campo])) continue;
+    s[campo] = s[campo].map(fijarSede);
+  }
+
+  if (s.automation && typeof s.automation === 'object') {
+    if (Array.isArray(s.automation.acciones)) {
+      s.automation.acciones = s.automation.acciones.map(fijarSede);
+    }
+    if (Array.isArray(s.automation.campanias)) {
+      s.automation.campanias = s.automation.campanias.map((camp) => {
+        if (!camp || typeof camp !== 'object') return camp;
+        const out = { ...camp };
+        if (Array.isArray(out.acciones)) out.acciones = out.acciones.map(fijarSede);
+        return out;
+      });
+    }
+  }
+
+  return normalizarSlice(s, tenantId);
+}
+
+/**
+ * Migra Snapshot V1 → V2 (identidad estable de sedes).
+ * Idempotente si ya es V2. No reconstruye desde demo.
+ *
+ * @param {object} raw
+ * @param {{ kind: 'world'|'tenant', tenantId?: string }} opts
+ */
+export function migrateV1toV2(raw, opts) {
+  const kind = opts.kind;
+  if (kind === 'world') {
+    if (esWorldSnapshotV2(raw)) return clonar(raw);
+    if (!esWorldSnapshotV1(raw) && !(raw && raw.schemaVersion === SCHEMA_VERSION_V1)) {
+      // Permitir world V1 estructural si schemaVersion es 1
+      if (!(raw && raw.schemaVersion === SCHEMA_VERSION_V1 && raw.byTenant)) {
+        throw new PersistenciaError(CODIGOS.INCOMPATIBLE, 'migrateV1toV2 requiere WorldSnapshotV1');
+      }
+    }
+    const tenants = Array.isArray(raw.tenants) ? clonar(raw.tenants) : listarTenants();
+    const byTenant = {};
+    for (const [id, slice] of Object.entries(raw.byTenant || {})) {
+      byTenant[id] = migrarSedesSliceV1aV2(slice, id);
+    }
+    return crearWorldSnapshotV2({ tenants, byTenant });
+  }
+  if (kind === 'tenant') {
+    if (esTenantSnapshotV2(raw, opts.tenantId)) return clonar(raw);
+    const tenantId = opts.tenantId || raw.tenantId;
+    if (!tenantId) {
+      throw new Error('migrateV1toV2_tenant_requires_tenantId');
+    }
+    const sliceSrc = raw.data && !raw.byTenant ? raw.data : raw;
+    const slice = migrarSedesSliceV1aV2(sliceSrc, tenantId);
+    return crearTenantSnapshotV2(tenantId, slice);
+  }
+  throw new Error(`migrateV1toV2_kind_unknown:${kind}`);
+}
+
+/**
+ * Cadena completa hasta la versión actual: V0→V1→V2 o V1→V2.
+ */
+export function migrateToCurrent(raw, opts) {
+  const kind = opts.kind;
+  if (kind === 'world' && esWorldSnapshotV2(raw)) return clonar(raw);
+  if (kind === 'tenant' && esTenantSnapshotV2(raw, opts.tenantId)) return clonar(raw);
+
+  let v1 = raw;
+  if (!(raw && raw.schemaVersion === SCHEMA_VERSION_V1)) {
+    if (raw && raw.schemaVersion === SCHEMA_VERSION) {
+      return clonar(raw);
+    }
+    v1 = migrateV0toV1(raw, opts);
+  } else if (kind === 'world' && !esWorldSnapshotV1(raw)) {
+    throw new PersistenciaError(CODIGOS.CORRUPTO, 'WorldSnapshotV1 corrupto');
+  } else if (kind === 'tenant' && !esTenantSnapshotV1(raw, opts.tenantId)) {
+    throw new PersistenciaError(CODIGOS.CORRUPTO, 'TenantSnapshotV1 corrupto');
+  }
+  return migrateV1toV2(v1, opts);
+}
+
+export { SCHEMA_VERSION, SCHEMA_VERSION_V1 };

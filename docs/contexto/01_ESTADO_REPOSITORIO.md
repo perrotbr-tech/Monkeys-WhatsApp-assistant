@@ -5,35 +5,37 @@ Fecha de corte: 2026-09-21.
 ## Repositorio y base
 
 - Repositorio: `perrotbr-tech/Monkeys-WhatsApp-assistant`.
-- `main`: `73dec396f0935cbc8eeb706e200fdb9fe8562875`.
-- E0: `integration/forkza-core-baseline` @ `ffc52fdd2dd64930090be9f0017220f5e4406608`.
-- E1A aprobada: `cursor/e1a-clock-deterministico-fb93` @ `a30643859c888e4dfdae8bb9fbde54b71b3e8034` (81/81).
-- E1B aprobada: `cursor/e1b-store-persistencia-f516` @ `5eaf8e206e2a78770bab88cb61e6f8d756c1b8a5` (129/129).
-- Rama de consolidación E0+E1: `integration/forkza-e1-complete` (creada desde E1B; 52 commits por delante de `main`, 0 por detrás).
-- E1 técnicamente completa en esa rama; consolidación pendiente de revisión humana y merge. E2 y Forja Training no iniciados.
+- `main`: `cf24445bf738870ac8365207927a51dc2f0ccfa9` (merge PR #12: consolidación E0+E1).
+- E0 y E1 terminadas y fusionadas en `main` vía PR #12.
+- E2 en ejecución: rama `cursor/e2-identidad-tenant-config` (identidad estable y tenant config); PR #13 draft con revisión B1–B5.
+- E3 y Forja Training no iniciados.
 
-## Pull requests relevantes
+## Pull requests
 
-- Cadena histórica incluida: PR #4 (multi-gimnasio SOMA), #5 (socios/membresías/pagos), #7 (contexto vivo), #8 (documentos maestros), #9 (E0), #10 (E1A), #11 (E1B).
-- PR anteriores siguen abiertos; serán sustituibles por el PR consolidado tras revisión. No fusionar los apilados por separado.
-- Consolidación: PR #12 (`integration/forkza-e1-complete` → `main`, draft).
+| PR | Estado | Notas |
+|---|---|---|
+| #12 | Fusionado | Consolidación E0+E1 → `main` @ `cf24445` |
+| #4 | Fusionado por consolidación | Multi-gimnasio SOMA (contenido en #12) |
+| #5 | Cerrado como sustituido | Socios/pagos; contenido en #12 |
+| #6 | Cerrado previamente | Docs maestros sustituidos por #8 |
+| #7–#11 | Cerrados como sustituidos | Contexto, maestro, E0, E1A, E1B → #12 |
+| #13 | Draft | E2 identidad/tenant config; revisión B1–B5 |
+| E2 | Draft pendiente | Un PR hacia `main`; sin merge automático |
 
-## Resultado reproducido
+## Resultado base (pre-E2)
 
-Sobre `integration/forkza-e1-complete` @ tip E1B:
+Sobre `main` @ `cf24445`:
 
 ```bash
-npm ci
-npm test
-git diff --check origin/main...HEAD
+npm ci && npm test
 ```
 
-Resultado: 129 pruebas, 129 aprobadas, 0 fallidas. Ancestría E0/E1A/E1B y PRs #4–#5/#7–#8 verificada hacia el tip E1B.
+129/129 aprobadas. Base obligatoria de E2.
 
 ## Documentos maestros
 
-Cadena vigente consolidada en una sola rama hacia `main`. E2 y Forja Training no iniciados.
+Vigentes en `main`. E2 actualiza contrato de tenant e identidad estable. E3/Forja no iniciados.
 
-## Restricción operativa actual
+## Restricción operativa
 
-No fusionar automáticamente. Consolidación lista para revisión humana; no avanzar a E2 sin aprobación. Sin merge en esta tarea.
+No fusionar automáticamente. Un PR por etapa. Detenerse al cerrar E2.

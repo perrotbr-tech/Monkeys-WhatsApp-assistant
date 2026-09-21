@@ -3,7 +3,15 @@
 export const CARGA = Object.freeze({
   VACIO: 'empty',
   V0_MIGABLE: 'v0_migratable',
-  V1_VALIDO: 'v1_valid',
+  /** Snapshot V1 (E1B) válido; requiere migrateV1toV2. */
+  V1_MIGABLE: 'v1_migratable',
+  /** Snapshot de la versión actual (V2) válido. */
+  V2_VALIDO: 'v2_valid',
+  /**
+   * Alias histórico E1B: en E2 significa “snapshot actual válido” (V2).
+   * Conservado para no romper harnesses que aún importan el nombre.
+   */
+  V1_VALIDO: 'v2_valid',
   CORRUPTO: 'corrupt',
 });
 

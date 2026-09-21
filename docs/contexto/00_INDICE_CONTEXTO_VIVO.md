@@ -1,8 +1,9 @@
 # Contexto vivo de FORKZA IA
 
-Estado de referencia: 2026-09-19
+Estado de referencia: 2026-09-21
 Repositorio: `perrotbr-tech/Monkeys-WhatsApp-assistant`
-Base funcional auditada: `cursor/socios-pagos-7236` @ `b03fd73db94589431209cf9a68f95e08f58a631d`
+Base funcional: `main` @ `cf24445bf738870ac8365207927a51dc2f0ccfa9` (PR #12 merge; E0+E1)
+Etapa en curso: E2 — identidad estable y configuración de tenant
 
 ## Propósito
 
@@ -15,8 +16,9 @@ Este directorio es la memoria técnica y funcional verificable del proyecto. Deb
 3. `02_ARQUITECTURA_ACTUAL.md`: lo que existe realmente.
 4. `03_DOMINIOS_Y_FLUJOS.md`: alcance funcional implementado y proyectado.
 5. `04_RIESGOS_BRECHAS_Y_DECISIONES.md`: hallazgos y decisiones pendientes.
-6. Los documentos maestros de `docs/forkza/`, cuando estén incorporados a la rama de trabajo.
-7. Los archivos fuente y pruebas directamente afectados por la tarea.
+6. `05_REGISTRO_ACTUALIZACIONES.md` y, si aplica, `06_REGISTRO_ACTUALIZACIONES_HISTORICO.md`.
+7. Los documentos maestros de `docs/forkza/`, cuando estén incorporados a la rama de trabajo.
+8. Los archivos fuente y pruebas directamente afectados por la tarea.
 
 ## Regla de 7.000 caracteres
 
@@ -46,7 +48,3 @@ Si no se puede acceder a una fuente necesaria, se declara la limitación y no se
 3. Contratos/datos vigentes y reglas de Cursor.
 4. Documentación versionada coherente con esa rama.
 5. PR, comentarios y conversación, como contexto histórico.
-
-## Alcance de la auditoría inicial
-
-Se inventarió el árbol completo de la rama base. Se leyeron el código fuente, las pruebas, las reglas de Cursor, la configuración y los seis documentos maestros de PR #6. Los binarios e imágenes de marca se inventariaron como activos; `package-lock.json` se validó mediante `npm ci`. No se interpretaron los píxeles ni se revisó manualmente cada línea generada del lockfile.

@@ -6,13 +6,17 @@ Datos y horarios son **demostrativos**. Los planes de SOMA usan valores publicad
 
 ## Multi-gimnasio (demo)
 
-El mismo despliegue sirve a dos gimnasios, sin mezclar datos.
+El mismo despliegue sirve a varios gimnasios vía configuración de tenant, sin mezclar datos. MONKEYS y SOMA son tenants demo; el selector y los motores se construyen recorriendo el catálogo.
 
 | | MONKEYS | SOMA |
 |---|---|---|
 | URL | `?t=monkeys` (default) | `?t=soma` |
-| Marca | negro / amarillo | taupe / madera |
+| `tenantId` estable | `monkeys` | `soma` |
+| Marca | negro / amarillo (config) | taupe / madera (config) |
 | Código de reserva | `GYM-YYYY-NNNN` | `SOMA-YYYY-NNNN` |
+| Sedes (ids) | `felix-garcia`, `alta-vista` | `soma-antofagasta` |
+
+Persistencia: Snapshot V2 (`schemaVersion: 2`). Clave localStorage `forkza_demo_state_<tenantId>` (legacy `monkeys_demo_state` solo migración histórica).
 
 Usuarios demo del equipo (clave `demo1234`):
 

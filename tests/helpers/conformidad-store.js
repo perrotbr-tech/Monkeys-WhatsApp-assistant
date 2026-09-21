@@ -18,10 +18,14 @@ import {
   claveEstadoV1,
   CLAVE_LOCAL_LEGACY_MONKEYS,
   crearTenantSnapshotV1,
+  crearTenantSnapshotV2,
   crearWorldSnapshotV1,
+  crearWorldSnapshotV2,
   camposMinimosPresentes,
   esWorldSnapshotV1,
+  esWorldSnapshotV2,
   esTenantSnapshotV1,
+  esTenantSnapshotV2,
 } from '../../engine/persistencia/index.js';
 import { clonarDemo, clonarMundo } from '../../data/demo.js';
 
@@ -30,14 +34,18 @@ export const INSTANTE_FIJO = '2026-09-14T15:00:00.000Z';
 
 function abrirSesion(world, clock, fechaRef) {
   const memoria = crearMemoria(world, { clock });
-  const engines = {
-    monkeys: crearEngine({ memoria }, 'monkeys', { fechaRef, clock }),
-    soma: crearEngine({ memoria }, 'soma', { fechaRef, clock }),
-  };
-  const autos = {
-    monkeys: crearAutomation(memoria.sliceExport('monkeys'), 'monkeys', { clock }),
-    soma: crearAutomation(memoria.sliceExport('soma'), 'soma', { clock }),
-  };
+  const engines = Object.create(null);
+  const autos = Object.create(null);
+  for (const id of Object.keys(world.byTenant || {})) {
+    engines[id] = crearEngine({ memoria }, id, { fechaRef, clock });
+    autos[id] = crearAutomation(memoria.sliceExport(id), id, { clock });
+  }
+  for (const id of ['monkeys', 'soma']) {
+    if (!engines[id]) {
+      engines[id] = crearEngine({ memoria }, id, { fechaRef, clock });
+      autos[id] = crearAutomation(memoria.sliceExport(id), id, { clock });
+    }
+  }
   return { memoria, engines, autos };
 }
 
@@ -89,15 +97,15 @@ export function crearFactory(kind) {
         if (opts.seedLocal) {
           for (const [k, v] of Object.entries(opts.seedLocal)) storage.setItem(k, v);
         } else if (opts.seedWorld) {
-          const world = opts.seedWorld.byTenant ? opts.seedWorld : crearWorldSnapshotV1(opts.seedWorld);
+          const world = opts.seedWorld.byTenant
+            ? opts.seedWorld
+            : crearWorldSnapshotV2(opts.seedWorld);
           for (const [id, slice] of Object.entries(world.byTenant || {})) {
-            const snap = world.schemaVersion === 1
-              ? crearTenantSnapshotV1(id, slice)
-              : slice;
-            storage.setItem(claveEstadoV1(id), JSON.stringify(
-              snap.schemaVersion ? snap : snap,
-            ));
-            // V0 seed: store plain slice under v1 key or legacy
+            let snap;
+            if (world.schemaVersion === 2) snap = crearTenantSnapshotV2(id, slice);
+            else if (world.schemaVersion === 1) snap = crearTenantSnapshotV1(id, slice);
+            else snap = slice;
+            storage.setItem(claveEstadoV1(id), JSON.stringify(snap));
             if (!world.schemaVersion) {
               storage.setItem(claveEstadoV1(id), JSON.stringify(slice));
             }
@@ -174,10 +182,14 @@ export {
   clonarDemo,
   clonarMundo,
   crearTenantSnapshotV1,
+  crearTenantSnapshotV2,
   crearWorldSnapshotV1,
+  crearWorldSnapshotV2,
   camposMinimosPresentes,
   esWorldSnapshotV1,
+  esWorldSnapshotV2,
   esTenantSnapshotV1,
+  esTenantSnapshotV2,
   CARGA,
   claveEstadoV1,
   CLAVE_LOCAL_LEGACY_MONKEYS,

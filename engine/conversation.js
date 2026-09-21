@@ -7,7 +7,7 @@
  */
 
 import { clonarDemo } from '../data/demo.js';
-import { TENANT_DEFAULT } from '../data/tenants.js';
+import { TENANT_DEFAULT, menuDe, capacidadesDe, mismaSede, nombreSede, resolverSedeId } from '../data/tenants.js';
 import { i18n } from '../data/i18n.js';
 import { crearIntentService, INTENCIONES, normalizar } from './intent.js';
 import { crearMemoria, clonar, normalizarTelefono, nombreValido } from './store.js';
@@ -27,24 +27,6 @@ const OBJETIVOS = [
   'Otro',
 ];
 const DIAS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
-
-const MENU_MONKEYS = [
-  { etiqueta: 'Ver clases', valor: 'ver clases' },
-  { etiqueta: 'Reservar mi cupo', valor: 'reservar mi cupo' },
-  { etiqueta: 'Probar una clase', valor: 'probar una clase' },
-  { etiqueta: 'Ver planes', valor: 'ver planes' },
-  { etiqueta: 'Consultar reserva', valor: 'consultar' },
-  { etiqueta: 'Hablar con equipo', valor: 'hablar con el equipo' },
-];
-
-const MENU_SOMA = [
-  { etiqueta: 'Ver clases', valor: 'ver clases' },
-  { etiqueta: 'Reservar mi cupo', valor: 'reservar mi cupo' },
-  { etiqueta: 'Probar una clase', valor: 'probar una clase' },
-  { etiqueta: 'Ver planes', valor: 'ver planes' },
-  { etiqueta: 'Consultar reserva', valor: 'consultar' },
-  { etiqueta: 'Hablar con equipo', valor: 'hablar con el equipo' },
-];
 
 const IA_LINEA = {
   [INTENCIONES.CLASES]: 'Entendí que quieres ver las clases.',
@@ -95,7 +77,11 @@ export function crearEngine(datosIniciales, tenantId = TENANT_DEFAULT, opts = {}
   }
 
   function menuOps() {
-    return tid === 'soma' ? MENU_SOMA : MENU_MONKEYS;
+    return menuDe(tenant());
+  }
+
+  function caps() {
+    return capacidadesDe(tenant());
   }
 
   function sedes() {
@@ -105,9 +91,11 @@ export function crearEngine(datosIniciales, tenantId = TENANT_DEFAULT, opts = {}
   function iniciar() {
     const t = tenant();
     const lista = sedes();
-    const autoSede = lista.length === 1 ? lista[0].nombre : null;
+    const autoSede = lista.length === 1 ? lista[0] : null;
+    const sedeId = autoSede ? autoSede.id : null;
+    const sedeNombre = autoSede ? autoSede.nombre : null;
     const conv = memoria.crearConversacion(tid, autoSede
-      ? { sede: autoSede, paso: 'menu' }
+      ? { sede: sedeNombre, sedeId, paso: 'menu' }
       : { paso: 'pick_sede' });
     const bienvenida = (t.textosBot && t.textosBot.bienvenida)
       || 'Hola. ¿En qué sede quieres entrenar?';
@@ -246,14 +234,15 @@ export function crearEngine(datosIniciales, tenantId = TENANT_DEFAULT, opts = {}
       }
       return [botMsg('Elige una sede para continuar.', sedesOps(sedes()))];
     }
-    conv.sede = sede;
+    conv.sede = sede.nombre;
+    conv.sedeId = sede.id;
     conv.paso = 'menu';
     if (conv.data && conv.data.pending) {
       const det = conv.data.pending;
       conv.data.pending = null;
       return aplicarIntencion(conv, det, true);
     }
-    return [botMsg(`Sede ${sede}. ¿Qué quieres hacer hoy?`, menuOps())];
+    return [botMsg(`Sede ${sede.nombre}. ¿Qué quieres hacer hoy?`, menuOps())];
   }
 
   function desdeMenu(conv, texto, cmd) {
@@ -390,7 +379,7 @@ export function crearEngine(datosIniciales, tenantId = TENANT_DEFAULT, opts = {}
     }
     const ops = [];
     if (slice.some((c) => !c.agotada && c.reservable !== false)) {
-      ops.push({ etiqueta: tid === 'soma' ? 'Reservar' : '📅 Reservar', valor: '2' });
+      ops.push({ etiqueta: caps().etiquetaReservar, valor: '2' });
     }
     if (slice.some((c) => c.agotada)) {
       ops.push({ etiqueta: 'Lista de espera', valor: 'lista de espera' });
@@ -726,7 +715,7 @@ export function crearEngine(datosIniciales, tenantId = TENANT_DEFAULT, opts = {}
     conv.paso = 'menu';
     conv.data = {};
     if (!result.ok) return [botMsg(result.error, menuOps())];
-    const fuego = tid === 'soma' ? '' : '🔥 ';
+    const fuego = caps().emojiReserva ? '🔥 ' : '';
     let texto = `${fuego}¡LISTO! TU CUPO ESTÁ RESERVADO.\nCódigo ${result.booking.codigo}`;
     if (result.cuposRestantes != null) {
       texto += `\nTe quedan ${result.cuposRestantes} cupos este mes.`;
@@ -737,7 +726,7 @@ export function crearEngine(datosIniciales, tenantId = TENANT_DEFAULT, opts = {}
   function iniciarTrial(conv, ia) {
     conv.data = { phoneTries: 0 };
     conv.paso = 'trial_name';
-    const txt = tid === 'soma' ? 'Clase de prueba. ¿Cuál es tu nombre?' : 'Clase de prueba GRATIS. ¿Cuál es tu nombre?';
+    const txt = caps().textoTrialNombre;
     return maybeIa(ia, INTENCIONES.TRIAL, [botMsg(txt)]);
   }
 
@@ -800,7 +789,7 @@ export function crearEngine(datosIniciales, tenantId = TENANT_DEFAULT, opts = {}
     });
     conv.paso = 'menu';
     conv.data = {};
-    const fuego = tid === 'soma' ? '' : '🔥 ';
+    const fuego = caps().emojiReserva ? '🔥 ' : '';
     return [botMsg(`${fuego}¡LISTO! Registramos tu solicitud de clase de prueba. Un ejecutivo podrá contactarte para coordinarla.`, menuOps())];
   }
 
@@ -1058,6 +1047,7 @@ export function crearEngine(datosIniciales, tenantId = TENANT_DEFAULT, opts = {}
       const lista = sedes();
       if (lista.length === 1) {
         conv.sede = lista[0].nombre;
+        conv.sedeId = lista[0].id;
         conv.paso = 'menu';
       } else {
         conv.paso = 'pick_sede';
@@ -1074,14 +1064,15 @@ export function crearEngine(datosIniciales, tenantId = TENANT_DEFAULT, opts = {}
     conv.motivo = 'Kinesiología con hora';
     conv.status = 'waiting_human';
     conv.paso = 'done';
+    const sedeRef = conv.sedeId || conv.sede;
     memoria.crearAccion(tid, {
       agente: 'recordatorio',
       tipo: 'tarea_equipo',
       socioId: null,
       texto: null,
-      motivo: `Derivar consulta de Kinesiología${conv.usuario ? ` de ${conv.usuario}` : ''} en ${conv.sede || 'SOMA Antofagasta'}.`,
+      motivo: `Derivar consulta de Kinesiología${conv.usuario ? ` de ${conv.usuario}` : ''} en ${conv.sede || nombreSede(tenant(), sedeRef)}.`,
       prioridad: 'alta',
-      sedeId: conv.sede || 'SOMA Antofagasta',
+      sedeId: sedeRef,
     });
     return [botMsg(
       'Kinesiología se atiende con hora, no se reserva por el asistente. Dejamos la solicitud al equipo para coordinarla.',
@@ -1126,15 +1117,25 @@ export function crearEngine(datosIniciales, tenantId = TENANT_DEFAULT, opts = {}
 
   function matchSede(cmd) {
     const lista = sedes();
+    const t = tenant();
     for (const s of lista) {
       const n = normalizar(s.nombre);
-      if (cmd === n || cmd.includes(n) || n.split(' ').some((p) => p.length > 3 && cmd.includes(p))) return s.nombre;
+      if (cmd === n || cmd.includes(n) || n.split(' ').some((p) => p.length > 3 && cmd.includes(p))) {
+        return s;
+      }
+      for (const alias of s.alias || []) {
+        const a = normalizar(alias);
+        if (a && (cmd === a || cmd.includes(a))) return s;
+      }
+      if (cmd === normalizar(s.id)) return s;
     }
-    if (cmd.includes('felix') || cmd.includes('garcia')) return 'Félix García';
-    if (cmd.includes('alta') || cmd.includes('vista')) return 'Alta Vista';
-    if (cmd.includes('antofagasta') || cmd.includes('soma')) {
-      const hit = lista.find((s) => normalizar(s.nombre).includes('soma') || normalizar(s.nombre).includes('antofagasta'));
-      if (hit) return hit.nombre;
+    // Coincidencia por fragmentos de aliases históricos de la config
+    const hist = (t.aliasHistoricos && t.aliasHistoricos.sedes) || {};
+    for (const [nombreHist, sedeId] of Object.entries(hist)) {
+      const n = normalizar(nombreHist);
+      if (n && (cmd.includes(n) || n.split(' ').some((p) => p.length > 3 && cmd.includes(p)))) {
+        return lista.find((s) => s.id === sedeId) || null;
+      }
     }
     return null;
   }

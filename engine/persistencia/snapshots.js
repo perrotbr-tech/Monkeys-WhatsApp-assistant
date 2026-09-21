@@ -1,11 +1,14 @@
-/** Snapshots versionados: WorldSnapshotV1 y TenantSnapshotV1. Sin byTenant/data opcionales en el mismo formato. */
+/** Snapshots versionados: V1 (histórico) y V2 (identidad estable de sedes). */
 
 import { clonar } from '../../data/demo.js';
-import { listarTenants } from '../../data/tenants.js';
+import { listarTenants, buscarTenant } from '../../data/tenants.js';
 
-export const SCHEMA_VERSION = 1;
+/** Versión actual del contrato persistido. */
+export const SCHEMA_VERSION = 2;
+/** Versión histórica E1B; solo lectura/migración. */
+export const SCHEMA_VERSION_V1 = 1;
 
-/** Campos mínimos obligatorios de un SliceV1. */
+/** Campos mínimos obligatorios de un Slice (V1 y V2). */
 export const CAMPOS_SLICE = Object.freeze([
   'classes',
   'plans',
@@ -22,38 +25,8 @@ export const CAMPOS_SLICE = Object.freeze([
 const CAMPOS_ARRAY = Object.freeze(CAMPOS_SLICE.filter((k) => k !== 'automation'));
 
 /**
- * @typedef {object} Slice
- * @property {string} tenantId
- * @property {object[]} classes
- * @property {object[]} plans
- * @property {object[]} bookings
- * @property {object[]} leads
- * @property {object[]} conversations
- * @property {object[]} socios
- * @property {object[]} asistencias
- * @property {object[]} membresias
- * @property {object[]} pagos
- * @property {object} automation
- */
-
-/**
- * @typedef {object} WorldSnapshotV1
- * @property {1} schemaVersion
- * @property {object[]} tenants
- * @property {Record<string, Slice>} byTenant
- */
-
-/**
- * @typedef {object} TenantSnapshotV1
- * @property {1} schemaVersion
- * @property {string} tenantId
- * @property {Slice} data
- */
-
-/**
- * Validación estructural estricta de SliceV1 (carga).
+ * Validación estructural estricta de Slice (carga).
  * Arrays vacíos son válidos; campo ausente o tipo incorrecto no lo es.
- * No completa ni normaliza el documento.
  *
  * @param {unknown} slice
  * @param {string} [expectedTenantId]
@@ -104,6 +77,105 @@ export function validarSliceV1(slice, expectedTenantId) {
   return { ok: true };
 }
 
+const CAMPOS_CON_SEDE_V2 = Object.freeze([
+  'classes', 'bookings', 'leads', 'conversations', 'socios', 'asistencias',
+]);
+
+/**
+ * IDs de sede estables configurados para un tenant.
+ * En WorldSnapshotV2, `tenantsExtra` (catálogo persistido) es la fuente de verdad.
+ * El catálogo global solo se usa cuando no se proporciona catálogo persistido
+ * (p. ej. TenantSnapshotV2).
+ * @param {string} tenantId
+ * @param {object[]} [tenantsExtra] catálogo `tenants` del WorldSnapshot
+ * @returns {Set<string>|null} null si el tenant no está configurado
+ */
+export function idsSedeConfigurados(tenantId, tenantsExtra) {
+  let t = null;
+  if (Array.isArray(tenantsExtra)) {
+    t = tenantsExtra.find((x) => x && (x.id === tenantId || x.slug === tenantId)) || null;
+  } else {
+    t = buscarTenant(tenantId);
+  }
+  if (!t) return null;
+  return new Set((t.sedes || []).map((s) => s && s.id).filter(Boolean));
+}
+
+/**
+ * Si existe sedeId, debe ser exactamente un ID estable del tenant.
+ * No resuelve aliases: eso solo ocurre en migración V1→V2.
+ * @param {object} row
+ * @param {Set<string>|null} ids
+ * @param {string} path
+ * @returns {{ ok: true } | { ok: false, reason: string }}
+ */
+export function validarSedeIdEstable(row, ids, path) {
+  if (!row || typeof row !== 'object') return { ok: true };
+  if (row.sedeId == null || row.sedeId === '') return { ok: true };
+  if (typeof row.sedeId !== 'string') {
+    return { ok: false, reason: `sedeId_tipo_invalido:${path}` };
+  }
+  if (!ids) {
+    return { ok: false, reason: `sede_tenant_desconocido:${path}` };
+  }
+  if (!ids.has(row.sedeId)) {
+    return { ok: false, reason: `sedeId_invalido:${path}:${row.sedeId}` };
+  }
+  return { ok: true };
+}
+
+/**
+ * Validación semántica V2 de sedes en un slice.
+ * @param {object} slice
+ * @param {string} tenantId
+ * @param {object[]} [tenantsExtra]
+ */
+export function validarSedesSliceV2(slice, tenantId, tenantsExtra) {
+  const ids = idsSedeConfigurados(tenantId, tenantsExtra);
+  for (const campo of CAMPOS_CON_SEDE_V2) {
+    const rows = slice[campo];
+    if (!Array.isArray(rows)) continue;
+    for (let i = 0; i < rows.length; i += 1) {
+      const v = validarSedeIdEstable(rows[i], ids, `${campo}[${i}]`);
+      if (!v.ok) return v;
+    }
+  }
+  const auto = slice.automation;
+  if (auto && typeof auto === 'object') {
+    if (Array.isArray(auto.acciones)) {
+      for (let i = 0; i < auto.acciones.length; i += 1) {
+        const v = validarSedeIdEstable(auto.acciones[i], ids, `automation.acciones[${i}]`);
+        if (!v.ok) return v;
+      }
+    }
+    if (Array.isArray(auto.campanias)) {
+      for (let c = 0; c < auto.campanias.length; c += 1) {
+        const camp = auto.campanias[c];
+        if (!camp || typeof camp !== 'object') continue;
+        if (!Array.isArray(camp.acciones)) continue;
+        for (let i = 0; i < camp.acciones.length; i += 1) {
+          const v = validarSedeIdEstable(camp.acciones[i], ids, `automation.campanias[${c}].acciones[${i}]`);
+          if (!v.ok) return v;
+        }
+      }
+    }
+  }
+  return { ok: true };
+}
+
+/**
+ * Slice V2: estructura V1 + sedeId semántico (solo IDs estables).
+ * @param {unknown} slice
+ * @param {string} [expectedTenantId]
+ * @param {object[]} [tenantsExtra]
+ */
+export function validarSliceV2(slice, expectedTenantId, tenantsExtra) {
+  const base = validarSliceV1(slice, expectedTenantId);
+  if (!base.ok) return base;
+  const tenantId = expectedTenantId || slice.tenantId;
+  return validarSedesSliceV2(slice, tenantId, tenantsExtra);
+}
+
 /**
  * Coherencia de identidad tenant (solicitado / envelope / slice).
  * @param {{ solicitado?: string, envelope?: string, slice?: string }} ids
@@ -120,11 +192,11 @@ export function coherenciaTenantIds(ids) {
 }
 
 /**
- * Normalización solo para bootstrap / migración V0→V1.
- * No usar al clasificar ni al cargar un documento V1.
- * @param {Slice|null|undefined} slice
+ * Normalización solo para bootstrap / migración.
+ * No usar al clasificar ni al cargar un documento ya versionado válido.
+ * @param {object|null|undefined} slice
  * @param {string} tenantId
- * @returns {Slice}
+ * @returns {object}
  */
 export function normalizarSlice(slice, tenantId) {
   const s = slice && typeof slice === 'object' ? clonar(slice) : {};
@@ -158,9 +230,39 @@ export function normalizarSlice(slice, tenantId) {
 
 /**
  * @param {object} world
- * @returns {WorldSnapshotV1}
+ * @returns {object} WorldSnapshotV1 (histórico)
  */
 export function crearWorldSnapshotV1(world) {
+  const byTenant = {};
+  const src = (world && world.byTenant) || {};
+  for (const [id, slice] of Object.entries(src)) {
+    byTenant[id] = normalizarSlice(slice, id);
+  }
+  return {
+    schemaVersion: SCHEMA_VERSION_V1,
+    tenants: clonar((world && world.tenants) || listarTenants()),
+    byTenant,
+  };
+}
+
+/**
+ * @param {string} tenantId
+ * @param {object} slice
+ * @returns {object} TenantSnapshotV1
+ */
+export function crearTenantSnapshotV1(tenantId, slice) {
+  return {
+    schemaVersion: SCHEMA_VERSION_V1,
+    tenantId,
+    data: normalizarSlice(slice, tenantId),
+  };
+}
+
+/**
+ * Snapshot actual (V2).
+ * @param {object} world
+ */
+export function crearWorldSnapshotV2(world) {
   const byTenant = {};
   const src = (world && world.byTenant) || {};
   for (const [id, slice] of Object.entries(src)) {
@@ -175,10 +277,9 @@ export function crearWorldSnapshotV1(world) {
 
 /**
  * @param {string} tenantId
- * @param {Slice} slice
- * @returns {TenantSnapshotV1}
+ * @param {object} slice
  */
-export function crearTenantSnapshotV1(tenantId, slice) {
+export function crearTenantSnapshotV2(tenantId, slice) {
   return {
     schemaVersion: SCHEMA_VERSION,
     tenantId,
@@ -186,33 +287,26 @@ export function crearTenantSnapshotV1(tenantId, slice) {
   };
 }
 
-/**
- * Validación estricta de WorldSnapshotV1 cargado (sin normalizar).
- * @param {unknown} obj
- * @returns {obj is WorldSnapshotV1}
- */
-export function esWorldSnapshotV1(obj) {
+/** Alias: creación del snapshot actual. */
+export const crearWorldSnapshot = crearWorldSnapshotV2;
+export const crearTenantSnapshot = crearTenantSnapshotV2;
+
+function esWorldDeVersion(obj, version, validarSlice) {
   if (!obj || typeof obj !== 'object') return false;
-  if (obj.schemaVersion !== SCHEMA_VERSION) return false;
+  if (obj.schemaVersion !== version) return false;
   if (!Array.isArray(obj.tenants)) return false;
   if (!obj.byTenant || typeof obj.byTenant !== 'object' || Array.isArray(obj.byTenant)) return false;
   if (Object.prototype.hasOwnProperty.call(obj, 'data')) return false;
   for (const [id, slice] of Object.entries(obj.byTenant)) {
-    const v = validarSliceV1(slice, id);
+    const v = validarSlice(slice, id, obj.tenants);
     if (!v.ok) return false;
   }
   return true;
 }
 
-/**
- * Validación estricta de TenantSnapshotV1 cargado (sin normalizar).
- * @param {unknown} obj
- * @param {string} [expectedTenantId] tenant solicitado / clave de almacenamiento
- * @returns {obj is TenantSnapshotV1}
- */
-export function esTenantSnapshotV1(obj, expectedTenantId) {
+function esTenantDeVersion(obj, version, expectedTenantId, validarSlice) {
   if (!obj || typeof obj !== 'object') return false;
-  if (obj.schemaVersion !== SCHEMA_VERSION) return false;
+  if (obj.schemaVersion !== version) return false;
   if (typeof obj.tenantId !== 'string' || !obj.tenantId) return false;
   if (!obj.data || typeof obj.data !== 'object' || Array.isArray(obj.data)) return false;
   if (Object.prototype.hasOwnProperty.call(obj, 'byTenant')) return false;
@@ -222,33 +316,53 @@ export function esTenantSnapshotV1(obj, expectedTenantId) {
     slice: obj.data && obj.data.tenantId,
   });
   if (!coh.ok) return false;
-  return validarSliceV1(obj.data, obj.tenantId).ok;
+  return validarSlice(obj.data, obj.tenantId).ok;
+}
+
+/** Valida WorldSnapshotV1 (schemaVersion === 1). */
+export function esWorldSnapshotV1(obj) {
+  return esWorldDeVersion(obj, SCHEMA_VERSION_V1, validarSliceV1);
+}
+
+/** Valida TenantSnapshotV1. */
+export function esTenantSnapshotV1(obj, expectedTenantId) {
+  return esTenantDeVersion(obj, SCHEMA_VERSION_V1, expectedTenantId, validarSliceV1);
+}
+
+/** Valida WorldSnapshotV2 (schemaVersion === 2) con sedeId semántico. */
+export function esWorldSnapshotV2(obj) {
+  return esWorldDeVersion(obj, SCHEMA_VERSION, validarSliceV2);
+}
+
+/** Valida TenantSnapshotV2 con sedeId semántico. */
+export function esTenantSnapshotV2(obj, expectedTenantId) {
+  return esTenantDeVersion(obj, SCHEMA_VERSION, expectedTenantId, validarSliceV2);
 }
 
 /**
- * Extrae Slice; normaliza solo si no es un TenantSnapshotV1 ya validado.
- * Para carga V1 preferir clonar `data` directamente tras validar.
- * @param {TenantSnapshotV1|Slice} snap
+ * Extrae Slice; normaliza solo si no es un TenantSnapshot ya validado.
+ * @param {object} snap
  * @param {string} [tenantId]
- * @returns {Slice}
  */
 export function sliceDe(snap, tenantId) {
-  if (snap && snap.schemaVersion === SCHEMA_VERSION && snap.data) {
+  if (snap && (snap.schemaVersion === SCHEMA_VERSION || snap.schemaVersion === SCHEMA_VERSION_V1) && snap.data) {
     return clonar(snap.data);
   }
   return normalizarSlice(snap, tenantId || (snap && snap.tenantId));
 }
 
 /**
- * Campos mínimos presentes en export/snapshot (para C12).
- * @param {WorldSnapshotV1|TenantSnapshotV1|Slice} snap
+ * Campos mínimos presentes en export/snapshot.
+ * @param {object} snap
  * @returns {string[]}
  */
 export function camposMinimosPresentes(snap) {
-  if (snap && snap.schemaVersion === SCHEMA_VERSION && snap.byTenant && !snap.data) {
+  if (snap && (snap.schemaVersion === SCHEMA_VERSION || snap.schemaVersion === SCHEMA_VERSION_V1)
+    && snap.byTenant && !snap.data) {
     return ['schemaVersion', 'tenants', 'byTenant'].filter((k) => k in snap);
   }
-  if (snap && snap.schemaVersion === SCHEMA_VERSION && snap.data && snap.tenantId) {
+  if (snap && (snap.schemaVersion === SCHEMA_VERSION || snap.schemaVersion === SCHEMA_VERSION_V1)
+    && snap.data && snap.tenantId) {
     return ['schemaVersion', 'tenantId', 'data'].filter((k) => k in snap);
   }
   return CAMPOS_SLICE.filter((k) => k in (snap || {}));

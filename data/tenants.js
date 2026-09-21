@@ -1,8 +1,73 @@
-/** Configuración de tenants demo. Textos visibles al usuario viven aquí. */
+/**
+ * Contrato único de configuración de tenant (E2).
+ * Solo datos: sin lógica de negocio ni Bifurcaciones por marca.
+ *
+ * Campos mínimos:
+ * - tenantId / id estable, slug público, nombre visible
+ * - idioma, zonaHoraria, identidad visual (marca)
+ * - codigoPrefix, sedes[{id,nombre}], planes vía demo/slice
+ * - menu, capacidades, textosBot, aliasHistoricos
+ */
 
-export const TENANT_DEFAULT = 'monkeys';
+/** @typedef {{ etiqueta: string, valor: string }} MenuOpcion */
 
-export const tenants = [
+/**
+ * @typedef {object} SedeConfig
+ * @property {string} id
+ * @property {string} nombre
+ * @property {string} [direccion]
+ * @property {string[]} [alias] nombres históricos aceptados en lectura
+ */
+
+/**
+ * @typedef {object} CapacidadesTenant
+ * @property {boolean} cuposPorPlan
+ * @property {boolean} clasePruebaGratis
+ * @property {boolean} emojiReserva
+ * @property {string} etiquetaReservar
+ * @property {string} textoTrialNombre
+ * @property {string} [prefijoSocioId]
+ * @property {string[]} servicios
+ */
+
+/**
+ * @typedef {object} AliasHistoricos
+ * @property {string[]} localStorageKeys
+ * @property {Record<string, string>} sedes  nombre histórico → sedeId
+ */
+
+/**
+ * @typedef {object} TenantConfig
+ * @property {string} id
+ * @property {string} slug
+ * @property {string} nombre
+ * @property {string} pais
+ * @property {string} moneda
+ * @property {string} zonaHoraria
+ * @property {string} idioma
+ * @property {string} codigoPrefix
+ * @property {boolean} demo
+ * @property {boolean} activo
+ * @property {object} marca
+ * @property {object} textosBot
+ * @property {string} datosBancarios
+ * @property {SedeConfig[]} sedes
+ * @property {MenuOpcion[]} menu
+ * @property {CapacidadesTenant} capacidades
+ * @property {AliasHistoricos} aliasHistoricos
+ */
+
+const MENU_BASE = Object.freeze([
+  { etiqueta: 'Ver clases', valor: 'ver clases' },
+  { etiqueta: 'Reservar mi cupo', valor: 'reservar mi cupo' },
+  { etiqueta: 'Probar una clase', valor: 'probar una clase' },
+  { etiqueta: 'Ver planes', valor: 'ver planes' },
+  { etiqueta: 'Consultar reserva', valor: 'consultar' },
+  { etiqueta: 'Hablar con equipo', valor: 'hablar con el equipo' },
+]);
+
+/** @type {TenantConfig[]} */
+const TENANTS_BASE = [
   {
     id: 'monkeys',
     slug: 'monkeys',
@@ -38,9 +103,27 @@ export const tenants = [
     },
     datosBancarios: 'Transferencia (ficticia, demo): Banco Estado · Chequera electrónica · 00000001 · RUT 76.111.111-1 · MONKEYS SpA. Prototipo demostrativo.',
     sedes: [
-      { id: 'felix-garcia', nombre: 'Félix García', direccion: 'Antofagasta' },
-      { id: 'alta-vista', nombre: 'Alta Vista', direccion: 'Antofagasta' },
+      { id: 'felix-garcia', nombre: 'Félix García', direccion: 'Antofagasta', alias: ['Félix García', 'Felix Garcia'] },
+      { id: 'alta-vista', nombre: 'Alta Vista', direccion: 'Antofagasta', alias: ['Alta Vista'] },
     ],
+    menu: MENU_BASE.map((o) => ({ ...o })),
+    capacidades: {
+      cuposPorPlan: false,
+      clasePruebaGratis: true,
+      emojiReserva: true,
+      etiquetaReservar: '📅 Reservar',
+      textoTrialNombre: 'Clase de prueba GRATIS. ¿Cuál es tu nombre?',
+      prefijoSocioId: 's',
+      servicios: ['clases', 'reservas', 'trial', 'planes', 'membresia', 'pago'],
+    },
+    aliasHistoricos: {
+      localStorageKeys: ['monkeys_demo_state'],
+      sedes: {
+        'Félix García': 'felix-garcia',
+        'Felix Garcia': 'felix-garcia',
+        'Alta Vista': 'alta-vista',
+      },
+    },
   },
   {
     id: 'soma',
@@ -82,23 +165,179 @@ export const tenants = [
         id: 'soma-antofagasta',
         nombre: 'SOMA Antofagasta',
         direccion: 'Av. Jaime Guzmán 04050, Antofagasta',
+        alias: ['SOMA Antofagasta', 'SOMA', 'Antofagasta'],
       },
     ],
+    menu: MENU_BASE.map((o) => ({ ...o })),
+    capacidades: {
+      cuposPorPlan: true,
+      clasePruebaGratis: false,
+      emojiReserva: false,
+      etiquetaReservar: 'Reservar',
+      textoTrialNombre: 'Clase de prueba. ¿Cuál es tu nombre?',
+      prefijoSocioId: 'sm',
+      servicios: ['clases', 'reservas', 'trial', 'planes', 'membresia', 'pago', 'kinesiologia', 'musculacion'],
+    },
+    aliasHistoricos: {
+      localStorageKeys: [],
+      sedes: {
+        'SOMA Antofagasta': 'soma-antofagasta',
+        SOMA: 'soma-antofagasta',
+        Antofagasta: 'soma-antofagasta',
+      },
+    },
   },
 ];
 
+/** Catálogo mutable: permite registrar tenants de prueba sin tocar motor/servidor. */
+const catalogo = TENANTS_BASE.map(clonarTenant);
+
+export const TENANT_DEFAULT = 'monkeys';
+
+function clonarTenant(t) {
+  return {
+    ...t,
+    marca: { ...t.marca },
+    textosBot: { ...t.textosBot },
+    sedes: (t.sedes || []).map((s) => ({ ...s, alias: [...(s.alias || [])] })),
+    menu: (t.menu || []).map((o) => ({ ...o })),
+    capacidades: { ...(t.capacidades || {}) },
+    aliasHistoricos: {
+      localStorageKeys: [...((t.aliasHistoricos && t.aliasHistoricos.localStorageKeys) || [])],
+      sedes: { ...((t.aliasHistoricos && t.aliasHistoricos.sedes) || {}) },
+    },
+  };
+}
+
 export function listarTenants() {
-  return tenants.map((t) => ({ ...t, marca: { ...t.marca }, textosBot: { ...t.textosBot }, sedes: t.sedes.map((s) => ({ ...s })) }));
+  return catalogo.map(clonarTenant);
+}
+
+export function idsTenantsActivos() {
+  return catalogo.filter((t) => t.activo).map((t) => t.id);
 }
 
 export function buscarTenant(slug) {
   const key = String(slug || '').trim().toLowerCase();
-  return tenants.find((t) => t.slug === key || t.id === key) || null;
+  return catalogo.find((t) => t.slug === key || t.id === key) || null;
 }
 
 export function tenantActivo(slug) {
   const t = buscarTenant(slug);
-  return t && t.activo ? t : null;
+  return t && t.activo ? clonarTenant(t) : null;
+}
+
+/**
+ * Registra o reemplaza un tenant en el catálogo (solo configuración).
+ * @param {TenantConfig} config
+ */
+export function registrarTenant(config) {
+  if (!config || !config.id || !config.slug) {
+    throw new Error('registrarTenant_requires_id_slug');
+  }
+  const row = clonarTenant({
+    demo: false,
+    activo: true,
+    pais: 'CL',
+    moneda: 'CLP',
+    zonaHoraria: 'America/Santiago',
+    idioma: 'es-CL',
+    codigoPrefix: String(config.id).toUpperCase(),
+    marca: {},
+    textosBot: {},
+    datosBancarios: '',
+    sedes: [],
+    menu: MENU_BASE.map((o) => ({ ...o })),
+    capacidades: {
+      cuposPorPlan: false,
+      clasePruebaGratis: true,
+      emojiReserva: false,
+      etiquetaReservar: 'Reservar',
+      textoTrialNombre: 'Clase de prueba. ¿Cuál es tu nombre?',
+      prefijoSocioId: 'x',
+      servicios: ['clases', 'reservas', 'planes'],
+    },
+    aliasHistoricos: { localStorageKeys: [], sedes: {} },
+    ...config,
+  });
+  const idx = catalogo.findIndex((t) => t.id === row.id);
+  if (idx >= 0) catalogo[idx] = row;
+  else catalogo.push(row);
+  return clonarTenant(row);
+}
+
+/** Restaura el catálogo demo (útil en pruebas). */
+export function resetCatalogoTenants() {
+  catalogo.length = 0;
+  for (const t of TENANTS_BASE) catalogo.push(clonarTenant(t));
+}
+
+/**
+ * Resuelve sedeId estable desde id, nombre o alias histórico.
+ * @param {TenantConfig|null} tenant
+ * @param {string|null|undefined} valor
+ * @returns {string|null}
+ */
+export function resolverSedeId(tenant, valor) {
+  if (valor == null || valor === '') return null;
+  const raw = String(valor).trim();
+  if (!tenant) return raw;
+  const sedes = tenant.sedes || [];
+  const byId = sedes.find((s) => s.id === raw);
+  if (byId) return byId.id;
+  const lower = raw.toLowerCase();
+  const byNombre = sedes.find((s) => s.nombre === raw
+    || String(s.nombre).toLowerCase() === lower
+    || (s.alias || []).some((a) => a === raw || String(a).toLowerCase() === lower));
+  if (byNombre) return byNombre.id;
+  const hist = tenant.aliasHistoricos && tenant.aliasHistoricos.sedes;
+  if (hist && hist[raw]) return hist[raw];
+  const histHit = hist && Object.entries(hist).find(([k]) => k.toLowerCase() === lower);
+  if (histHit) return histHit[1];
+  return null;
+}
+
+/**
+ * Nombre visible de una sede (desde id o alias).
+ * @param {TenantConfig|null} tenant
+ * @param {string|null|undefined} valor
+ * @returns {string}
+ */
+export function nombreSede(tenant, valor) {
+  const id = resolverSedeId(tenant, valor) || valor;
+  if (!tenant || !id) return valor == null ? '' : String(valor);
+  const sede = (tenant.sedes || []).find((s) => s.id === id);
+  return sede ? sede.nombre : String(valor);
+}
+
+/**
+ * Compara dos referencias de sede (id o nombre) del mismo tenant.
+ */
+export function mismaSede(tenant, a, b) {
+  const idA = resolverSedeId(tenant, a);
+  const idB = resolverSedeId(tenant, b);
+  if (idA && idB) return idA === idB;
+  return String(a || '') === String(b || '');
+}
+
+export function capacidadesDe(tenant) {
+  const c = (tenant && tenant.capacidades) || {};
+  return {
+    cuposPorPlan: !!c.cuposPorPlan,
+    clasePruebaGratis: c.clasePruebaGratis !== false,
+    emojiReserva: !!c.emojiReserva,
+    etiquetaReservar: c.etiquetaReservar || 'Reservar',
+    textoTrialNombre: c.textoTrialNombre || 'Clase de prueba. ¿Cuál es tu nombre?',
+    prefijoSocioId: c.prefijoSocioId || 's',
+    servicios: Array.isArray(c.servicios) ? [...c.servicios] : [],
+  };
+}
+
+export function menuDe(tenant) {
+  const m = tenant && Array.isArray(tenant.menu) && tenant.menu.length
+    ? tenant.menu
+    : MENU_BASE;
+  return m.map((o) => ({ ...o }));
 }
 
 export function varsMarca(marca) {
@@ -124,3 +363,5 @@ export const USUARIOS_DEMO = [
 ];
 
 export const CLAVE_DEMO = 'demo1234';
+
+export { MENU_BASE };

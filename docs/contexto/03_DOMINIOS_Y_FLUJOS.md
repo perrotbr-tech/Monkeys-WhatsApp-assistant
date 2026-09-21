@@ -11,15 +11,16 @@ No son dos repositorios obligatorios ni dos productos inconexos. Deben compartir
 
 ## Forkza Gestión implementado
 
-- Dos tenants demo y tema visual por tenant.
-- Asistente para clases, planes, reservas, cupos, prueba, membresía y pago.
+- Dos tenants demo (MONKEYS, SOMA) como configuración; catálogo extensible sin hardcode en motor/servidor.
+- Identidades estables: `tenantId`, `sedeId`, `planId`, clase `id`; nombres visibles separados.
+- Asistente para clases, planes, reservas, cupos, prueba, membresía y pago (capacidades por config).
 - Login demo y sesión para vistas internas.
 - Paneles de reservas, leads y conversaciones.
 - Cinco agentes deterministas de automatización.
 - Alta, edición, baja, reactivación e importación CSV de socios.
 - Membresías, pagos manuales/demo, conciliación y exportación.
 - Adaptador opcional de Mercado Pago preparado, no desplegado de extremo a extremo.
-- Persistencia JSON en servidor o `localStorage` en standalone.
+- Persistencia JSON/localStorage con Snapshot V2 y migración V1→V2 (sedes).
 
 ## Forja Training diseñado, no implementado
 

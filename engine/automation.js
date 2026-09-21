@@ -28,7 +28,7 @@ import { crearAgenteReactivacion } from './agents/reactivacion.js';
 import { crearAgenteRecordatorio } from './agents/recordatorio.js';
 import { crearAgenteReferidos } from './agents/referidos.js';
 import { textoValido } from '../data/templates.js';
-import { TENANT_DEFAULT } from '../data/tenants.js';
+import { TENANT_DEFAULT, buscarTenant, mismaSede, nombreSede, resolverSedeId } from '../data/tenants.js';
 
 const AGENTES = [
   crearAgenteRetencion(),
@@ -85,6 +85,9 @@ export function crearAutomation(datosIniciales, tenantId = TENANT_DEFAULT, opts 
         const dup = acciones.some((x) => x.agente === acc.agente && x.socioId === acc.socioId && x.tipo === 'mensaje');
         if (acc.tipo === 'mensaje' && dup) continue;
         acc.tenantId = state.tenantId;
+        const tenantCfg = buscarTenant(state.tenantId);
+        const sedeEstable = resolverSedeId(tenantCfg, acc.sedeId);
+        if (sedeEstable) acc.sedeId = sedeEstable;
         state.automation.nextActionSeq += 1;
         acc.id = `act-${state.tenantId}-${state.automation.nextActionSeq}`;
         acc.estado = acc.tipo === 'mensaje' ? 'enviado' : 'pendiente';
@@ -149,19 +152,22 @@ export function crearAutomation(datosIniciales, tenantId = TENANT_DEFAULT, opts 
   }
 
   function listarAcciones({ agente, sede, estado } = {}) {
+    const tenant = buscarTenant(state.tenantId);
     return state.automation.acciones
       .filter((a) => !agente || a.agente === agente)
-      .filter((a) => !sede || a.sedeId === sede)
+      .filter((a) => !sede || mismaSede(tenant, a.sedeId, sede))
       .filter((a) => !estado || a.estado === estado)
       .map((a) => enriquecer(a));
   }
 
   function enriquecer(a) {
     const socio = state.socios.find((s) => s.id === a.socioId);
+    const tenant = buscarTenant(state.tenantId);
     return {
       ...clonar(a),
       socioNombre: socio ? socio.nombre : a.socioId,
       claseFavorita: socio ? socio.claseFavorita : null,
+      sedeNombre: nombreSede(tenant, a.sedeId),
     };
   }
 
