@@ -6,13 +6,50 @@ import { fechaHoy } from '../dates.js';
 import { relojActivo } from '../clock.js';
 import { listarTenants } from '../../data/tenants.js';
 import { CARGA, PersistenciaError, CODIGOS } from './estados.js';
-import { crearWorldSnapshotV1, crearTenantSnapshotV1, sliceDe } from './snapshots.js';
+import {
+  crearWorldSnapshotV1,
+  crearTenantSnapshotV1,
+  sliceDe,
+  validarSliceV1,
+  coherenciaTenantIds,
+  SCHEMA_VERSION,
+} from './snapshots.js';
 import {
   claveEstadoV1, resolverClaveLocal, CLAVE_LOCAL_LEGACY_MONKEYS,
 } from './migraciones.js';
 import {
   parsearJsonSeguro, resolverCarga, bootstrapTenant, bootstrapMundo, componerMundo,
 } from './cargar.js';
+
+/**
+ * Rechaza escritura si el tenant del snapshot/slice contradice el solicitado.
+ * No normaliza ni corrige identidades.
+ * @param {string} tenantId
+ * @param {object} sliceOrSnap
+ */
+export function assertTenantEscritura(tenantId, sliceOrSnap) {
+  if (!sliceOrSnap || typeof sliceOrSnap !== 'object') {
+    throw new PersistenciaError(CODIGOS.CORRUPTO, 'payload de escritura inválido');
+  }
+  if (sliceOrSnap.schemaVersion === SCHEMA_VERSION && sliceOrSnap.data) {
+    const coh = coherenciaTenantIds({
+      solicitado: tenantId,
+      envelope: sliceOrSnap.tenantId,
+      slice: sliceOrSnap.data.tenantId,
+    });
+    if (!coh.ok) {
+      throw new PersistenciaError(CODIGOS.AMBIGUO, `tenantId incoherente al guardar (${coh.reason})`);
+    }
+    const v = validarSliceV1(sliceOrSnap.data, tenantId);
+    if (!v.ok) {
+      throw new PersistenciaError(CODIGOS.CORRUPTO, `SliceV1 inválido al guardar (${v.reason})`);
+    }
+    return;
+  }
+  if (sliceOrSnap.tenantId != null && sliceOrSnap.tenantId !== tenantId) {
+    throw new PersistenciaError(CODIGOS.AMBIGUO, 'tenantId del slice contradice el solicitado');
+  }
+}
 
 /**
  * @param {{ storage: Storage, clock?: object, fechaRef?: string, tenantIds?: string[] }} opts
@@ -29,9 +66,12 @@ export function crearAdaptadorLocal(opts) {
   let cargaActual = null;
 
   function escribirTenant(tenantId, sliceOrSnap) {
-    const snap = sliceOrSnap && sliceOrSnap.schemaVersion === 1 && sliceOrSnap.data
+    assertTenantEscritura(tenantId, sliceOrSnap);
+    const snap = sliceOrSnap && sliceOrSnap.schemaVersion === SCHEMA_VERSION && sliceOrSnap.data
       ? sliceOrSnap
       : crearTenantSnapshotV1(tenantId, sliceOrSnap);
+    // revalidar envelope tras envolver
+    assertTenantEscritura(tenantId, snap);
     let serialized;
     try {
       serialized = JSON.stringify(snap);

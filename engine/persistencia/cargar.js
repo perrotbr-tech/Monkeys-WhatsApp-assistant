@@ -14,6 +14,8 @@ import {
   esWorldSnapshotV1,
   esTenantSnapshotV1,
   sliceDe,
+  validarSliceV1,
+  coherenciaTenantIds,
 } from './snapshots.js';
 import { migrateV0toV1 } from './migraciones.js';
 
@@ -52,9 +54,10 @@ export function parsearJsonSeguro(text) {
 /**
  * @param {unknown} value
  * @param {'world'|'tenant'} kind
+ * @param {{ expectedTenantId?: string }} [opts]
  * @returns {typeof CARGA[keyof typeof CARGA]}
  */
-export function clasificarDocumento(value, kind) {
+export function clasificarDocumento(value, kind, opts = {}) {
   if (value == null) return CARGA.VACIO;
   if (typeof value !== 'object' || Array.isArray(value)) return CARGA.CORRUPTO;
 
@@ -64,6 +67,7 @@ export function clasificarDocumento(value, kind) {
   }
 
   if (kind === 'world') {
+    // schemaVersion: 1 nunca se trata como V0 ni se completa silenciosamente
     if (version === SCHEMA_VERSION) {
       if (Object.prototype.hasOwnProperty.call(value, 'data')) return CARGA.CORRUPTO;
       return esWorldSnapshotV1(value) ? CARGA.V1_VALIDO : CARGA.CORRUPTO;
@@ -77,10 +81,10 @@ export function clasificarDocumento(value, kind) {
     return CARGA.CORRUPTO;
   }
 
-  // tenant
+  // tenant — schemaVersion: 1 nunca degrada a V0
   if (version === SCHEMA_VERSION) {
     if (Object.prototype.hasOwnProperty.call(value, 'byTenant')) return CARGA.CORRUPTO;
-    return esTenantSnapshotV1(value) ? CARGA.V1_VALIDO : CARGA.CORRUPTO;
+    return esTenantSnapshotV1(value, opts.expectedTenantId) ? CARGA.V1_VALIDO : CARGA.CORRUPTO;
   }
   if (Object.prototype.hasOwnProperty.call(value, 'byTenant')) return CARGA.CORRUPTO;
   // V0 tenant = slice plano (sin schemaVersion)
@@ -107,7 +111,7 @@ export function resolverCarga(value, opts) {
   const kind = opts.kind;
   const clock = opts.clock || relojActivo();
   const fechaRef = opts.fechaRef || fechaHoy(undefined, clock);
-  const status = clasificarDocumento(value, kind);
+  const status = clasificarDocumento(value, kind, { expectedTenantId: opts.tenantId });
 
   if (status === CARGA.VACIO) {
     if (kind === 'world') {
@@ -125,7 +129,7 @@ export function resolverCarga(value, opts) {
     return {
       status,
       snapshot: snap,
-      slice: sliceDe(snap, tenantId),
+      slice: clonar(snap.data),
       bootstrapped: true,
     };
   }
@@ -143,21 +147,33 @@ export function resolverCarga(value, opts) {
   }
 
   if (status === CARGA.V1_VALIDO) {
+    // Carga V1: clonar sin normalizar ni rellenar campos
     if (kind === 'world') {
       const world = clonar(value);
       return { status, snapshot: world, world, migrated: false, bootstrapped: false };
     }
     const snap = clonar(value);
+    const coh = coherenciaTenantIds({
+      solicitado: opts.tenantId,
+      envelope: snap.tenantId,
+      slice: snap.data && snap.data.tenantId,
+    });
+    if (!coh.ok || !validarSliceV1(snap.data, snap.tenantId).ok) {
+      return {
+        status: CARGA.CORRUPTO,
+        error: new PersistenciaError(CODIGOS.CORRUPTO, 'TenantSnapshotV1 incoherente o incompleto'),
+      };
+    }
     return {
       status,
       snapshot: snap,
-      slice: sliceDe(snap, opts.tenantId || snap.tenantId),
+      slice: clonar(snap.data),
       migrated: false,
       bootstrapped: false,
     };
   }
 
-  // V0_MIGABLE
+  // V0_MIGABLE — normalización solo aquí / bootstrap
   try {
     const snapshot = migrateV0toV1(value, {
       kind,

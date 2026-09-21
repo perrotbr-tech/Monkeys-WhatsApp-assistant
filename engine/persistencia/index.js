@@ -10,6 +10,8 @@ export {
   crearWorldSnapshotV1,
   crearTenantSnapshotV1,
   normalizarSlice,
+  validarSliceV1,
+  coherenciaTenantIds,
   esWorldSnapshotV1,
   esTenantSnapshotV1,
   sliceDe,
