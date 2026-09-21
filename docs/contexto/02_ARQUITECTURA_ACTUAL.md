@@ -6,7 +6,7 @@
 - Express 4.
 - JavaScript ESM sin framework de frontend ni bundler.
 - `bcryptjs` para claves y HMAC propio para la sesión.
-- Persistencia del servidor en JSON local; alternativa standalone en `localStorage`.
+- Persistencia intercambiable: adaptador JSON (servidor) y adaptador localStorage (standalone).
 - Frontend estático: `index.html`, `app.js`, `styles.css` y `manifest.webmanifest`.
 
 ## Capas reales
@@ -17,13 +17,16 @@
 
 ### Dominio
 
-`engine/` contiene reglas para conversación, intención, catálogo, fechas, socios, membresías, pagos, autenticación, automatización y salida compatible con WhatsApp.
+`engine/` contiene reglas para conversación, intención, catálogo, fechas, socios, membresías, pagos, autenticación, automatización y salida compatible con WhatsApp. El reloj es inyectable vía `engine/clock.js` (E1A).
 
-### Estado
+### Persistencia (E1B)
 
-- `engine/store.js`: memoria de servidor, separada por `tenantId`.
-- `engine/store-local.js`: fallback de navegador por tenant.
-- `server/data/data.json`: persistencia JSON en servidor; está ignorada por Git.
+- Contrato en `engine/persistencia/`: estados de carga (vacío, V0 migrable, V1 válido, corrupto), `WorldSnapshotV1`, `TenantSnapshotV1`, `migrateV0toV1`.
+- Adaptador JSON (`persistencia/json.js`): ruta inyectable, escritura atómica temp→rename.
+- Adaptador localStorage (`persistencia/local.js`): clave `forkza_demo_state_<tenant>`; migra `monkeys_demo_state`.
+- `engine/store.js`: motor de dominio en memoria (hidratar mundo ≠ hidratar tenant).
+- `engine/store-local.js` y `server/index.js` delegan carga/guardado a los adaptadores.
+- Demo solo en bootstrap vacío, reset explícito o migración de campo documentada. Snapshot corrupto → error; no se reemplaza con demo.
 
 ### API
 
@@ -40,22 +43,18 @@ La SPA usa rutas hash y puede operar contra API o en modo local. Presenta asiste
 - Las vistas internas requieren sesión; el asistente público no.
 - Sesión en cookie `HttpOnly`, `SameSite=Lax`, firmada por HMAC.
 - Hay bloqueo temporal tras cinco intentos fallidos.
-- Los usuarios demo y motores para MONKEYS/SOMA están definidos de forma estática.
 
 ## Automatización e IA
 
-La comprensión actual es determinista y local; no hay LLM conectado. Los agentes de retención, cobranza, reactivación, recordatorio y referidos generan acciones mediante reglas y plantillas. “IA” describe una arquitectura sustituible/proyectada, no un modelo generativo ya operativo.
+Comprensión determinista local; sin LLM. Los agentes generan acciones por reglas. Tras bootstrap, los datos persistidos son la fuente de verdad (`automation.extraer` ya no rellena desde demo).
 
 ## Diferencias frente a la arquitectura objetivo
 
-La regla `.cursor/rules/forkza.mdc` menciona `/server/store/*`, `/channels/*` y contratos futuros. Es una arquitectura objetivo, no una descripción exacta del árbol actual: hoy existen `engine/store.js`, `engine/store-local.js` y no existe una capa `/channels` implementada. El README también menciona una interfaz `MessageChannel`, pero no hay implementación con ese nombre.
-
-Forja Training todavía no está implementado en el código. Su diseño existe en los documentos maestros: modalidades, ejercicios, planificación, wellness, RPE, cargas y progreso.
+La regla `.cursor/rules/forkza.mdc` menciona `/server/store/*` y `/channels/*` como objetivo. Hoy: `engine/persistencia/*`, `engine/store.js`, `engine/store-local.js`. Forja Training no está implementado.
 
 ## Prácticas observadas
 
-- La lógica de negocio está separada del DOM en gran parte.
-- Las respuestas pasan por límites compatibles con WhatsApp.
-- Se usa inyección de fecha en varios motores, pero quedan llamadas directas a `new Date()` y `fechaHoy()` que reducen el determinismo.
-- No hay base de datos relacional, migraciones, colas, almacenamiento de archivos ni RBAC granular implementados.
-
+- Lógica de negocio separada del DOM en gran parte.
+- Respuestas con límites compatibles con WhatsApp.
+- Clock inyectable en motor y persistencia; UI (`app.js`) aún puede usar reloj de pared.
+- Sin Postgres/SQL, colas, RBAC granular ni almacenamiento de archivos productivo.

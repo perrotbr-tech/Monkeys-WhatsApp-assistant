@@ -2,56 +2,48 @@
 
 ## Prioridad alta
 
-### Pruebas no deterministas (parcialmente cerrado en E1A)
+### Pruebas no deterministas (cerrado en E1A; E1B usa Clock fijo)
 
-E1A introdujo `engine/clock.js` (`crearRelojSistema` / `crearRelojFijo` / `crearRelojSimulado`, `usarReloj` / `conReloj`) y cableó el reloj en `dates`, `auth`, `conversation`, `automation`, `store`, `store-local`, `whatsapp-out` y `server`. Producción sigue con reloj real por defecto. Persisten `new Date(...)` justificados: construcción de calendario en `parseFecha` y restas de fechas ISO en `store.js` (no leen el reloj de pared). Fuera de alcance E1A: timestamps de UI en `app.js`. Pendiente E1B: contrato Store y conformidad JSON/localStorage.
+E1A introdujo `engine/clock.js` y lo cableó en dominio/auth/server. E1B usa exclusivamente ese Clock en adaptadores y en la suite de conformidad. Persisten `new Date(...)` justificados en parseo de calendario y restas ISO. Timestamps de UI en `app.js` siguen fuera de alcance.
 
 ### Posible cruce de tenant en pagos demo
 
-Las rutas públicas de pago buscan primero en el tenant indicado y luego pueden buscar la referencia en todos los tenants. La acción de pagar también opera por referencia global. Si una referencia se conoce, esto podría permitir consultar o marcar un pago de otro tenant. Debe exigirse pertenencia al tenant o utilizar un token público opaco, firmado, de un solo ámbito.
+Las rutas públicas de pago pueden buscar la referencia en todos los tenants. Si una referencia se conoce, podría consultarse o marcarse un pago de otro tenant. Fuera de alcance E1B.
 
 ### Webhook de pagos
 
-La ruta de webhook no demuestra verificación de firma, protección contra repetición ni idempotencia. No debe considerarse lista para producción.
+Sin verificación de firma, replay ni idempotencia. No listo para producción.
 
-### Persistencia
+### Persistencia (E1B implementada; límites de demo)
 
-El JSON local y `localStorage` sirven para demo, no para concurrencia, auditoría, recuperación ni aislamiento robusto de producción. La migración a almacenamiento transaccional requiere repositorios y migraciones (E1B+).
+Contrato versionado JSON/localStorage con migración V0→V1, escritura atómica y rechazo de corruptos. Sigue siendo demo: sin concurrencia multi-proceso, auditoría inmutable ni recuperación productiva. Postgres/Supabase fuera de alcance.
 
 ## Prioridad media
 
-- Los motores y usuarios demo se inicializan de manera estática para dos tenants; no hay aprovisionamiento real.
-- La interfaz aún no deriva navegación y acciones de un RBAC granular.
-- No existe adaptador WhatsApp Cloud API implementado aunque la salida respeta sus límites.
-- No existe capa de canales declarada por la arquitectura objetivo.
-- Mercado Pago tiene contrato/adaptador, pero falta integración productiva segura.
-- La escritura JSON es síncrona y de proceso único.
-- No hay observabilidad, auditoría inmutable, colas ni política de respaldo.
-- PR #6 quedó cerrado sin fusión y sustituido por PR #8; sus cifras de pruebas obsoletas ya no son una brecha vigente.
+- Motores y usuarios demo estáticos para dos tenants; sin aprovisionamiento real.
+- Interfaz sin RBAC granular.
+- Sin adaptador WhatsApp Cloud API aunque la salida respeta límites.
+- Mercado Pago con contrato/adaptador, sin integración productiva segura.
+- Escritura JSON de proceso único.
+- Sin observabilidad, colas ni política de respaldo formal.
 
 ## Decisiones confirmadas
 
-- Nombre paraguas: FORKZA IA.
-- Módulo operativo: Forkza Gestión.
-- Módulo deportivo: Forja Training.
-- Arquitectura multi-tenant desde el núcleo.
-- Un usuario puede tener roles y vínculos distintos por organización/modalidad.
-- El coach conserva control; la IA asiste, acelera y aprende patrones autorizados.
-- El test de bienestar aplica a todas las modalidades.
-- La planificación y el registro admiten campos comunes y específicos por modalidad.
-- La implementación debe hacerse por etapas verificables, sin reemplazo total del prototipo.
-- E1 se ejecuta en subetapas: E1A Clock (esta) y E1B Store (siguiente, no iniciada).
+- Nombre paraguas: FORKZA IA; módulos Forkza Gestión y Forja Training.
+- Multi-tenant desde el núcleo; coach conserva control.
+- Implementación por etapas verificables.
+- E1 en subetapas: E1A Clock (revisión) y E1B Store (esta; pendiente de revisión humana). E1 no se declara completa.
+- Snapshots estrictos: `WorldSnapshotV1` (`schemaVersion`, `tenants`, `byTenant`) y `TenantSnapshotV1` (`schemaVersion`, `tenantId`, `data`); sin `byTenant`/`data` opcionales en el mismo formato.
+- Demo solo en vacío, reset explícito o migración de campo documentada.
 
 ## Decisiones aún abiertas
 
 - Base de datos y proveedor de despliegue.
 - Modelo final de RBAC y alcance por sede/equipo.
-- Contrato de integración entre Gestión y Training.
-- Política de consentimiento, retención y eliminación de datos sensibles.
-- Estrategia real de WhatsApp, pagos y almacenamiento de archivos.
-- Alcance exacto del primer MVP de Forja Training.
-- Orden de consolidación o cierre de PR #4, #5, #7, #8 y #9.
+- Contrato Gestión ↔ Training; WhatsApp/pagos/archivos productivos.
+- Alcance del primer MVP de Forja Training.
+- Orden de consolidación de PR #4, #5, #7, #8, #9, #10 y E1B.
 
 ## Regla de interpretación
 
-“Implementado” exige evidencia en código y prueba reproducible. “Diseñado” indica especificación sin implementación. “Objetivo” indica dirección arquitectónica aún no materializada. Estas etiquetas no deben intercambiarse en instrucciones futuras.
+“Implementado” exige evidencia en código y prueba reproducible. “Diseñado” indica especificación sin implementación. “Objetivo” indica dirección aún no materializada.

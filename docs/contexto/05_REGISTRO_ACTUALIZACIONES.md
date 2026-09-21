@@ -64,3 +64,12 @@ No eliminar entradas anteriores. Si una conclusión queda obsoleta, agregar una 
 - Pruebas: `npm test` → 75/75 (68 previas + 7 nuevas); `git diff --check` limpio.
 - Hechos: producción usa reloj sistema por defecto; tests inyectan fijo/simulado; bloqueos auth sin `Date.now` real; zona tenant conservada.
 - Decisión: E1A lista para revisión; E1B (Store) no iniciada; sin merge.
+
+## 2026-09-21 — E1B: Contrato Store, snapshots y persistencia
+
+- Rama base: `cursor/e1a-clock-deterministico-fb93` @ `a30643859c888e4dfdae8bb9fbde54b71b3e8034` (81/81).
+- Rama de trabajo: `cursor/e1b-store-persistencia-f516` → base E1A.
+- Archivos: `engine/persistencia/*` (contrato, snapshots V1, migraciones, adaptadores JSON/localStorage); cableado en `store-local.js`, `server/index.js`, `automation.js`, `store.js`, `conversation.js`; suite `tests/store-conformidad.test.js` (C01–C17); docs `01`, `02`, `04`, `05`.
+- Pruebas: `npm ci` + `npm test` → 111/111; `git diff --check` limpio.
+- Hechos: vacío→bootstrap V1; V0→migrateV0toV1; V1→carga; corrupto→error sin sobrescribir; sin heurísticas destructivas; Clock E1A en conformidad.
+- Decisión: E1B implementada y pendiente de revisión; E1 no completa; sin merge ni E2.
