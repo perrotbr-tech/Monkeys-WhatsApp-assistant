@@ -70,9 +70,10 @@ No eliminar entradas anteriores. Si una conclusión queda obsoleta, agregar una 
 
 ## 2026-09-21 — E3A: contratos Forkza Core y fronteras
 
-- Rama: `cursor/e3-forkza-core-boundaries-ac33` desde `main` @ `4504c9b`.
+- Rama: `cursor/e3-forkza-core-boundaries-ac33` @ `fb1ab98e28b833a4054b8ff74bdeaa14ee69d0e6` desde `main` @ `4504c9b`.
+- PR draft E3: #16 → `main`.
 - Nuevo `core/` ESM: identity, organizations (puente tenantId→workspaceId), authorization (RBAC deny-by-default), features (`gestion:true`/`forja:false`), contracts/acción, audit (AuditSink memoria).
 - Adaptadores: sesión/`GET /api/me` aditivos (`userId`,`workspaceId`); `baseAccion`/`crearAccion` con metadatos; features en tenants.
 - Sin Snapshot V3, sin migración masiva, sin RBAC en todas las rutas, sin Forja UI.
-- Pruebas: 152 previas + E3A (`tests/e3a-core-boundaries.test.js`, incl. dependencias Core) → suite en verde.
-- E3 iniciada; E3A lista en PR draft de E3. E3B/E3C/Forja no iniciados. Sin merge.
+- Pruebas: `npm ci` + `npm test` → 168/168 (152 previas + 16 E3A); `git diff --check` limpio; contexto &lt; 7.000 chars.
+- E3 iniciada; E3A lista. E3B/E3C/Forja no iniciados. Sin merge.
