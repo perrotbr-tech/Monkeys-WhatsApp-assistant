@@ -2,8 +2,8 @@
 
 Estado de referencia: 2026-09-21
 Repositorio: `perrotbr-tech/Monkeys-WhatsApp-assistant`
-Base funcional: `main` @ `cf24445bf738870ac8365207927a51dc2f0ccfa9` (PR #12 merge; E0+E1)
-Etapa en curso: E2 — identidad estable y configuración de tenant
+Base funcional: `main` @ `0e20df0e7382ed373c65a2f506540a2e3f7a24d7` (PR #13 squash merge; E0+E1+E2)
+Etapa cerrada: E2 — identidad estable y configuración de tenant. Próxima etapa no iniciada: E3.
 
 ## Propósito
 
