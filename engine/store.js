@@ -10,6 +10,7 @@ import {
 } from './membresias.js';
 import { parseCsv, validarFilaSocio, prepararSocio, PLANTILLA_CSV_SOCIOS } from './socios-admin.js';
 import { proveedorDe, modoPasarela } from './services/pagos.js';
+import { migrarSedesSliceV1aV2 } from './persistencia/migraciones.js';
 
 export { normalizarTelefono, nombreValido, PLANTILLA_CSV_SOCIOS };
 
@@ -210,7 +211,7 @@ export function crearMemoria(datosIniciales, opts = {}) {
     return rows
       .filter((a) => a.tenantId === tenantId || !a.tenantId)
       .filter((a) => !filtro.agente || a.agente === filtro.agente)
-      .filter((a) => !filtro.sede || a.sedeId === filtro.sede)
+      .filter((a) => !filtro.sede || mismaSede(getTenant(tenantId), a.sedeId, filtro.sede))
       .filter((a) => !filtro.estado || a.estado === filtro.estado)
       .map((a) => clonar(a));
   }
@@ -391,25 +392,33 @@ export function crearMemoria(datosIniciales, opts = {}) {
   function editarSocio(tenantId, id, datos) {
     const socio = getSocio(tenantId, id);
     if (!socio) return { ok: false, error: 'socio no encontrado' };
+    const patch = {};
     if (datos.nombre != null) {
       if (!nombreValido(datos.nombre)) return { ok: false, error: 'nombre inválido' };
-      socio.nombre = String(datos.nombre).trim();
+      patch.nombre = String(datos.nombre).trim();
     }
     if (datos.telefono != null) {
       const tel = normalizarTelefono(datos.telefono);
       if (!tel) return { ok: false, error: 'teléfono inválido' };
       const otro = buscarSocioPorTelefono(tenantId, tel);
       if (otro && otro.id !== socio.id) return { ok: false, error: 'teléfono duplicado' };
-      socio.telefono = tel;
+      patch.telefono = tel;
     }
-    if (datos.email != null) socio.email = datos.email || null;
-    if (datos.sedeId != null) socio.sedeId = datos.sedeId;
+    if (datos.email != null) patch.email = datos.email || null;
+    if (datos.sedeId != null) {
+      const tenant = getTenant(tenantId);
+      const sedeId = resolverSedeId(tenant, datos.sedeId);
+      const sedeOk = sedeId && (tenant.sedes || []).some((x) => x.id === sedeId);
+      if (!sedeOk) return { ok: false, error: 'sede inexistente' };
+      patch.sedeId = sedeId;
+    }
     if (datos.planId != null) {
       const plan = planDe(tenantId, datos.planId);
       if (!plan) return { ok: false, error: 'plan inexistente' };
-      socio.planId = plan.id;
+      patch.planId = plan.id;
     }
-    if (datos.claseFavorita != null) socio.claseFavorita = datos.claseFavorita;
+    if (datos.claseFavorita != null) patch.claseFavorita = datos.claseFavorita;
+    Object.assign(socio, patch);
     return { ok: true, socio: clonar(socio) };
   }
 
@@ -718,7 +727,11 @@ export function crearMemoria(datosIniciales, opts = {}) {
     }
 
     const socio = buscarSocioPorTelefono(tenantId, tel);
-    const caps = capacidadesDe(getTenant(tenantId));
+    const tenant = getTenant(tenantId);
+    const sedeIdAccion = resolverSedeId(tenant, sede || clase.sedeId || clase.sede)
+      || clase.sedeId
+      || null;
+    const caps = capacidadesDe(tenant);
     const plan = caps.cuposPorPlan ? planDe(tenantId, socio) : null;
     if (socio && socio.estado !== 'baja' && plan) {
       const usados = socio.cuposUsadosMes || 0;
@@ -730,7 +743,7 @@ export function crearMemoria(datosIniciales, opts = {}) {
           texto: null,
           motivo: 'cupos agotados',
           prioridad: 'media',
-          sedeId: sede || clase.sede,
+          sedeId: sedeIdAccion,
         });
         return {
           ok: false,
@@ -747,7 +760,7 @@ export function crearMemoria(datosIniciales, opts = {}) {
           texto: null,
           motivo: `disciplina no incluida: ${clase.nombre}`,
           prioridad: 'media',
-          sedeId: sede || clase.sede,
+          sedeId: sedeIdAccion,
         });
         return {
           ok: false,
@@ -769,10 +782,7 @@ export function crearMemoria(datosIniciales, opts = {}) {
     }
 
     clase.reserved += 1;
-    const tenant = getTenant(tenantId);
-    const sedeId = resolverSedeId(tenant, sede || clase.sedeId || clase.sede)
-      || clase.sedeId
-      || null;
+    const sedeId = sedeIdAccion;
     const booking = {
       tenantId,
       codigo: siguienteCodigo(tenantId),
@@ -869,6 +879,10 @@ export function crearMemoria(datosIniciales, opts = {}) {
       s.automation = { nextActionSeq: 1, agentesActivos: {}, campanias: [], acciones: [] };
     }
     s.automation.nextActionSeq = (s.automation.nextActionSeq || 0) + 1;
+    const tenant = getTenant(tenantId);
+    const sedeId = resolverSedeId(tenant, accion && (accion.sedeId || accion.sede))
+      || (accion && accion.sedeId)
+      || null;
     const row = {
       id: `act-${s.automation.nextActionSeq}`,
       tenantId,
@@ -876,6 +890,7 @@ export function crearMemoria(datosIniciales, opts = {}) {
       estado: accion.tipo === 'mensaje' ? 'enviado' : 'pendiente',
       fechaISO: clock.iso(),
       ...accion,
+      sedeId,
     };
     s.automation.acciones.push(row);
     return clonar(row);
@@ -936,8 +951,9 @@ export function crearMemoria(datosIniciales, opts = {}) {
     planDe,
     sliceExport,
     hidratarTenant(tenantId, slice) {
-      const s = clonar(slice);
-      s.tenantId = tenantId;
+      // Normaliza nombres/alias históricos → sedeId estable (vía de escritura in-memory).
+      // No corrige documentos V2 en disco: eso lo rechaza la carga/persistencia.
+      const s = migrarSedesSliceV1aV2(clonar(slice), tenantId);
       stampSlice(s, tenantId);
       if (!state.byTenant) state.byTenant = {};
       state.byTenant[tenantId] = s;

@@ -31,6 +31,7 @@ Contrato V2 con migración y rechazo de corruptos. Sigue siendo demo: sin concur
 - E1B: Store, snapshots V1, conformidad JSON/localStorage.
 - PR #12 fusionado en `main` @ `cf24445`.
 - E2: contrato de tenant, IDs estables de sede, registro dinámico, Snapshot V2, migración V1→V2.
+- E2 B1–B4: validación semántica V2 de `sedeId`; edición de socios con resolución/rechazo; agentes con nombres visibles; filtros panel por ID estable.
 
 ## Decisiones confirmadas
 

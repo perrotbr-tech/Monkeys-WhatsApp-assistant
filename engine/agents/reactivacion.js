@@ -2,6 +2,7 @@ import { parseFecha } from '../dates.js';
 import { plantillas, aplicarPlantilla, textoValido } from '../../data/templates.js';
 import { base } from './accion.js';
 import { vencidaMasDe, refrescarMembresia } from '../membresias.js';
+import { etiquetaSedeSocio } from './sedes.js';
 
 export function crearAgenteReactivacion() {
   return {
@@ -18,7 +19,7 @@ export function crearAgenteReactivacion() {
         ids.add(socio.id);
         const textoMotivo = aplicarPlantilla(plantillas.reactivacion_tarea, {
           nombre: socio.nombre,
-          sede: socio.sedeId,
+          sede: etiquetaSedeSocio(socio),
           claseFavorita: socio.claseFavorita,
         });
         if (!textoValido(textoMotivo)) return;

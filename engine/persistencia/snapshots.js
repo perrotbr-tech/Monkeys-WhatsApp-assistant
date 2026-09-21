@@ -1,7 +1,7 @@
 /** Snapshots versionados: V1 (histórico) y V2 (identidad estable de sedes). */
 
 import { clonar } from '../../data/demo.js';
-import { listarTenants } from '../../data/tenants.js';
+import { listarTenants, buscarTenant } from '../../data/tenants.js';
 
 /** Versión actual del contrato persistido. */
 export const SCHEMA_VERSION = 2;
@@ -77,7 +77,97 @@ export function validarSliceV1(slice, expectedTenantId) {
   return { ok: true };
 }
 
-export const validarSliceV2 = validarSliceV1;
+const CAMPOS_CON_SEDE_V2 = Object.freeze([
+  'classes', 'bookings', 'leads', 'conversations', 'socios', 'asistencias',
+]);
+
+/**
+ * IDs de sede estables configurados para un tenant.
+ * @param {string} tenantId
+ * @param {object[]} [tenantsExtra] catálogo del snapshot (fallback)
+ * @returns {Set<string>|null} null si el tenant no está configurado
+ */
+export function idsSedeConfigurados(tenantId, tenantsExtra) {
+  const t = buscarTenant(tenantId)
+    || (Array.isArray(tenantsExtra) ? tenantsExtra.find((x) => x && (x.id === tenantId || x.slug === tenantId)) : null);
+  if (!t) return null;
+  return new Set((t.sedes || []).map((s) => s && s.id).filter(Boolean));
+}
+
+/**
+ * Si existe sedeId, debe ser exactamente un ID estable del tenant.
+ * No resuelve aliases: eso solo ocurre en migración V1→V2.
+ * @param {object} row
+ * @param {Set<string>|null} ids
+ * @param {string} path
+ * @returns {{ ok: true } | { ok: false, reason: string }}
+ */
+export function validarSedeIdEstable(row, ids, path) {
+  if (!row || typeof row !== 'object') return { ok: true };
+  if (row.sedeId == null || row.sedeId === '') return { ok: true };
+  if (typeof row.sedeId !== 'string') {
+    return { ok: false, reason: `sedeId_tipo_invalido:${path}` };
+  }
+  if (!ids) {
+    return { ok: false, reason: `sede_tenant_desconocido:${path}` };
+  }
+  if (!ids.has(row.sedeId)) {
+    return { ok: false, reason: `sedeId_invalido:${path}:${row.sedeId}` };
+  }
+  return { ok: true };
+}
+
+/**
+ * Validación semántica V2 de sedes en un slice.
+ * @param {object} slice
+ * @param {string} tenantId
+ * @param {object[]} [tenantsExtra]
+ */
+export function validarSedesSliceV2(slice, tenantId, tenantsExtra) {
+  const ids = idsSedeConfigurados(tenantId, tenantsExtra);
+  for (const campo of CAMPOS_CON_SEDE_V2) {
+    const rows = slice[campo];
+    if (!Array.isArray(rows)) continue;
+    for (let i = 0; i < rows.length; i += 1) {
+      const v = validarSedeIdEstable(rows[i], ids, `${campo}[${i}]`);
+      if (!v.ok) return v;
+    }
+  }
+  const auto = slice.automation;
+  if (auto && typeof auto === 'object') {
+    if (Array.isArray(auto.acciones)) {
+      for (let i = 0; i < auto.acciones.length; i += 1) {
+        const v = validarSedeIdEstable(auto.acciones[i], ids, `automation.acciones[${i}]`);
+        if (!v.ok) return v;
+      }
+    }
+    if (Array.isArray(auto.campanias)) {
+      for (let c = 0; c < auto.campanias.length; c += 1) {
+        const camp = auto.campanias[c];
+        if (!camp || typeof camp !== 'object') continue;
+        if (!Array.isArray(camp.acciones)) continue;
+        for (let i = 0; i < camp.acciones.length; i += 1) {
+          const v = validarSedeIdEstable(camp.acciones[i], ids, `automation.campanias[${c}].acciones[${i}]`);
+          if (!v.ok) return v;
+        }
+      }
+    }
+  }
+  return { ok: true };
+}
+
+/**
+ * Slice V2: estructura V1 + sedeId semántico (solo IDs estables).
+ * @param {unknown} slice
+ * @param {string} [expectedTenantId]
+ * @param {object[]} [tenantsExtra]
+ */
+export function validarSliceV2(slice, expectedTenantId, tenantsExtra) {
+  const base = validarSliceV1(slice, expectedTenantId);
+  if (!base.ok) return base;
+  const tenantId = expectedTenantId || slice.tenantId;
+  return validarSedesSliceV2(slice, tenantId, tenantsExtra);
+}
 
 /**
  * Coherencia de identidad tenant (solicitado / envelope / slice).
@@ -194,20 +284,20 @@ export function crearTenantSnapshotV2(tenantId, slice) {
 export const crearWorldSnapshot = crearWorldSnapshotV2;
 export const crearTenantSnapshot = crearTenantSnapshotV2;
 
-function esWorldDeVersion(obj, version) {
+function esWorldDeVersion(obj, version, validarSlice) {
   if (!obj || typeof obj !== 'object') return false;
   if (obj.schemaVersion !== version) return false;
   if (!Array.isArray(obj.tenants)) return false;
   if (!obj.byTenant || typeof obj.byTenant !== 'object' || Array.isArray(obj.byTenant)) return false;
   if (Object.prototype.hasOwnProperty.call(obj, 'data')) return false;
   for (const [id, slice] of Object.entries(obj.byTenant)) {
-    const v = validarSliceV1(slice, id);
+    const v = validarSlice(slice, id, obj.tenants);
     if (!v.ok) return false;
   }
   return true;
 }
 
-function esTenantDeVersion(obj, version, expectedTenantId) {
+function esTenantDeVersion(obj, version, expectedTenantId, validarSlice) {
   if (!obj || typeof obj !== 'object') return false;
   if (obj.schemaVersion !== version) return false;
   if (typeof obj.tenantId !== 'string' || !obj.tenantId) return false;
@@ -219,27 +309,27 @@ function esTenantDeVersion(obj, version, expectedTenantId) {
     slice: obj.data && obj.data.tenantId,
   });
   if (!coh.ok) return false;
-  return validarSliceV1(obj.data, obj.tenantId).ok;
+  return validarSlice(obj.data, obj.tenantId).ok;
 }
 
 /** Valida WorldSnapshotV1 (schemaVersion === 1). */
 export function esWorldSnapshotV1(obj) {
-  return esWorldDeVersion(obj, SCHEMA_VERSION_V1);
+  return esWorldDeVersion(obj, SCHEMA_VERSION_V1, validarSliceV1);
 }
 
 /** Valida TenantSnapshotV1. */
 export function esTenantSnapshotV1(obj, expectedTenantId) {
-  return esTenantDeVersion(obj, SCHEMA_VERSION_V1, expectedTenantId);
+  return esTenantDeVersion(obj, SCHEMA_VERSION_V1, expectedTenantId, validarSliceV1);
 }
 
-/** Valida WorldSnapshotV2 (schemaVersion === 2). */
+/** Valida WorldSnapshotV2 (schemaVersion === 2) con sedeId semántico. */
 export function esWorldSnapshotV2(obj) {
-  return esWorldDeVersion(obj, SCHEMA_VERSION);
+  return esWorldDeVersion(obj, SCHEMA_VERSION, validarSliceV2);
 }
 
-/** Valida TenantSnapshotV2. */
+/** Valida TenantSnapshotV2 con sedeId semántico. */
 export function esTenantSnapshotV2(obj, expectedTenantId) {
-  return esTenantDeVersion(obj, SCHEMA_VERSION, expectedTenantId);
+  return esTenantDeVersion(obj, SCHEMA_VERSION, expectedTenantId, validarSliceV2);
 }
 
 /**

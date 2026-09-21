@@ -38,3 +38,12 @@ No eliminar entradas anteriores. Si una conclusión queda obsoleta, agregar una 
 - Pruebas: 129 previas + 10 E2 → 139/139.
 - Literales restantes: solo `tenantId === 'monkeys'` en `clavesLegacyLocal` (compat `monkeys_demo_state`).
 - E3 y Forja Training no iniciados.
+
+## 2026-09-21 — E2 revisión B1–B4 (misma rama/PR #13)
+
+- B1: `validarSliceV2` valida `sedeId` semántico (solo IDs estables) en clases, reservas, leads, conversaciones, socios, asistencias, acciones y acciones en campañas. V2 con nombre/desconocido → `CORRUPTO`, fuente intacta.
+- B2: `editarSocio` resuelve alias histórico → ID; rechaza sede desconocida sin mutar.
+- B3: agentes usan `nombreSede`/`etiquetaSedeSocio` para textos; match de clase por `sedeId`; Recordatorio recupera horario real.
+- B4: filtro panel usa valor = ID estable / etiqueta = nombre; cupos/disciplina guardan `sedeId` estable; `hidratarTenant` normaliza sedes en escritura in-memory.
+- Pruebas: `tests/e2-brechas-b1-b4.test.js`; suite 149/149.
+- Sin merge; E3/Forja no iniciados.

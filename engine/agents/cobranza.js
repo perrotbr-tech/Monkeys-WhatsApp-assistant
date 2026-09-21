@@ -2,6 +2,7 @@ import { parseFecha } from '../dates.js';
 import { plantillas, aplicarPlantilla, textoValido } from '../../data/templates.js';
 import { base } from './accion.js';
 import { venceEnDias, refrescarMembresia } from '../membresias.js';
+import { etiquetaSedeSocio } from './sedes.js';
 
 export function crearAgenteCobranza() {
   return {
@@ -23,7 +24,7 @@ export function crearAgenteCobranza() {
         const texto = aplicarPlantilla(plantillas.cobranza_aviso, {
           nombre: socio.nombre,
           plan: plan ? plan.nombre : 'plan',
-          sede: socio.sedeId,
+          sede: etiquetaSedeSocio(socio),
         });
         if (!textoValido(texto, { allowDollar: true })) return;
         acciones.push(base('cobranza', socio, fecha, 'mensaje', 'media', motivo, texto));

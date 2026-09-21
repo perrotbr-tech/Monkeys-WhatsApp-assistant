@@ -4,6 +4,7 @@
  */
 import { enVentana, daysAgo, parseFecha, addDays, dayKey } from '../dates.js';
 import { plantillas, aplicarPlantilla, textoValido } from '../../data/templates.js';
+import { etiquetaSedeSocio, horarioSugerido } from './sedes.js';
 
 export function crearAgenteRetencion() {
   return {
@@ -110,12 +111,8 @@ function calcularRacha(visits, fechaRef) {
   return racha;
 }
 
-function horarioSugerido(socio, clases) {
-  const c = (clases || []).find(
-    (x) => x.nombre === socio.claseFavorita && x.sede === socio.sedeId,
-  );
-  if (!c) return `${socio.claseFavorita} en ${socio.sedeId}`;
-  return `${c.dia} ${c.hora}`;
+function horarioSugeridoLocal(socio, clases) {
+  return horarioSugerido(socio, clases);
 }
 
 function codigoReferido(socio, contexto) {
@@ -131,7 +128,7 @@ function mensajeConstante(socio, row, contexto, fecha) {
     nombre: socio.nombre,
     racha: String(row.rachaSemanas || 1),
     claseFavorita: socio.claseFavorita,
-    sede: socio.sedeId,
+    sede: etiquetaSedeSocio(socio),
     codigoReferido: codigo || '',
   });
   return baseAccion({
@@ -148,8 +145,8 @@ function mensajeRiesgo(socio, contexto, fecha) {
   const texto = aplicarPlantilla(plantillas.retencion_riesgo, {
     nombre: socio.nombre,
     claseFavorita: socio.claseFavorita,
-    sede: socio.sedeId,
-    horarioSugerido: horarioSugerido(socio, contexto.clases),
+    sede: etiquetaSedeSocio(socio),
+    horarioSugerido: horarioSugeridoLocal(socio, contexto.clases),
   });
   return baseAccion({
     socio,
@@ -164,7 +161,7 @@ function mensajeRiesgo(socio, contexto, fecha) {
 function tareaSilencioso(socio, fecha) {
   const motivo = aplicarPlantilla(plantillas.retencion_tarea_silencioso, {
     nombre: socio.nombre,
-    sede: socio.sedeId,
+    sede: etiquetaSedeSocio(socio),
     claseFavorita: socio.claseFavorita,
   });
   return baseAccion({
