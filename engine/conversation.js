@@ -1168,10 +1168,15 @@ export function crearEngine(datosIniciales, tenantId = TENANT_DEFAULT, opts = {}
     getTenant: () => tenant(),
     reset() {
       if (memoria.hidratarTenant) memoria.hidratarTenant(tid, clonarDemo(tid, fechaRef));
-      else memoria.hidratar(clonarDemo(tid, fechaRef));
+      else memoria.hidratar({ tenants: memoria.listarTenants(), byTenant: { [tid]: clonarDemo(tid, fechaRef) } });
     },
     exportar() { return memoria.sliceExport(tid); },
-    hidratar(datos) { memoria.hidratar(datos); },
+    /** Compat: slice → hidratarTenant; mundo con byTenant → hidratar mundo. */
+    hidratar(datos) {
+      if (datos && datos.byTenant) memoria.hidratar(datos);
+      else if (memoria.hidratarTenant) memoria.hidratarTenant(tid, datos);
+      else memoria.hidratar(datos);
+    },
     setFechaRef,
     fecha,
     cancelarReserva: (codigo) => memoria.cancelarReserva(tid, codigo),

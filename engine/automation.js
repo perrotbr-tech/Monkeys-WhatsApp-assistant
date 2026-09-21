@@ -41,7 +41,7 @@ const AGENTES = [
 export function crearAutomation(datosIniciales, tenantId = TENANT_DEFAULT, opts = {}) {
   const clock = opts.clock || relojActivo();
   const hoy = () => fechaHoy(undefined, clock);
-  let state = extraer(datosIniciales || clonarDemo(tenantId), tenantId);
+  let state = extraer(datosIniciales != null ? datosIniciales : clonarDemo(tenantId), tenantId);
 
   function contexto() {
     return {
@@ -237,19 +237,35 @@ export function crearAutomation(datosIniciales, tenantId = TENANT_DEFAULT, opts 
   };
 }
 
+/**
+ * Extrae el estado de automatización sin rellenar desde demo.
+ * Los datos persistidos (o el seed explícito del caller) son la fuente de verdad.
+ * Campos de array ausentes → [] ; automation ausente → bloque vacío.
+ */
 function extraer(datos, tenantId = TENANT_DEFAULT) {
-  const src = (datos && datos.byTenant && datos.byTenant[tenantId]) ? datos.byTenant[tenantId] : datos;
-  const seed = clonarDemo(tenantId);
+  if (!datos) {
+    throw new Error('automation_extraer_requires_data');
+  }
+  let src = (datos.byTenant && datos.byTenant[tenantId]) ? datos.byTenant[tenantId] : datos;
+  if (src && src.schemaVersion === 1 && src.data) src = src.data;
+  const auto = src.automation && typeof src.automation === 'object'
+    ? src.automation
+    : { nextActionSeq: 0, agentesActivos: {}, campanias: [], acciones: [] };
   return {
-    tenantId,
-    socios: clonar(src.socios || seed.socios),
-    asistencias: clonar(src.asistencias || seed.asistencias),
-    classes: clonar(src.classes || seed.classes),
-    plans: clonar(src.plans || seed.plans),
-    membresias: clonar(src.membresias || seed.membresias || []),
-    pagos: clonar(src.pagos || seed.pagos || []),
-    referidos: clonar(src.referidos || []),
-    automation: clonar(src.automation || seed.automation),
+    tenantId: src.tenantId || tenantId,
+    socios: clonar(Array.isArray(src.socios) ? src.socios : []),
+    asistencias: clonar(Array.isArray(src.asistencias) ? src.asistencias : []),
+    classes: clonar(Array.isArray(src.classes) ? src.classes : []),
+    plans: clonar(Array.isArray(src.plans) ? src.plans : []),
+    membresias: clonar(Array.isArray(src.membresias) ? src.membresias : []),
+    pagos: clonar(Array.isArray(src.pagos) ? src.pagos : []),
+    referidos: clonar(Array.isArray(src.referidos) ? src.referidos : []),
+    automation: clonar({
+      nextActionSeq: auto.nextActionSeq || 0,
+      agentesActivos: auto.agentesActivos || {},
+      campanias: Array.isArray(auto.campanias) ? auto.campanias : [],
+      acciones: Array.isArray(auto.acciones) ? auto.acciones : [],
+    }),
   };
 }
 

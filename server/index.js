@@ -1,5 +1,5 @@
 import express from 'express';
-import { mkdirSync, readFileSync, writeFileSync, existsSync } from 'node:fs';
+import { mkdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { clonarMundo, clonar } from '../data/demo.js';
@@ -13,6 +13,9 @@ import {
   COOKIE, parseCookies, firmarSesion, leerSesion, cookieSesion, cookieLogout,
   intentarLogin, usuariosConHash, hashClave, resetLocks,
 } from '../engine/auth.js';
+import {
+  crearAdaptadorJson, CARGA, PersistenciaError,
+} from '../engine/persistencia/index.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, '..');
@@ -22,46 +25,32 @@ const DATA_FILE = join(DATA_DIR, 'data.json');
 const SESSION_SECRET = process.env.SESSION_SECRET || 'forkza-demo-hmac';
 const HASH_DEMO = hashClave('demo1234');
 
-function loadState() {
-  mkdirSync(DATA_DIR, { recursive: true });
-  if (!existsSync(DATA_FILE)) {
-    const seed = clonarMundo();
-    writeFileSync(DATA_FILE, JSON.stringify(seed, null, 2));
-    return seed;
-  }
-  const parsed = JSON.parse(readFileSync(DATA_FILE, 'utf8'));
-  if (!parsed.byTenant) {
-    const seed = clonarMundo();
-    writeFileSync(DATA_FILE, JSON.stringify(seed, null, 2));
-    return seed;
-  }
-  const soma = parsed.byTenant.soma;
-  const monkeys = parsed.byTenant.monkeys;
-  if (soma && soma.plans && soma.plans[0] && !('cuposMes' in soma.plans[0])) {
-    const seed = clonarMundo();
-    parsed.byTenant.soma = seed.byTenant.soma;
-    writeFileSync(DATA_FILE, JSON.stringify(parsed, null, 2));
-  }
-  if (!monkeys || !Array.isArray(monkeys.membresias) || (monkeys.socios || []).length < 40) {
-    const seed = clonarMundo();
-    parsed.byTenant.monkeys = seed.byTenant.monkeys;
-    if (parsed.byTenant.soma && !Array.isArray(parsed.byTenant.soma.membresias)) {
-      parsed.byTenant.soma = seed.byTenant.soma;
-    }
-    writeFileSync(DATA_FILE, JSON.stringify(parsed, null, 2));
-  }
-  return parsed;
-}
-
 export function crearApp({
   mundo = null,
   persist = true,
   sessionSecret = SESSION_SECRET,
   pagosOpts = null,
   clock = null,
+  dataFile = DATA_FILE,
 } = {}) {
   const reloj = clock || relojActivo();
-  let state = mundo ? clonar(mundo) : loadState();
+  let adapter = null;
+  let state;
+
+  if (mundo) {
+    state = clonar(mundo);
+  } else if (persist) {
+    mkdirSync(dirname(dataFile), { recursive: true });
+    adapter = crearAdaptadorJson({ filePath: dataFile, clock: reloj });
+    const carga = adapter.cargar();
+    if (carga.status === CARGA.CORRUPTO) {
+      throw carga.error || new PersistenciaError('PERSISTENCIA_CORRUPTA', 'data.json corrupto');
+    }
+    state = carga.world;
+  } else {
+    state = clonarMundo();
+  }
+
   const memoria = crearMemoria(state, { clock: reloj });
   const engines = {
     monkeys: crearEngine({ memoria }, 'monkeys', { clock: reloj }),
@@ -103,8 +92,8 @@ export function crearApp({
     }
     state = snap;
     if (persist) {
-      mkdirSync(DATA_DIR, { recursive: true });
-      writeFileSync(DATA_FILE, JSON.stringify(snap, null, 2));
+      if (!adapter) adapter = crearAdaptadorJson({ filePath: dataFile, clock: reloj });
+      adapter.guardar(snap);
     }
   }
 
@@ -224,13 +213,13 @@ export function crearApp({
   });
 
   app.post('/api/demo/reset', requireTenant, requireAuth, (req, res) => {
-    const seed = clonarMundo();
+    const seed = adapter ? adapter.reset() : clonarMundo();
     memoria.hidratar(seed);
-    engines.monkeys = crearEngine({ memoria }, 'monkeys');
-    engines.soma = crearEngine({ memoria }, 'soma');
-    autos.monkeys = crearAutomation(memoria.sliceExport('monkeys'), 'monkeys');
-    autos.soma = crearAutomation(memoria.sliceExport('soma'), 'soma');
-    saveState();
+    engines.monkeys = crearEngine({ memoria }, 'monkeys', { clock: reloj });
+    engines.soma = crearEngine({ memoria }, 'soma', { clock: reloj });
+    autos.monkeys = crearAutomation(memoria.sliceExport('monkeys'), 'monkeys', { clock: reloj });
+    autos.soma = crearAutomation(memoria.sliceExport('soma'), 'soma', { clock: reloj });
+    if (persist && !adapter) saveState();
     res.json({ ok: true });
   });
 
@@ -269,10 +258,10 @@ export function crearApp({
   });
 
   app.get('/api/pagos/config', requireTenant, (req, res) => {
-    const opts = pasarela();
+    const optsPagos = pasarela();
     res.json({
-      modo: opts.accessToken ? 'mercadopago' : 'demo',
-      pasarela: opts.accessToken ? 'Mercado Pago' : 'Pasarela en modo demostración',
+      modo: optsPagos.accessToken ? 'mercadopago' : 'demo',
+      pasarela: optsPagos.accessToken ? 'Mercado Pago' : 'Pasarela en modo demostración',
       datosBancarios: memoria.datosBancarios(req.tenant.id),
     });
   });
@@ -397,6 +386,8 @@ export function crearApp({
     resetLocks,
     usuarios,
     demoUsers: USUARIOS_DEMO,
+    adapter,
+    dataFile,
   };
 }
 

@@ -1,40 +1,37 @@
 import { crearEngine } from './conversation.js';
 import { crearAutomation } from './automation.js';
-import { clonarDemo } from '../data/demo.js';
 import { fechaHoy } from './dates.js';
 import { relojActivo } from './clock.js';
 import { USUARIOS_DEMO, CLAVE_DEMO } from '../data/tenants.js';
 import { combinarPersistencia } from './store.js';
 import { LOCK_MS, MAX_FALLOS } from './auth.js';
+import {
+  crearAdaptadorLocal,
+  claveEstadoV1,
+  CARGA,
+  PersistenciaError,
+} from './persistencia/index.js';
 
+/** @deprecated usar claveEstadoV1; se mantiene como alias público. */
 export function claveEstado(tenantId) {
-  return `forkza_demo_state_${tenantId}`;
+  return claveEstadoV1(tenantId);
 }
 
 export function crearStoreLocal(tenantId, storage, opts = {}) {
   const clock = opts.clock || relojActivo();
   const fechaRef = opts.fechaRef || fechaHoy(undefined, clock);
-  const KEY = claveEstado(tenantId);
-  const LEGACY = tenantId === 'monkeys' ? 'monkeys_demo_state' : null;
-  let datos = clonarDemo(tenantId, fechaRef);
-  try {
-    const raw = storage.getItem(KEY) || (LEGACY ? storage.getItem(LEGACY) : null);
-    if (raw) datos = JSON.parse(raw);
-    if (tenantId === 'soma' && datos.plans && datos.plans[0] && !('cuposMes' in datos.plans[0])) {
-      datos = clonarDemo('soma', fechaRef);
-    }
-    if (!Array.isArray(datos.membresias) || (tenantId === 'monkeys' && (datos.socios || []).length < 40)) {
-      datos = clonarDemo(tenantId, fechaRef);
-    }
-  } catch {
-    datos = clonarDemo(tenantId, fechaRef);
+  const adapter = crearAdaptadorLocal({ storage, clock, fechaRef, tenantIds: [tenantId] });
+  const carga = adapter.cargarTenant(tenantId);
+  if (carga.status === CARGA.CORRUPTO) {
+    throw carga.error || new PersistenciaError('PERSISTENCIA_CORRUPTA', 'localStorage corrupto');
   }
+  const datos = carga.slice;
   const engine = crearEngine(datos, tenantId, { fechaRef, clock });
   const auto = crearAutomation(datos, tenantId, { clock });
 
   function persist() {
     const merged = combinarPersistencia(engine.exportar(), auto.exportar());
-    storage.setItem(KEY, JSON.stringify(merged));
+    adapter.guardarTenant(tenantId, merged);
     auto.hidratar(merged);
   }
 
@@ -44,6 +41,7 @@ export function crearStoreLocal(tenantId, storage, opts = {}) {
     engine,
     auto,
     persist,
+    adapter,
     async iniciarConversacion() {
       const r = engine.iniciar();
       persist();
@@ -61,13 +59,13 @@ export function crearStoreLocal(tenantId, storage, opts = {}) {
     async listarConversaciones() { return engine.listarConversaciones(); },
     async listarSocios(filtro = {}) { return engine.filtrarSocios(filtro, fechaRef); },
     async fichaSocio(id) { return engine.fichaSocio(id, fechaRef); },
-    async altaSocio(datos) {
-      const r = engine.altaSocio(datos, fechaRef);
+    async altaSocio(datosSocio) {
+      const r = engine.altaSocio(datosSocio, fechaRef);
       persist();
       return r;
     },
-    async editarSocio(id, datos) {
-      const r = engine.editarSocio(id, datos);
+    async editarSocio(id, datosSocio) {
+      const r = engine.editarSocio(id, datosSocio);
       persist();
       return r;
     },

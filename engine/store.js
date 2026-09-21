@@ -109,8 +109,21 @@ export function crearMemoria(datosIniciales, opts = {}) {
     return clonar(state);
   }
 
+  /**
+   * Hidrata el mundo completo. Requiere forma { tenants?, byTenant }.
+   * Un Slice suelto no debe usarse aquí (usar hidratarTenant).
+   */
   function hidratar(datos) {
-    state = toWorld(datos);
+    if (!datos || typeof datos !== 'object') {
+      throw new Error('hidratar_requires_world');
+    }
+    if (!datos.byTenant || typeof datos.byTenant !== 'object') {
+      throw new Error('hidratar_requires_world');
+    }
+    state = {
+      tenants: clonar(datos.tenants || listarTenants()),
+      byTenant: clonar(datos.byTenant),
+    };
   }
 
   function getTenant(tenantId) {
