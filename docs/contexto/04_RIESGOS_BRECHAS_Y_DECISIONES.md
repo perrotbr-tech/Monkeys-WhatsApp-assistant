@@ -36,7 +36,7 @@ Contrato versionado JSON/localStorage con migración V0→V1, escritura atómica
 - Snapshots estrictos: `WorldSnapshotV1` (`schemaVersion`, `tenants`, `byTenant`) y `TenantSnapshotV1` (`schemaVersion`, `tenantId`, `data`); sin opcionales ambiguos.
 - Demo solo en vacío, reset explícito o migración de campo documentada.
 - SliceV1 estricto en carga y escritura simétrica: V1 incompleto o con identidad cruzada → error/corrupto sin sanitizar ni sobrescribir.
-- Consolidación E0–E1 en un único PR hacia `main` desde el tip E1B; no fusionar PR apilados (#4–#11) por separado. E2 y Forja Training no iniciados.
+- Consolidación E0–E1 en PR #12 (`integration/forkza-e1-complete` → `main`, draft) desde el tip E1B; no fusionar PR apilados (#4–#11) por separado. E2 y Forja Training no iniciados.
 
 ## Decisiones aún abiertas
 

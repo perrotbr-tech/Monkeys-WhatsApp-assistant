@@ -16,7 +16,7 @@ Fecha de corte: 2026-09-21.
 
 - Cadena histórica incluida: PR #4 (multi-gimnasio SOMA), #5 (socios/membresías/pagos), #7 (contexto vivo), #8 (documentos maestros), #9 (E0), #10 (E1A), #11 (E1B).
 - PR anteriores siguen abiertos; serán sustituibles por el PR consolidado tras revisión. No fusionar los apilados por separado.
-- Consolidación: PR pendiente sobre `integration/forkza-e1-complete` → `main` (draft).
+- Consolidación: PR #12 (`integration/forkza-e1-complete` → `main`, draft).
 
 ## Resultado reproducido
 
