@@ -5,7 +5,7 @@ Fecha de corte: 2026-09-21.
 ## Repositorio y base
 
 - Repositorio: `perrotbr-tech/Monkeys-WhatsApp-assistant`.
-- `main`: `0e20df0e7382ed373c65a2f506540a2e3f7a24d7` (squash merge PR #13: E2).
+- `main` contiene el commit funcional de E2 `0e20df0e7382ed373c65a2f506540a2e3f7a24d7` (squash merge PR #13) y su cierre documental posterior.
 - E0, E1 y E2 terminadas y fusionadas en `main` vía PR #12 y PR #13.
 - E3 y Forja Training no iniciados.
 
@@ -23,7 +23,7 @@ Fecha de corte: 2026-09-21.
 
 ## Resultado base vigente
 
-Sobre `main` @ `0e20df0`:
+Sobre el commit funcional E2 `0e20df0` y sus descendientes documentales en `main`:
 
 ```bash
 npm ci && npm test
@@ -37,4 +37,5 @@ Vigentes en `main`. E2 cerró contrato de tenant, identidad estable y Snapshot V
 
 ## Restricción operativa
 
-Un PR por etapa. Antes de iniciar E3, crear rama desde `main` @ `0e20df0` y definir su alcance.
+Un PR por etapa. Antes de iniciar E3, crear rama desde la punta vigente de `main` (descendiente de `0e20df0`) y definir su alcance.
+1444 docs/contexto/01_ESTADO_REPOSITORIO.md
