@@ -17,7 +17,7 @@ Fecha de corte: 2026-09-21.
 
 - PR #4–#9: cadena previa (multi-gimnasio → socios/pagos → contexto → maestro → E0).
 - E1A (Clock): PR #10, `cursor/e1a-clock-deterministico-fb93` hacia `integration/forkza-core-baseline`.
-- E1B (Store): PR de `cursor/e1b-store-persistencia-f516` hacia `cursor/e1a-clock-deterministico-fb93`. Contrato de persistencia, snapshots V1, adaptadores JSON/localStorage y suite de conformidad. No declara E1 completa.
+- E1B (Store): PR #11, `cursor/e1b-store-persistencia-f516` hacia `cursor/e1a-clock-deterministico-fb93`. Contrato de persistencia, snapshots V1, adaptadores JSON/localStorage y suite de conformidad. No declara E1 completa.
 
 ## Resultado reproducido
 
