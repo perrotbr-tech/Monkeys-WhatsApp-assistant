@@ -32,6 +32,7 @@ Contrato V2 con migración y rechazo de corruptos. Sigue siendo demo: sin concur
 - PR #12 fusionado en `main` @ `cf24445`.
 - E2: contrato de tenant, IDs estables de sede, registro dinámico, Snapshot V2, migración V1→V2.
 - E2 B1–B4: validación semántica V2 de `sedeId`; edición de socios con resolución/rechazo; agentes con nombres visibles; filtros panel por ID estable.
+- E2 B5: `WorldSnapshotV2.tenants` es fuente de verdad para validar `sedeId` (no el catálogo global).
 
 ## Decisiones confirmadas
 
@@ -39,8 +40,9 @@ Contrato V2 con migración y rechazo de corruptos. Sigue siendo demo: sin concur
 - Multi-tenant desde el núcleo; coach conserva control.
 - MONKEYS/SOMA son configuración de tenant, no identidad global del producto.
 - Snapshots: V1 histórico; V2 actual con `sedeId` estable. No se altera el significado de V1.
+- En `WorldSnapshotV2`, el catálogo `tenants` persistido es la fuente de verdad para validar `sedeId`; el catálogo global solo respalda cuando no hay catálogo persistido (`TenantSnapshotV2`).
 - Demo solo en vacío, reset explícito o migración de campo documentada.
-- Excepciones literales `monkeys`/`soma` solo en migración histórica (p. ej. clave `monkeys_demo_state`), documentadas.
+- Motor y servidor no bifurcan por marca (`monkeys`/`soma`). Siguen existiendo literales en fixtures demo (`data/socios.js`, `data/membresias-demo.js`). La excepción de migración histórica es la clave legacy `monkeys_demo_state`.
 
 ## Decisiones aún abiertas
 

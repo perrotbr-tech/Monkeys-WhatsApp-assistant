@@ -36,7 +36,7 @@ No eliminar entradas anteriores. Si una conclusión queda obsoleta, agregar una 
 - Servidor/UI/conversación sin hardcode `.monkeys`/`.soma` ni `tid ===`; builders demo por registro.
 - Persistencia: Snapshot V2 (`schemaVersion: 2`); `migrateV1toV2` (sedes → sedeId); V1 intacto como histórico.
 - Pruebas: 129 previas + 10 E2 → 139/139.
-- Literales restantes: solo `tenantId === 'monkeys'` en `clavesLegacyLocal` (compat `monkeys_demo_state`).
+- Literales: motor/servidor sin condicionales por marca; fixtures demo (`data/socios.js`, `data/membresias-demo.js`) aún bifurcan; excepción migración `clavesLegacyLocal` / `monkeys_demo_state`.
 - E3 y Forja Training no iniciados.
 
 ## 2026-09-21 — E2 revisión B1–B4 (misma rama/PR #13)
@@ -46,4 +46,12 @@ No eliminar entradas anteriores. Si una conclusión queda obsoleta, agregar una 
 - B3: agentes usan `nombreSede`/`etiquetaSedeSocio` para textos; match de clase por `sedeId`; Recordatorio recupera horario real.
 - B4: filtro panel usa valor = ID estable / etiqueta = nombre; cupos/disciplina guardan `sedeId` estable; `hidratarTenant` normaliza sedes en escritura in-memory.
 - Pruebas: `tests/e2-brechas-b1-b4.test.js`; suite 149/149.
+- Sin merge; E3/Forja no iniciados.
+
+## 2026-09-21 — E2 revisión B5 (misma rama/PR #13)
+
+- `idsSedeConfigurados`: si hay `tenantsExtra` (WorldSnapshotV2), ese catálogo persistido manda; el global solo respalda sin catálogo persistido (TenantSnapshotV2).
+- Corrige: sede nueva en snapshot aceptada; sede borrada del snapshot rechazada aunque siga en el global.
+- Pruebas: `tests/e2-brechas-b5.test.js` (B5.1–B5.3); B5.4 = suite completa en verde.
+- Precisión docs: motor/servidor sin bifurcar por marca; literales demo en `data/socios.js` y `data/membresias-demo.js`; legacy `monkeys_demo_state` en migración.
 - Sin merge; E3/Forja no iniciados.

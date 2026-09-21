@@ -83,13 +83,20 @@ const CAMPOS_CON_SEDE_V2 = Object.freeze([
 
 /**
  * IDs de sede estables configurados para un tenant.
+ * En WorldSnapshotV2, `tenantsExtra` (catálogo persistido) es la fuente de verdad.
+ * El catálogo global solo se usa cuando no se proporciona catálogo persistido
+ * (p. ej. TenantSnapshotV2).
  * @param {string} tenantId
- * @param {object[]} [tenantsExtra] catálogo del snapshot (fallback)
+ * @param {object[]} [tenantsExtra] catálogo `tenants` del WorldSnapshot
  * @returns {Set<string>|null} null si el tenant no está configurado
  */
 export function idsSedeConfigurados(tenantId, tenantsExtra) {
-  const t = buscarTenant(tenantId)
-    || (Array.isArray(tenantsExtra) ? tenantsExtra.find((x) => x && (x.id === tenantId || x.slug === tenantId)) : null);
+  let t = null;
+  if (Array.isArray(tenantsExtra)) {
+    t = tenantsExtra.find((x) => x && (x.id === tenantId || x.slug === tenantId)) || null;
+  } else {
+    t = buscarTenant(tenantId);
+  }
   if (!t) return null;
   return new Set((t.sedes || []).map((s) => s && s.id).filter(Boolean));
 }

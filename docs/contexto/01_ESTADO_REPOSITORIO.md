@@ -7,7 +7,7 @@ Fecha de corte: 2026-09-21.
 - Repositorio: `perrotbr-tech/Monkeys-WhatsApp-assistant`.
 - `main`: `cf24445bf738870ac8365207927a51dc2f0ccfa9` (merge PR #12: consolidación E0+E1).
 - E0 y E1 terminadas y fusionadas en `main` vía PR #12.
-- E2 en ejecución: rama `cursor/e2-identidad-tenant-config` (identidad estable y tenant config); PR #13 draft con revisión B1–B4.
+- E2 en ejecución: rama `cursor/e2-identidad-tenant-config` (identidad estable y tenant config); PR #13 draft con revisión B1–B5.
 - E3 y Forja Training no iniciados.
 
 ## Pull requests
