@@ -3,7 +3,7 @@
 Estado de referencia: 2026-09-22
 Repositorio: `perrotbr-tech/Monkeys-WhatsApp-assistant`
 Base funcional E2: `main` @ `4504c9b99eca9614f241f29276e806604a607f2e` (descendiente de E2 `0e20df0`)
-Etapa en curso: E3 — Forkza Core y fronteras. E3A cerrada en `14d24ba`. E3B implementada en rama (pendiente de revisión).
+Etapa en curso: E3 — Forkza Core y fronteras. E3A cerrada en `14d24ba`. E3B aceptada tras B5–B8. E3C implementada en rama (pendiente de revisión independiente). E3 no se declara completa hasta esa revisión.
 
 ## Propósito
 

@@ -46,9 +46,9 @@ Runtime: `mundoRuntimeDesdeSnapshot` proyecta `byWorkspace` → vista `byTenant`
 
 Aliases documentados: `crearTenantSnapshot`/`crearTenantSnapshotV3` → Workspace V3; `CARGA.V1_VALIDO` → `v3_valid`; `CARGA.V2_VALIDO` → `v2_migratable`; `claveEstado` → `claveEstadoV1`; parámetros `tenantId` coexisten con `workspaceId`.
 
-### API / Interfaz / Seguridad
+### API / Interfaz / Seguridad (E3C)
 
-Sin cambio de rutas públicas en E3B. Sesión con `userId`/`workspaceId` aditivos. RBAC de rutas = E3C. SPA hash; marca por tenant.
+Sesión con `userId`/`workspaceId` aditivos. Middleware en `server/acceso.js`: `requireAuth`, `requireFeature`, `requirePermission` reutilizan Core (`crearContextoAcceso`, `contextoCoincideConSesion`, `tienePermiso`, `featureHabilitado`). Deny-by-default: sin sesión → 401; sin permiso/feature/rol desconocido → 403; tenant incoherente → 401. `tenantId`/`workspaceId` del body/query no autorizan. `GET /api/me` expone permisos y features efectivos. UI (`app.js`) oculta navegación/acciones no autorizadas; el servidor es autoridad final. `pagarDemo(tenantId, ref, fecha)` y rutas demo/webhook acotados al `X-Tenant` (sin búsqueda global). `AuditSink` inyectable en `crearApp` (default memoria). SPA hash; marca por tenant.
 
 ## Diferencias frente al objetivo
 

@@ -3,19 +3,22 @@ import { mkdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { clonarMundo, clonar } from '../data/demo.js';
-import { TENANT_DEFAULT, tenantActivo, varsMarca, USUARIOS_DEMO, idsTenantsActivos, listarTenants } from '../data/tenants.js';
+import { TENANT_DEFAULT, tenantActivo, varsMarca, USUARIOS_DEMO, idsTenantsActivos, catalogoWorkspaces } from '../data/tenants.js';
 import { crearEngine } from '../engine/conversation.js';
 import { crearAutomation } from '../engine/automation.js';
 import { crearMemoria, combinarPersistencia } from '../engine/store.js';
 import { fechaHoy, fechaDesdeQuery } from '../engine/dates.js';
 import { relojActivo } from '../engine/clock.js';
 import {
-  COOKIE, parseCookies, firmarSesion, leerSesion, cookieSesion, cookieLogout,
+  firmarSesion, cookieSesion, cookieLogout,
   intentarLogin, usuariosConHash, hashClave, resetLocks,
 } from '../engine/auth.js';
 import {
   crearAdaptadorJson, CARGA, PersistenciaError,
 } from '../engine/persistencia/index.js';
+import { crearAuditSinkMemoria } from '../core/audit/sink.js';
+import { featuresDe } from '../core/features/flags.js';
+import { crearMiddlewareAcceso } from './acceso.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, '..');
@@ -32,6 +35,7 @@ export function crearApp({
   pagosOpts = null,
   clock = null,
   dataFile = DATA_FILE,
+  auditSink = null,
 } = {}) {
   const reloj = clock || relojActivo();
   let adapter = null;
@@ -68,6 +72,13 @@ export function crearApp({
   reiniciarMotores();
   const usuarios = usuariosConHash(HASH_DEMO);
   const secret = sessionSecret;
+  const audit = auditSink || crearAuditSinkMemoria(catalogoWorkspaces());
+  const {
+    requireAuth,
+    requireFeature,
+    requirePermission,
+    resolverContexto,
+  } = crearMiddlewareAcceso({ sessionSecret: secret });
 
   function pasarela() {
     if (pagosOpts) return pagosOpts;
@@ -123,23 +134,21 @@ export function crearApp({
     next();
   }
 
-  function sesionDe(req) {
-    const cookies = parseCookies(req.headers.cookie);
-    const payload = leerSesion(cookies[COOKIE], secret);
-    if (!payload || !payload.email) return null;
-    return payload;
+  function auditar(req, { action, targetType, targetId = null, metadata = {} }) {
+    const actor = req.usuario || req.accessContext;
+    audit.record({
+      workspaceId: req.tenant.id,
+      actorId: actor && actor.userId ? actor.userId : null,
+      action,
+      targetType,
+      targetId,
+      sourceDomain: 'gestion',
+      timestamp: reloj.iso(),
+      metadata,
+    });
   }
 
-  function requireAuth(req, res, next) {
-    const s = sesionDe(req);
-    if (!s || s.tenantId !== req.tenant.id) return res.status(401).json({ error: 'unauthorized' });
-    // E3A: seleccionar tenant en UI no autoriza; la sesión debe coincidir con el workspace.
-    if (s.workspaceId && s.workspaceId !== req.tenant.id) {
-      return res.status(401).json({ error: 'unauthorized' });
-    }
-    req.usuario = s;
-    next();
-  }
+  const featGestion = requireFeature('gestion');
 
   const app = express();
   app.use(express.json());
@@ -162,7 +171,7 @@ export function crearApp({
     });
   });
 
-  app.post('/api/login', requireTenant, (req, res) => {
+  app.post('/api/login', requireTenant, featGestion, (req, res) => {
     const email = req.body && req.body.email;
     const password = req.body && req.body.password;
     const r = intentarLogin({
@@ -175,6 +184,13 @@ export function crearApp({
     if (!r.ok) return res.status(r.status).json({ error: r.error });
     const token = firmarSesion({ ...r.usuario, iat: reloj.now() }, secret);
     res.setHeader('Set-Cookie', cookieSesion(token));
+    req.usuario = r.usuario;
+    auditar(req, {
+      action: 'login',
+      targetType: 'usuario',
+      targetId: r.usuario.userId || r.usuario.email,
+      metadata: { email: r.usuario.email, rol: r.usuario.rol },
+    });
     res.json({ ok: true, usuario: r.usuario });
   });
 
@@ -183,74 +199,83 @@ export function crearApp({
     res.json({ ok: true });
   });
 
-  app.get('/api/me', requireTenant, (req, res) => {
-    const s = sesionDe(req);
-    if (!s || s.tenantId !== req.tenant.id) return res.status(401).json({ error: 'unauthorized' });
+  app.get('/api/me', requireTenant, requireAuth, (req, res) => {
+    const ctx = req.accessContext;
+    const features = featuresDe(req.tenant);
     res.json({
       usuario: {
-        email: s.email,
-        nombre: s.nombre,
-        rol: s.rol,
-        tenantId: s.tenantId,
-        userId: s.userId,
-        workspaceId: s.workspaceId,
+        email: ctx.email,
+        nombre: ctx.nombre,
+        rol: ctx.rol,
+        tenantId: ctx.tenantId,
+        userId: ctx.userId,
+        workspaceId: ctx.workspaceId,
       },
+      permisos: [...(ctx.permisos || [])],
+      features: { ...features },
     });
   });
 
-  app.post('/api/conversations', requireTenant, (req, res) => {
+  app.post('/api/conversations', requireTenant, featGestion, (req, res) => {
     const result = req.engine.iniciar();
     saveState();
     res.json(result);
   });
 
-  app.post('/api/conversations/:id/messages', requireTenant, (req, res) => {
+  app.post('/api/conversations/:id/messages', requireTenant, featGestion, (req, res) => {
     const text = req.body && req.body.text;
     const result = req.engine.procesar(req.params.id, text);
     saveState();
     res.json(result);
   });
 
-  app.get('/api/classes', requireTenant, (req, res) => {
+  app.get('/api/classes', requireTenant, featGestion, (req, res) => {
     res.json({ classes: req.engine.listarClases(req.query.sede) });
   });
 
-  app.get('/api/plans', requireTenant, (req, res) => {
+  app.get('/api/plans', requireTenant, featGestion, (req, res) => {
     res.json({ plans: req.engine.listarPlanes() });
   });
 
-  app.get('/api/bookings', requireTenant, requireAuth, (req, res) => {
+  app.get('/api/bookings', requireTenant, featGestion, requireAuth, requirePermission('gestion:reservas:leer'), (req, res) => {
     res.json({ bookings: req.engine.listarReservas() });
   });
 
-  app.get('/api/leads', requireTenant, requireAuth, (req, res) => {
+  app.get('/api/leads', requireTenant, featGestion, requireAuth, requirePermission('gestion:leads:leer'), (req, res) => {
     res.json({ leads: req.engine.listarLeads() });
   });
 
-  app.get('/api/conversations', requireTenant, requireAuth, (req, res) => {
+  app.get('/api/conversations', requireTenant, featGestion, requireAuth, requirePermission('gestion:conversaciones:leer'), (req, res) => {
     res.json({ conversations: req.engine.listarConversaciones() });
   });
 
-  app.post('/api/demo/reset', requireTenant, requireAuth, (req, res) => {
+  app.post('/api/demo/reset', requireTenant, featGestion, requireAuth, requirePermission('gestion:configurar'), (req, res) => {
     const seed = adapter ? adapter.reset() : clonarMundo();
     memoria.hidratar(seed);
     reiniciarMotores();
     if (persist && !adapter) saveState();
+    auditar(req, { action: 'demo.reset', targetType: 'workspace', targetId: req.tenant.id });
     res.json({ ok: true });
   });
 
-  app.post('/api/automation/run', requireTenant, requireAuth, (req, res) => {
+  app.post('/api/automation/run', requireTenant, featGestion, requireAuth, requirePermission('gestion:automatizacion'), (req, res) => {
     const fecha = fechaDeReq(req);
     const campania = req.auto.ejecutarCiclo(fecha);
     saveState();
+    auditar(req, {
+      action: 'automation.run',
+      targetType: 'campania',
+      targetId: campania && campania.id ? campania.id : null,
+      metadata: { fecha },
+    });
     res.json({ ok: true, campania, summary: req.auto.summary(fecha) });
   });
 
-  app.get('/api/automation/summary', requireTenant, requireAuth, (req, res) => {
+  app.get('/api/automation/summary', requireTenant, featGestion, requireAuth, requirePermission('gestion:automatizacion'), (req, res) => {
     res.json(req.auto.summary(fechaDeReq(req)));
   });
 
-  app.get('/api/automation/actions', requireTenant, requireAuth, (req, res) => {
+  app.get('/api/automation/actions', requireTenant, featGestion, requireAuth, requirePermission('gestion:automatizacion'), (req, res) => {
     res.json({
       actions: req.auto.listarAcciones({
         agente: req.query.agente,
@@ -260,20 +285,32 @@ export function crearApp({
     });
   });
 
-  app.post('/api/automation/actions/:id/estado', requireTenant, requireAuth, (req, res) => {
+  app.post('/api/automation/actions/:id/estado', requireTenant, featGestion, requireAuth, requirePermission('gestion:automatizacion'), (req, res) => {
     const acc = req.auto.setEstado(req.params.id, req.body && req.body.estado);
     if (!acc) return res.status(404).json({ error: 'not found' });
     saveState();
+    auditar(req, {
+      action: 'automation.action.estado',
+      targetType: 'accion',
+      targetId: req.params.id,
+      metadata: { estado: req.body && req.body.estado },
+    });
     res.json({ action: acc });
   });
 
-  app.post('/api/automation/agentes/:id/activo', requireTenant, requireAuth, (req, res) => {
+  app.post('/api/automation/agentes/:id/activo', requireTenant, featGestion, requireAuth, requirePermission('gestion:automatizacion'), (req, res) => {
     const activos = req.auto.setAgenteActivo(req.params.id, req.body && req.body.activo);
     saveState();
+    auditar(req, {
+      action: 'automation.agente.activo',
+      targetType: 'agente',
+      targetId: req.params.id,
+      metadata: { activo: Boolean(req.body && req.body.activo) },
+    });
     res.json({ agentesActivos: activos });
   });
 
-  app.get('/api/pagos/config', requireTenant, (req, res) => {
+  app.get('/api/pagos/config', requireTenant, featGestion, requireAuth, requirePermission('gestion:pagos:leer'), (req, res) => {
     const optsPagos = pasarela();
     res.json({
       modo: optsPagos.accessToken ? 'mercadopago' : 'demo',
@@ -282,12 +319,12 @@ export function crearApp({
     });
   });
 
-  app.get('/api/socios/plantilla.csv', requireTenant, requireAuth, (_req, res) => {
+  app.get('/api/socios/plantilla.csv', requireTenant, featGestion, requireAuth, requirePermission('gestion:socios:leer'), (_req, res) => {
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
     res.send('nombre,telefono,email,plan,fechaInicio,sede\n');
   });
 
-  app.get('/api/socios', requireTenant, requireAuth, (req, res) => {
+  app.get('/api/socios', requireTenant, featGestion, requireAuth, requirePermission('gestion:socios:leer'), (req, res) => {
     res.json({
       socios: memoria.filtrarSocios(req.tenant.id, {
         q: req.query.q,
@@ -300,94 +337,149 @@ export function crearApp({
     });
   });
 
-  app.get('/api/socios/:id', requireTenant, requireAuth, (req, res) => {
+  app.get('/api/socios/:id', requireTenant, featGestion, requireAuth, requirePermission('gestion:socios:leer'), (req, res) => {
     const ficha = memoria.fichaSocio(req.tenant.id, req.params.id, fechaDeReq(req));
     if (!ficha) return res.status(404).json({ error: 'not found' });
     res.json(ficha);
   });
 
-  app.post('/api/socios', requireTenant, requireAuth, (req, res) => {
+  app.post('/api/socios', requireTenant, featGestion, requireAuth, requirePermission('gestion:socios:escribir'), (req, res) => {
     const r = memoria.altaSocio(req.tenant.id, req.body || {}, fechaDeReq(req));
     if (!r.ok) return res.status(400).json(r);
     saveState();
+    auditar(req, {
+      action: 'socio.alta',
+      targetType: 'socio',
+      targetId: r.socio && r.socio.id ? r.socio.id : null,
+    });
     res.json(r);
   });
 
-  app.put('/api/socios/:id', requireTenant, requireAuth, (req, res) => {
+  app.put('/api/socios/:id', requireTenant, featGestion, requireAuth, requirePermission('gestion:socios:escribir'), (req, res) => {
     const r = memoria.editarSocio(req.tenant.id, req.params.id, req.body || {});
     if (!r.ok) return res.status(400).json(r);
     saveState();
+    auditar(req, {
+      action: 'socio.editar',
+      targetType: 'socio',
+      targetId: req.params.id,
+    });
     res.json(r);
   });
 
-  app.post('/api/socios/:id/baja', requireTenant, requireAuth, (req, res) => {
+  app.post('/api/socios/:id/baja', requireTenant, featGestion, requireAuth, requirePermission('gestion:socios:escribir'), (req, res) => {
     const r = memoria.bajaSocio(req.tenant.id, req.params.id, req.body && req.body.motivo, fechaDeReq(req));
     if (!r.ok) return res.status(400).json(r);
     saveState();
+    auditar(req, {
+      action: 'socio.baja',
+      targetType: 'socio',
+      targetId: req.params.id,
+    });
     res.json(r);
   });
 
-  app.post('/api/socios/:id/reactivar', requireTenant, requireAuth, (req, res) => {
+  app.post('/api/socios/:id/reactivar', requireTenant, featGestion, requireAuth, requirePermission('gestion:socios:escribir'), (req, res) => {
     const r = memoria.reactivarSocio(req.tenant.id, req.params.id);
     if (!r.ok) return res.status(400).json(r);
     saveState();
+    auditar(req, {
+      action: 'socio.reactivar',
+      targetType: 'socio',
+      targetId: req.params.id,
+    });
     res.json(r);
   });
 
-  app.post('/api/socios/import', requireTenant, requireAuth, (req, res) => {
+  app.post('/api/socios/import', requireTenant, featGestion, requireAuth, requirePermission('gestion:socios:escribir'), (req, res) => {
     const r = memoria.importarSociosCsv(req.tenant.id, (req.body && req.body.csv) || '', fechaDeReq(req));
     saveState();
+    auditar(req, {
+      action: 'socio.importar',
+      targetType: 'socio',
+      targetId: null,
+      metadata: { ok: r.ok, creados: Array.isArray(r.creados) ? r.creados.length : 0, errores: Array.isArray(r.errores) ? r.errores.length : 0 },
+    });
     res.json(r);
   });
 
-  app.get('/api/pagos', requireTenant, requireAuth, (req, res) => {
+  app.get('/api/pagos', requireTenant, featGestion, requireAuth, requirePermission('gestion:pagos:leer'), (req, res) => {
     const estado = req.query.estado;
     let pagos = memoria.listarPagos(req.tenant.id);
     if (estado) pagos = pagos.filter((p) => p.estado === estado);
     res.json({ pagos, conciliacion: memoria.conciliacionMes(req.tenant.id, fechaDeReq(req)) });
   });
 
-  app.post('/api/pagos/:id/marcar', requireTenant, requireAuth, (req, res) => {
+  app.post('/api/pagos/:id/marcar', requireTenant, featGestion, requireAuth, requirePermission('gestion:pagos:escribir'), (req, res) => {
     const r = memoria.marcarPagado(req.tenant.id, req.params.id, req.body && req.body.referencia, fechaDeReq(req));
     if (!r.ok) return res.status(400).json(r);
     saveState();
+    auditar(req, {
+      action: 'pago.marcar',
+      targetType: 'pago',
+      targetId: req.params.id,
+    });
     res.json(r);
   });
 
-  app.post('/api/pagos/:id/enviar-link', requireTenant, requireAuth, async (req, res) => {
+  app.post('/api/pagos/:id/enviar-link', requireTenant, featGestion, requireAuth, requirePermission('gestion:pagos:escribir'), async (req, res) => {
     const r = await memoria.enviarLinkPago(req.tenant.id, req.params.id, pasarela());
     if (!r.ok) return res.status(400).json(r);
     saveState();
+    auditar(req, {
+      action: 'pago.enviar_link',
+      targetType: 'pago',
+      targetId: req.params.id,
+      metadata: { modo: r.modo || 'demo' },
+    });
     res.json(r);
   });
 
-  app.get('/api/pagos/export.csv', requireTenant, requireAuth, (req, res) => {
+  app.get('/api/pagos/export.csv', requireTenant, featGestion, requireAuth, requirePermission('gestion:pagos:leer'), (req, res) => {
     const r = memoria.exportarPagosCsv(req.tenant.id, fechaDeReq(req));
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
     res.send(r.csv);
   });
 
-  app.get('/api/pagos/conciliacion', requireTenant, requireAuth, (req, res) => {
+  app.get('/api/pagos/conciliacion', requireTenant, featGestion, requireAuth, requirePermission('gestion:pagos:leer'), (req, res) => {
     res.json(memoria.conciliacionMes(req.tenant.id, fechaDeReq(req)));
   });
 
-  app.get('/api/pagos/demo/:ref', requireTenant, (req, res) => {
-    const pago = memoria.pagoPorReferencia(req.tenant.id, req.params.ref)
-      || (memoria.buscarPagoEnTenants(req.params.ref) || {}).pago;
+  app.get('/api/pagos/demo/:ref', requireTenant, featGestion, (req, res) => {
+    const pago = memoria.pagoPorReferencia(req.tenant.id, req.params.ref);
     if (!pago) return res.status(404).json({ error: 'not found' });
     res.json({ pago });
   });
 
-  app.post('/api/pagos/demo/:ref/pagar', requireTenant, (req, res) => {
-    const r = memoria.pagarDemo(req.params.ref, fechaDeReq(req));
+  app.post('/api/pagos/demo/:ref/pagar', requireTenant, featGestion, (req, res) => {
+    const r = memoria.pagarDemo(req.tenant.id, req.params.ref, fechaDeReq(req));
     if (!r.ok) return res.status(400).json(r);
     saveState();
+    auditar(req, {
+      action: 'pago.demo',
+      targetType: 'pago',
+      targetId: r.pago && r.pago.id ? r.pago.id : null,
+      metadata: { referencia: req.params.ref },
+    });
     res.json(r);
   });
 
-  app.post('/api/pagos/webhook', requireTenant, (req, res) => {
+  app.post('/api/pagos/webhook', requireTenant, featGestion, (req, res) => {
+    const before = memoria.listarPagos(req.tenant.id).map((p) => `${p.id}:${p.estado}`);
     const r = memoria.webhookPago(req.tenant.id, req.body || {}, pasarela());
-    if (r.ok) saveState();
+    if (r.ok) {
+      saveState();
+      const after = memoria.listarPagos(req.tenant.id).map((p) => `${p.id}:${p.estado}`);
+      const cambio = before.join('|') !== after.join('|');
+      if (cambio || (r.pago && r.pago.id)) {
+        auditar(req, {
+          action: 'pago.webhook',
+          targetType: 'pago',
+          targetId: r.pago && r.pago.id ? r.pago.id : null,
+          metadata: { estado: r.evento && r.evento.estado ? r.evento.estado : undefined },
+        });
+      }
+    }
     res.json(r);
   });
 
@@ -404,6 +496,8 @@ export function crearApp({
     demoUsers: USUARIOS_DEMO,
     adapter,
     dataFile,
+    auditSink: audit,
+    resolverContexto,
   };
 }
 

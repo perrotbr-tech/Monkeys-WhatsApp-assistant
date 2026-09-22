@@ -564,10 +564,17 @@ export function crearMemoria(datosIniciales, opts = {}) {
     return null;
   }
 
-  function pagarDemo(referencia, fechaRef = hoy()) {
-    const hit = buscarPagoEnTenants(referencia);
-    if (!hit) return { ok: false, error: 'pago no encontrado' };
-    return marcarPagado(hit.tenantId, hit.pago.id, referencia, fechaRef);
+  /**
+   * Pago demo acotado al workspace explícito (E3C).
+   * No busca referencias en otros tenants.
+   * @param {string} tenantId
+   * @param {string} referencia
+   * @param {string} [fechaRef]
+   */
+  function pagarDemo(tenantId, referencia, fechaRef = hoy()) {
+    const pago = pagoPorReferencia(tenantId, referencia);
+    if (!pago) return { ok: false, error: 'pago no encontrado' };
+    return marcarPagado(tenantId, pago.id, referencia, fechaRef);
   }
 
   function webhookPago(tenantId, payload, opts = {}) {

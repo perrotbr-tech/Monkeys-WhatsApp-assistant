@@ -2,35 +2,32 @@
 
 ## Prioridad alta
 
-### Posible cruce de tenant en pagos demo
-
-Las rutas públicas de pago pueden buscar la referencia en todos los tenants. Fuera de alcance E3B; pendiente post-E3 / E3C.
-
 ### Webhook de pagos
 
-Sin verificación de firma, replay ni idempotencia. No listo para producción.
+Sin verificación de firma, replay ni idempotencia. No listo para producción (E5).
 
 ### Persistencia demo (E1B–E3B)
 
-Contrato V3 con migración V0–V2→V3 y rechazo de corruptos/cruzados. Sigue siendo demo: sin concurrencia multi-proceso, auditoría inmutable ni recuperación productiva. Postgres/Supabase fuera de alcance. AuditSink en Core solo en memoria de prueba; no persiste en snapshots.
+Contrato V3 con migración V0–V2→V3 y rechazo de corruptos/cruzados. Sigue siendo demo: sin concurrencia multi-proceso, auditoría inmutable ni recuperación productiva. Postgres/Supabase fuera de alcance. AuditSink E3C en memoria inyectable; no persiste en snapshots (Snapshot V4 fuera de alcance).
 
 ## Prioridad media
 
-- Usuarios demo estáticos; `userId` estable por correo; sin tablas productivas de memberships.
-- RBAC contractual listo; no aplicado aún a todas las rutas (E3C).
+- Usuarios demo estáticos ampliados (dueño, recepción, ventas, coach, alumno en MONKEYS); sin tablas productivas de memberships.
 - Runtime aún proyecta `byTenant` desde `byWorkspace`; consumidores legacy no renombrados de golpe.
 - Sin adaptador WhatsApp Cloud API aunque la salida respeta límites.
 - Mercado Pago con contrato/adaptador, sin integración productiva segura.
 - Escritura JSON de proceso único.
 - Sin observabilidad, colas ni política de respaldo formal.
 - UI (`app.js`) aún puede usar reloj de pared en timestamps visibles.
-- Acciones históricas seed: tras V3 llevan `workspaceId`; no se inventan actor/destinatario/origen ausentes. Acciones nuevas cumplen E3A completo.
+- Acciones históricas seed: tras V3 llevan `workspaceId`; no se inventan actor/destinatario/origen ausentes.
 
-## Cerrado en E0–E3B (parcial)
+## Cerrado en E0–E3C (parcial)
 
 - E0–E2 en `main` (PR #12–#15).
 - E3A cerrada en `14d24ba` (PR #16): `core/` + adaptadores; B1–B4.
-- E3B en PR #16 (pendiente de aceptación): Snapshot V3 + revisión B5–B8 (entidades nuevas con `workspaceId`; escritura sin sellar/normalizar; migraciones rechazan versionados corruptos).
+- E3B aceptada tras B5–B8: Snapshot V3 + escritura sin sellar/normalizar.
+- E3C (PR #16, pendiente revisión): RBAC deny-by-default en rutas Gestión; pagos demo/webhook sin cruce de tenant; auditoría de mutaciones sensibles; `/api/me` con permisos/features; UI oculta sin reemplazar servidor.
+- Brecha pagos cross-tenant demo: cerrada en E3C (sin fallback global).
 
 ## Decisiones confirmadas
 
@@ -44,14 +41,16 @@ Contrato V3 con migración V0–V2→V3 y rechazo de corruptos/cruzados. Sigue s
 - Features: `gestion: true`, `forja: false`. Feature desconocido = deshabilitado.
 - Acciones nuevas: `origenDominio: gestion`; mensaje → `socio`; tarea → `equipo`.
 - Demo solo en vacío, reset explícito o migración documentada. V3/V2/V1 declarados incompletos no se rellenan en silencio.
+- RBAC: propietario/admin = Gestión completa; recepción sin config/automatización/pagos escribir; ventas lee pagos; entrenador lee reservas/socios; alumno sin Gestión interna.
 
 ## Decisiones aún abiertas / pendientes
 
-- E3C: RBAC en todas las rutas servidor.
-- Renombre masivo de APIs/params `tenantId` → `workspaceId` (solo aliases en E3B).
+- Revisión independiente de E3C antes de declarar E3 completa.
+- Renombre masivo de APIs/params `tenantId` → `workspaceId`.
 - Base de datos y proveedor de despliegue.
 - Contrato Gestión ↔ Training; WhatsApp/pagos/archivos productivos.
 - Alcance del primer MVP de Forja Training.
+- Firma real Mercado Pago, idempotencia y Snapshot V4 (E5 / fuera de E3).
 
 ## Regla de interpretación
 

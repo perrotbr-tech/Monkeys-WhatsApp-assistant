@@ -1,7 +1,7 @@
 /**
- * Autorización por roles y permisos explícitos (E3A).
+ * Autorización por roles y permisos explícitos (E3A/E3C).
  * No depende de nombres MONKEYS/SOMA. Deniega por defecto lo desconocido.
- * E3A define y prueba el contrato; la aplicación total en rutas es E3C.
+ * E3C aplica estos contratos a las rutas de Gestión.
  */
 
 /** Roles canónicos admitidos (actuales + futuros). */
@@ -32,12 +32,17 @@ const ALIAS_ROL = Object.freeze({
 /** Catálogo de permisos conocidos. */
 export const PERMISOS_CONOCIDOS = Object.freeze([
   'gestion:acceso',
+  'gestion:panel',
+  'gestion:reservas:leer',
+  'gestion:leads:leer',
+  'gestion:conversaciones:leer',
   'gestion:socios:leer',
   'gestion:socios:escribir',
   'gestion:pagos:leer',
   'gestion:pagos:escribir',
   'gestion:automatizacion',
-  'gestion:panel',
+  'gestion:configurar',
+  'gestion:auditoria:leer',
   'forja:acceso',
   'forja:programar',
   'forja:ejecutar',
@@ -45,42 +50,47 @@ export const PERMISOS_CONOCIDOS = Object.freeze([
 
 const SET_PERMISOS = new Set(PERMISOS_CONOCIDOS);
 
+const GESTION_COMPLETA = Object.freeze([
+  'gestion:acceso',
+  'gestion:panel',
+  'gestion:reservas:leer',
+  'gestion:leads:leer',
+  'gestion:conversaciones:leer',
+  'gestion:socios:leer',
+  'gestion:socios:escribir',
+  'gestion:pagos:leer',
+  'gestion:pagos:escribir',
+  'gestion:automatizacion',
+  'gestion:configurar',
+  'gestion:auditoria:leer',
+]);
+
 /** Permisos por rol canónico. */
 const PERMISOS_POR_ROL = Object.freeze({
-  propietario: [
-    'gestion:acceso',
-    'gestion:socios:leer',
-    'gestion:socios:escribir',
-    'gestion:pagos:leer',
-    'gestion:pagos:escribir',
-    'gestion:automatizacion',
-    'gestion:panel',
-  ],
-  administrador: [
-    'gestion:acceso',
-    'gestion:socios:leer',
-    'gestion:socios:escribir',
-    'gestion:pagos:leer',
-    'gestion:pagos:escribir',
-    'gestion:automatizacion',
-    'gestion:panel',
-  ],
+  propietario: [...GESTION_COMPLETA],
+  administrador: [...GESTION_COMPLETA],
   recepcion: [
     'gestion:acceso',
+    'gestion:panel',
+    'gestion:reservas:leer',
+    'gestion:leads:leer',
+    'gestion:conversaciones:leer',
     'gestion:socios:leer',
     'gestion:socios:escribir',
-    'gestion:panel',
   ],
   ventas: [
     'gestion:acceso',
+    'gestion:panel',
+    'gestion:leads:leer',
+    'gestion:conversaciones:leer',
     'gestion:socios:leer',
     'gestion:pagos:leer',
-    'gestion:panel',
   ],
   entrenador: [
     'gestion:acceso',
-    'gestion:socios:leer',
     'gestion:panel',
+    'gestion:reservas:leer',
+    'gestion:socios:leer',
     'forja:acceso',
     'forja:programar',
   ],

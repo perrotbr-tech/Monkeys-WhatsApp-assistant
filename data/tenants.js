@@ -388,6 +388,10 @@ export function varsMarca(marca) {
 
 export const USUARIOS_DEMO = [
   { tenantId: 'monkeys', email: 'dueno@monkeys.demo', nombre: 'Dueña demo', rol: 'dueño' },
+  { tenantId: 'monkeys', email: 'recepcion@monkeys.demo', nombre: 'Recepción demo', rol: 'recepcion' },
+  { tenantId: 'monkeys', email: 'ventas@monkeys.demo', nombre: 'Ventas demo', rol: 'ventas' },
+  { tenantId: 'monkeys', email: 'coach@monkeys.demo', nombre: 'Coach demo', rol: 'coach' },
+  { tenantId: 'monkeys', email: 'alumno@monkeys.demo', nombre: 'Alumno demo', rol: 'alumno' },
   { tenantId: 'soma', email: 'dueno@soma.demo', nombre: 'Dueña demo', rol: 'dueño' },
   { tenantId: 'soma', email: 'coach@soma.demo', nombre: 'Coach demo', rol: 'coach' },
 ];
