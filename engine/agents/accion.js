@@ -9,9 +9,11 @@ import { catalogoWorkspaces } from '../../data/tenants.js';
 export function baseAccion(agente, socio, fecha, tipo, prioridad, motivo, texto) {
   const estado = 'pendiente';
   const fechaISO = parseFecha(fecha).toISOString();
+  const workspaceId = socio.workspaceId || socio.tenantId || null;
   const base = {
     id: null,
-    tenantId: socio.tenantId || null,
+    workspaceId,
+    tenantId: workspaceId,
     agente,
     tipo,
     socioId: socio.id,

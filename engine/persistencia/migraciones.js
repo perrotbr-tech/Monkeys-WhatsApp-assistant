@@ -252,11 +252,12 @@ export function migrateV1toV2(raw, opts) {
   const kind = opts.kind;
   if (kind === 'world') {
     if (esWorldSnapshotV2(raw)) return clonar(raw);
-    if (!esWorldSnapshotV1(raw) && !(raw && raw.schemaVersion === SCHEMA_VERSION_V1)) {
-      // Permitir world V1 estructural si schemaVersion es 1
-      if (!(raw && raw.schemaVersion === SCHEMA_VERSION_V1 && raw.byTenant)) {
-        throw new PersistenciaError(CODIGOS.INCOMPATIBLE, 'migrateV1toV2 requiere WorldSnapshotV1');
+    if (raw && raw.schemaVersion === SCHEMA_VERSION_V1) {
+      if (!esWorldSnapshotV1(raw)) {
+        throw new PersistenciaError(CODIGOS.CORRUPTO, 'WorldSnapshotV1 corrupto');
       }
+    } else if (!esWorldSnapshotV1(raw)) {
+      throw new PersistenciaError(CODIGOS.INCOMPATIBLE, 'migrateV1toV2 requiere WorldSnapshotV1');
     }
     const tenants = Array.isArray(raw.tenants) ? clonar(raw.tenants) : listarTenants();
     const byTenant = {};
@@ -270,6 +271,19 @@ export function migrateV1toV2(raw, opts) {
     const tenantId = opts.tenantId || raw.tenantId;
     if (!tenantId) {
       throw new Error('migrateV1toV2_tenant_requires_tenantId');
+    }
+    if (raw && raw.schemaVersion === SCHEMA_VERSION_V1) {
+      if (!esTenantSnapshotV1(raw, tenantId)) {
+        throw new PersistenciaError(CODIGOS.CORRUPTO, 'TenantSnapshotV1 corrupto');
+      }
+    } else if (raw && Object.prototype.hasOwnProperty.call(raw, 'schemaVersion')) {
+      throw new PersistenciaError(CODIGOS.INCOMPATIBLE, 'migrateV1toV2 requiere TenantSnapshotV1');
+    } else if (!esTenantSnapshotV1(raw, tenantId)
+      && !(raw && raw.data && typeof raw.data === 'object')) {
+      // Permitir slice crudo solo sin schemaVersion (no V1 declarado).
+      if (!(raw && typeof raw === 'object' && !Object.prototype.hasOwnProperty.call(raw, 'schemaVersion'))) {
+        throw new PersistenciaError(CODIGOS.INCOMPATIBLE, 'migrateV1toV2 requiere TenantSnapshotV1');
+      }
     }
     const sliceSrc = raw.data && !raw.byTenant ? raw.data : raw;
     const slice = migrarSedesSliceV1aV2(sliceSrc, tenantId);
@@ -297,8 +311,17 @@ export function migrateV2toV3(raw, opts) {
   const workspaceId = opts.workspaceId || opts.tenantId || (raw && (raw.workspaceId || raw.tenantId));
 
   if (kind === 'world') {
-    if (esWorldSnapshotV3(raw, catalogo)) return clonar(raw);
-    if (!esWorldSnapshotV2(raw) && !(raw && raw.schemaVersion === SCHEMA_VERSION_V2 && raw.byTenant)) {
+    if (raw && raw.schemaVersion === SCHEMA_VERSION) {
+      if (!esWorldSnapshotV3(raw, catalogo)) {
+        throw new PersistenciaError(CODIGOS.CORRUPTO, 'WorldSnapshotV3 corrupto');
+      }
+      return clonar(raw);
+    }
+    if (raw && raw.schemaVersion === SCHEMA_VERSION_V2) {
+      if (!esWorldSnapshotV2(raw)) {
+        throw new PersistenciaError(CODIGOS.CORRUPTO, 'WorldSnapshotV2 corrupto');
+      }
+    } else if (!esWorldSnapshotV2(raw)) {
       throw new PersistenciaError(CODIGOS.INCOMPATIBLE, 'migrateV2toV3 requiere WorldSnapshotV2');
     }
     const tenants = Array.isArray(raw.tenants) ? clonar(raw.tenants) : listarTenants();
@@ -313,7 +336,12 @@ export function migrateV2toV3(raw, opts) {
   }
 
   if (kind === 'tenant') {
-    if (esWorkspaceSnapshotV3(raw, workspaceId, catalogo)) return clonar(raw);
+    if (raw && raw.schemaVersion === SCHEMA_VERSION) {
+      if (!esWorkspaceSnapshotV3(raw, workspaceId, catalogo)) {
+        throw new PersistenciaError(CODIGOS.CORRUPTO, 'WorkspaceSnapshotV3 corrupto');
+      }
+      return clonar(raw);
+    }
     const id = workspaceId;
     if (!id) {
       throw new Error('migrateV2toV3_tenant_requires_workspaceId');
@@ -321,11 +349,12 @@ export function migrateV2toV3(raw, opts) {
     if (!catalogo.conoce(id)) {
       throw new PersistenciaError(CODIGOS.AMBIGUO, `workspace desconocido en migración V2→V3: ${id}`);
     }
-    if (!esTenantSnapshotV2(raw, id) && !(raw && raw.schemaVersion === SCHEMA_VERSION_V2 && raw.data)) {
-      // Permitir slice V2 estructural con schemaVersion 2
-      if (!(raw && raw.schemaVersion === SCHEMA_VERSION_V2 && raw.tenantId && raw.data)) {
-        throw new PersistenciaError(CODIGOS.INCOMPATIBLE, 'migrateV2toV3 requiere TenantSnapshotV2');
+    if (raw && raw.schemaVersion === SCHEMA_VERSION_V2) {
+      if (!esTenantSnapshotV2(raw, id)) {
+        throw new PersistenciaError(CODIGOS.CORRUPTO, 'TenantSnapshotV2 corrupto');
       }
+    } else if (!esTenantSnapshotV2(raw, id)) {
+      throw new PersistenciaError(CODIGOS.INCOMPATIBLE, 'migrateV2toV3 requiere TenantSnapshotV2');
     }
     if (raw.tenantId && raw.tenantId !== id) {
       throw new PersistenciaError(CODIGOS.AMBIGUO, 'tenantId incoherente en migrateV2toV3');
@@ -353,13 +382,21 @@ export function migrateToCurrent(raw, opts) {
     tenantId: workspaceId || opts.tenantId,
   };
 
-  if (kind === 'world' && esWorldSnapshotV3(raw, catalogo)) return clonar(raw);
-  if (kind === 'tenant' && esWorkspaceSnapshotV3(raw, workspaceId, catalogo)) return clonar(raw);
-
   const ver = raw && raw.schemaVersion;
 
   if (ver === SCHEMA_VERSION) {
-    return clonar(raw);
+    if (kind === 'world') {
+      if (!esWorldSnapshotV3(raw, catalogo)) {
+        throw new PersistenciaError(CODIGOS.CORRUPTO, 'WorldSnapshotV3 corrupto');
+      }
+      return clonar(raw);
+    }
+    if (kind === 'tenant') {
+      if (!esWorkspaceSnapshotV3(raw, workspaceId, catalogo)) {
+        throw new PersistenciaError(CODIGOS.CORRUPTO, 'WorkspaceSnapshotV3 corrupto');
+      }
+      return clonar(raw);
+    }
   }
 
   if (ver === SCHEMA_VERSION_V2) {

@@ -25,6 +25,7 @@ import {
   mundoRuntimeDesdeSnapshot,
 } from './snapshots.js';
 import { migrateV1toV2, migrateV2toV3, migrateToCurrent } from './migraciones.js';
+import { proyectarRuntimeAWorldV3 } from './escritura.js';
 
 /**
  * Parsea texto JSON. Fallo de parse → corrupto (no demo).
@@ -297,12 +298,12 @@ export const bootstrapWorkspace = bootstrapTenant;
 
 /**
  * Compone un WorldSnapshotV3 a partir de slices por workspace.
+ * No sella: cada slice debe ya ser V3 válido.
  */
 export function componerMundo(byTenantSlices, tenants, catalogo) {
-  return crearWorldSnapshotV3({
+  return proyectarRuntimeAWorldV3({
     tenants: tenants || listarTenants(),
     byWorkspace: byTenantSlices,
-    byTenant: byTenantSlices,
   }, catalogo || catalogoWorkspaces());
 }
 

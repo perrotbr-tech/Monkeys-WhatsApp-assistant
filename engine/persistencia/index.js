@@ -77,6 +77,7 @@ export {
   assertTenantEscritura,
   assertWorkspaceEscritura,
   prepararMundoParaEscritura,
+  proyectarRuntimeAWorldV3,
   envelopeTenantEscritura,
   envelopeWorkspaceEscritura,
 } from './escritura.js';

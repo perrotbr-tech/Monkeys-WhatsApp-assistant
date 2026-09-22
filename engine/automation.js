@@ -84,7 +84,8 @@ export function crearAutomation(datosIniciales, tenantId = TENANT_DEFAULT, opts 
         }
         const dup = acciones.some((x) => x.agente === acc.agente && x.socioId === acc.socioId && x.tipo === 'mensaje');
         if (acc.tipo === 'mensaje' && dup) continue;
-        acc.tenantId = state.tenantId;
+        acc.workspaceId = state.workspaceId || state.tenantId;
+        acc.tenantId = acc.workspaceId;
         const tenantCfg = buscarTenant(state.tenantId);
         const sedeEstable = resolverSedeId(tenantCfg, acc.sedeId);
         if (sedeEstable) acc.sedeId = sedeEstable;
@@ -100,8 +101,11 @@ export function crearAutomation(datosIniciales, tenantId = TENANT_DEFAULT, opts 
       segmento: r.segmento,
     }));
 
+    const ws = state.workspaceId || state.tenantId;
     const campania = {
       id: `camp-${dia}`,
+      workspaceId: ws,
+      tenantId: ws,
       fecha: dia,
       fechaISO: fecha.toISOString(),
       clasificacion,
@@ -220,8 +224,10 @@ export function crearAutomation(datosIniciales, tenantId = TENANT_DEFAULT, opts 
     setAgenteActivo,
     socioPorId,
     exportar() {
+      const ws = state.workspaceId || state.tenantId;
       return {
-        tenantId: state.tenantId,
+        workspaceId: ws,
+        tenantId: ws,
         socios: clonar(state.socios),
         asistencias: clonar(state.asistencias),
         classes: clonar(state.classes),
@@ -257,8 +263,10 @@ function extraer(datos, tenantId = TENANT_DEFAULT) {
   const auto = src.automation && typeof src.automation === 'object'
     ? src.automation
     : { nextActionSeq: 0, agentesActivos: {}, campanias: [], acciones: [] };
+  const ws = src.workspaceId || src.tenantId || tenantId;
   return {
-    tenantId: src.tenantId || tenantId,
+    workspaceId: ws,
+    tenantId: ws,
     socios: clonar(Array.isArray(src.socios) ? src.socios : []),
     asistencias: clonar(Array.isArray(src.asistencias) ? src.asistencias : []),
     classes: clonar(Array.isArray(src.classes) ? src.classes : []),

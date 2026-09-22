@@ -53,9 +53,13 @@ function anioCodigo(fechaRef, clock = relojActivo()) {
 }
 
 function toWorld(datosIniciales) {
-  if (!datosIniciales) return clonarMundo();
+  if (!datosIniciales) return toWorld(clonarMundo());
   if (datosIniciales.byTenant) {
-    return clonar(datosIniciales);
+    const world = clonar(datosIniciales);
+    for (const [id, slice] of Object.entries(world.byTenant || {})) {
+      stampSlice(slice, id);
+    }
+    return world;
   }
   const tenantId = datosIniciales.tenantId
     || (datosIniciales.classes && datosIniciales.classes[0] && datosIniciales.classes[0].tenantId)
@@ -106,7 +110,7 @@ export function crearMemoria(datosIniciales, opts = {}) {
     if (!state.byTenant[id]) {
       const t = buscarTenant(id);
       if (!t || !t.activo) return null;
-      state.byTenant[id] = clonarDemo(id);
+      state.byTenant[id] = stampSlice(clonarDemo(id), id);
     }
     return state.byTenant[id];
   }
@@ -321,6 +325,7 @@ export function crearMemoria(datosIniciales, opts = {}) {
     const dup = pagoDelPeriodo(s, membresia.id, membresia.inicio);
     if (dup) return { ok: false, error: 'Ya existe un pago para este período.', pago: clonar(dup) };
     const pago = {
+      workspaceId: tenantId,
       tenantId,
       id: siguientePagoId(tenantId),
       socioId: socio.id,
@@ -799,6 +804,7 @@ export function crearMemoria(datosIniciales, opts = {}) {
     clase.reserved += 1;
     const sedeId = sedeIdAccion;
     const booking = {
+      workspaceId: tenantId,
       tenantId,
       codigo: siguienteCodigo(tenantId),
       cliente: nombre,
@@ -848,8 +854,11 @@ export function crearMemoria(datosIniciales, opts = {}) {
     const row = {
       id,
       estado: 'nuevo',
+      workspaceId: tenantId,
       tenantId,
       ...lead,
+      workspaceId: tenantId,
+      tenantId,
       sedeId,
       sede: nombreSede(tenant, sedeId) || lead.sede || null,
     };
@@ -865,6 +874,7 @@ export function crearMemoria(datosIniciales, opts = {}) {
     const sedeId = resolverSedeId(tenant, base.sedeId || base.sede) || base.sedeId || null;
     const conv = {
       id,
+      workspaceId: tenantId,
       tenantId,
       sede: null,
       sedeId: null,
@@ -876,6 +886,8 @@ export function crearMemoria(datosIniciales, opts = {}) {
       motivo: null,
       messages: [],
       ...base,
+      workspaceId: tenantId,
+      tenantId,
       sedeId,
       sede: nombreSede(tenant, sedeId) || base.sede || null,
     };
