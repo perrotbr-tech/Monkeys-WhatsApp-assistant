@@ -30,7 +30,7 @@ Contrato V3 con migración V0–V2→V3 y rechazo de corruptos/cruzados. Sigue s
 
 - E0–E2 en `main` (PR #12–#15).
 - E3A cerrada en `14d24ba` (PR #16): `core/` + adaptadores; B1–B4.
-- E3B implementada en PR #16 (pendiente revisión): Snapshot V3, `workspaceId` canónico, `migrateV2toV3`, validadores estrictos, adaptadores JSON/localStorage.
+- E3B en PR #16 (pendiente de aceptación): Snapshot V3 + revisión B5–B8 (entidades nuevas con `workspaceId`; escritura sin sellar/normalizar; migraciones rechazan versionados corruptos).
 
 ## Decisiones confirmadas
 
@@ -38,11 +38,12 @@ Contrato V3 con migración V0–V2→V3 y rechazo de corruptos/cruzados. Sigue s
 - Multi-tenant desde el núcleo; coach conserva control.
 - MONKEYS/SOMA son configuración, no identidad global; `workspaceId === tenantId` en esta migración.
 - Snapshots: V1/V2 históricos; **V3 actual** (`byWorkspace`). `tenantId` alias compatible; si ambos existen deben coincidir.
+- `sellarWorkspaceEnSlice` / `normalizarSlice` solo en bootstrap y migraciones documentadas; nunca en escritura runtime.
 - Catálogo de workspaces inyectable; Core sin marcas hardcodeadas; `acme` vía registro dinámico.
 - `userId` identifica al usuario; workspace/rol/permisos son contexto de pertenencia.
 - Features: `gestion: true`, `forja: false`. Feature desconocido = deshabilitado.
 - Acciones nuevas: `origenDominio: gestion`; mensaje → `socio`; tarea → `equipo`.
-- Demo solo en vacío, reset explícito o migración documentada. V3 declarado incompleto no se rellena en silencio.
+- Demo solo en vacío, reset explícito o migración documentada. V3/V2/V1 declarados incompletos no se rellenan en silencio.
 
 ## Decisiones aún abiertas / pendientes
 

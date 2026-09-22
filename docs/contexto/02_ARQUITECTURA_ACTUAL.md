@@ -26,6 +26,7 @@ Prueba negativa: `tests/e3a-core-boundaries.test.js`.
 ### Dominio
 
 `engine/` — conversación, intención, catálogo, fechas, socios, membresías, pagos, auth, automatización, WhatsApp-out. Clock inyectable. Acciones nuevas cumplen contrato E3A; históricas migradas llevan al menos `workspaceId`.
+Entidades nuevas (reserva, lead, conversación, socio, membresía, pago, campaña, acciones) nacen con `{ workspaceId, tenantId: workspaceId }` en el dominio; no dependen del sellado de persistencia.
 
 ### Persistencia (E3B — actual)
 
@@ -37,11 +38,13 @@ Contrato en `engine/persistencia/`. Versión actual: **Snapshot V3** (`SCHEMA_VE
 
 **WorkspaceSliceV3:** slice V2 + `workspaceId` canónico (= `tenantId` alias) en el slice y en entidades: classes, plans, bookings, leads, conversations, socios, asistencias, membresias, pagos, referidos, usuariosEquipo; más `automation.acciones` y `automation.campanias` (y acciones anidadas en campañas). Elementos estrictamente anidados sin evidencia propia no inventan actor/origen; campañas/acciones sí exigen `workspaceId` coherente.
 
-Migraciones: `V0→V1→V2→V3`, `V1→V2→V3`, `V2→V3`, `V3` idempotente (`migrateV2toV3` / `migrateToCurrent`). Catálogo inyectado; desconocidos/ambiguos se rechazan. Corruptos no se sobrescriben. Escritura inválida falla antes de tocar archivo/localStorage.
+Migraciones: `V0→V1→V2→V3`, `V1→V2→V3`, `V2→V3`, `V3` idempotente (`migrateV2toV3` / `migrateToCurrent`). V1/V2/V3 declarados incompletos → `PERSISTENCIA_CORRUPTA` (no se reparan). Catálogo inyectado; desconocidos/ambiguos se rechazan. Corruptos no se sobrescriben.
+
+Escritura runtime: `proyectarRuntimeAWorldV3` / `prepararMundoParaEscritura` / `envelopeTenantEscritura` validan con `validarSliceV3` sin `sellarWorkspaceEnSlice` ni `normalizarSlice`. Solo bootstrap y migraciones documentadas sellan/completan. Cruzados o campos ausentes → error; entrada y destino intactos.
 
 Runtime: `mundoRuntimeDesdeSnapshot` proyecta `byWorkspace` → vista `byTenant` (una fuente en disco).
 
-Aliases documentados: `crearTenantSnapshot`/`crearTenantSnapshotV3` → Workspace V3; `CARGA.V1_VALIDO` → `v3_valid`; `CARGA.V2_VALIDO` → `v2_migratable`; `claveEstado` → `claveEstadoV1`; parámetros `tenantId` en APIs de carga/escritura coexisten con `workspaceId` vía helper único.
+Aliases documentados: `crearTenantSnapshot`/`crearTenantSnapshotV3` → Workspace V3; `CARGA.V1_VALIDO` → `v3_valid`; `CARGA.V2_VALIDO` → `v2_migratable`; `claveEstado` → `claveEstadoV1`; parámetros `tenantId` coexisten con `workspaceId`.
 
 ### API / Interfaz / Seguridad
 

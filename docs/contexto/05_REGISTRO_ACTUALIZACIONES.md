@@ -91,3 +91,12 @@ No eliminar entradas anteriores. Si una conclusión queda obsoleta, agregar una 
 - Adaptadores JSON/localStorage, carga, escritura, runtime (`mundoRuntimeDesdeSnapshot`).
 - Pruebas: `tests/e3b-snapshot-v3.test.js`; suite 197/197. Smoke bootstrap/V2→V3/JSON/localStorage/aislamiento/acme/corrupto OK.
 - Docs: `00`, `01`, `02`, `04`, `05`. E3B pendiente de revisión. Sin E3C, sin RBAC masivo, sin Forja Training, sin merge.
+
+## 2026-09-22 — E3B revisión B5–B8 (mismo PR #16)
+
+- Rama: `cursor/e3-forkza-core-boundaries-ac33` desde tip E3B `f33f229`.
+- B5: fábricas de dominio (reserva, lead, conversación, socio, membresía, pago, campaña, acciones) nacen con `workspaceId` + `tenantId`.
+- B6: escritura runtime proyecta `byTenant`→`byWorkspace` sin sellar; cruces → rechazo; entrada/destino intactos.
+- B7: mundo/slice incompleto rechazado; sin `normalizarSlice` en escritura ordinaria.
+- B8: `migrateToCurrent`/`migrateV2toV3`/`migrateV1toV2` exigen V3/V2/V1 válidos; incompletos declarados → `PERSISTENCIA_CORRUPTA`.
+- Pruebas: `tests/e3b-brechas-b5-b8.test.js`; suite 219/219. E3B sigue pendiente de aceptación. Sin E3C/RBAC/Forja/merge.
