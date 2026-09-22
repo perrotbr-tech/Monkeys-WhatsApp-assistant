@@ -15,49 +15,38 @@
 
 `core/` — contratos puros ESM: `identity/`, `organizations/`, `authorization/`, `audit/`, `contracts/`, `features/`.
 No importa `engine/`, `data/`, `server/`, `app.js`, ni futuros `gestion/`/`forja/`.
-Catálogo de workspaces: `crearCatalogoWorkspaces(ids)` inyectado; adaptador `catalogoWorkspaces()` en `data/tenants.js` lee IDs activos (sin hardcode en Core).
-`userId` global por correo; `workspaceId`/rol = pertenencia. Si llegan ambos IDs, deben coincidir (`workspace_tenant_incoherente`).
-Prueba negativa de dependencias en `tests/e3a-core-boundaries.test.js`.
-
-Compatibilidad: `workspaceId === tenantId` en el puente E3A; `tenantId` alias hasta E3B.
+Catálogo: `crearCatalogoWorkspaces(ids)` inyectado; adaptador `catalogoWorkspaces()` en `data/tenants.js`.
+`userId` global por correo; `workspaceId`/rol = pertenencia. IDs cruzados → `workspace_tenant_incoherente`.
+Prueba negativa: `tests/e3a-core-boundaries.test.js`.
 
 ### Datos
 
-`data/` define tenants (incl. `features: { gestion, forja }`), planes, clases, socios, membresías, pagos, plantillas, i18n y demo. Dos tenants demo: MONKEYS y SOMA.
+`data/` — tenants (features `gestion`/`forja`), planes, clases, socios, membresías, pagos, plantillas, i18n y demo. MONKEYS y SOMA; `acme` vía `registrarTenant`.
 
 ### Dominio
 
-`engine/` — conversación, intención, catálogo, fechas, socios, membresías, pagos, auth, automatización, WhatsApp-out. Clock inyectable (`engine/clock.js`). Acciones pasan por contrato Core (destinatario/origen) sin cambiar textos ni agentes.
+`engine/` — conversación, intención, catálogo, fechas, socios, membresías, pagos, auth, automatización, WhatsApp-out. Clock inyectable. Acciones nuevas cumplen contrato E3A; históricas migradas llevan al menos `workspaceId`.
 
-### Persistencia (E1B/E2)
+### Persistencia (E3B — actual)
 
-Contrato en `engine/persistencia/`: V1 histórico, V2 actual con `sedeId`. Adaptadores JSON y localStorage. Semántica V1/V2 intacta en E3A (sin Snapshot V3).
+Contrato en `engine/persistencia/`. Versión actual: **Snapshot V3** (`SCHEMA_VERSION = 3`).
 
-### API
+**WorldSnapshotV3:** `{ schemaVersion: 3, tenants: TenantConfig[], byWorkspace: { [workspaceId]: WorkspaceSliceV3 } }`. Sin `byTenant` ni `data` en disco.
 
-`server/index.js` — salud, tema, login/sesión (`userId`+`workspaceId` aditivos), conversaciones, clases, planes, reservas, leads, automatización, socios, CSV y pagos.
+**WorkspaceSnapshotV3:** `{ schemaVersion: 3, workspaceId, tenantId (= workspaceId), data: WorkspaceSliceV3 }`.
 
-### Interfaz
+**WorkspaceSliceV3:** slice V2 + `workspaceId` canónico (= `tenantId` alias) en el slice y en entidades: classes, plans, bookings, leads, conversations, socios, asistencias, membresias, pagos, referidos, usuariosEquipo; más `automation.acciones` y `automation.campanias` (y acciones anidadas en campañas). Elementos estrictamente anidados sin evidencia propia no inventan actor/origen; campañas/acciones sí exigen `workspaceId` coherente.
 
-SPA hash; API o local. Asistente, panel, socios, pagos, automatizaciones. Marca por tenant (CSS). Sin pestañas de rol.
+Migraciones: `V0→V1→V2→V3`, `V1→V2→V3`, `V2→V3`, `V3` idempotente (`migrateV2toV3` / `migrateToCurrent`). Catálogo inyectado; desconocidos/ambiguos se rechazan. Corruptos no se sobrescriben. Escritura inválida falla antes de tocar archivo/localStorage.
 
-## Seguridad y tenancy
+Runtime: `mundoRuntimeDesdeSnapshot` proyecta `byWorkspace` → vista `byTenant` (una fuente en disco).
 
-- Tenant por encabezado/parámetro; entidades con `tenantId`.
-- Sesión cookie HttpOnly; login enriquece `userId`/`workspaceId` sin quitar campos previos.
-- RBAC contractual en Core; aplicación plena a rutas = E3C.
-- Bloqueo tras cinco fallos.
+Aliases documentados: `crearTenantSnapshot`/`crearTenantSnapshotV3` → Workspace V3; `CARGA.V1_VALIDO` → `v3_valid`; `CARGA.V2_VALIDO` → `v2_migratable`; `claveEstado` → `claveEstadoV1`; parámetros `tenantId` en APIs de carga/escritura coexisten con `workspaceId` vía helper único.
 
-## Automatización e IA
+### API / Interfaz / Seguridad
 
-Comprensión determinista local; sin LLM. Agentes → acciones con `destinatarioRol` (`socio`/`equipo`) y `origenDominio: gestion`.
+Sin cambio de rutas públicas en E3B. Sesión con `userId`/`workspaceId` aditivos. RBAC de rutas = E3C. SPA hash; marca por tenant.
 
 ## Diferencias frente al objetivo
 
-Regla `.cursor/rules/forkza.mdc` menciona `/server/store/*` y `/channels/*` como objetivo. Hoy: `engine/persistencia/*`, `engine/store.js`. Forja Training no implementado (`features.forja: false`).
-
-## Prácticas observadas
-
-- Lógica de negocio separada del DOM en gran parte.
-- Clock inyectable en motor/persistencia; UI puede usar reloj de pared.
-- Sin Postgres/SQL, colas, ni almacenamiento de archivos productivo.
+Regla menciona `/server/store/*` y `/channels/*`. Hoy: `engine/persistencia/*`, `engine/store.js`. Forja Training no implementado.

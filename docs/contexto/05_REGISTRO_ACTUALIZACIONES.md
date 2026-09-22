@@ -81,4 +81,13 @@ No eliminar entradas anteriores. Si una conclusión queda obsoleta, agregar una 
 - B1/B2: `resolverParTenantWorkspace` rechaza `tenantId ≠ workspaceId` (`workspace_tenant_incoherente`) en identidad, sesión y acciones; entrada de acción intacta.
 - B3: `crearCatalogoWorkspaces(ids)` inyectable; adaptador `catalogoWorkspaces()` desde `idsTenantsActivos`/`registrarTenant`; Core sin hardcode monkeys/soma; tenant `acme` admitido vía catálogo; desconocido rechazado.
 - B4: `userIdEstable` solo por correo; mismo email → mismo `userId` en workspaces distintos; contextos separados por `workspaceId`/rol.
-- Pruebas: `npm ci` + `npm test` → 177/177. E3A aún no cerrada. Sin E3B/E3C/Snapshot V3/Forja. Sin merge.
+- Docs tip: `14d24baede77e5ffbd82866d551a8197d35419d1`. Suite 177/177. E3A cerrada en ese tip. Sin E3B aún en ese commit. Sin merge.
+
+## 2026-09-22 — E3B: Snapshot V3 y persistencia por workspaceId (mismo PR #16)
+
+- Rama: `cursor/e3-forkza-core-boundaries-ac33` desde tip E3A `14d24ba`.
+- Contrato actual: `schemaVersion: 3`; `WorldSnapshotV3.byWorkspace`; `WorkspaceSnapshotV3` / `WorkspaceSliceV3` con `workspaceId` canónico (`tenantId` alias; deben coincidir).
+- `migrateV2toV3` + cadena `migrateToCurrent` (V0/V1/V2→V3; V3 idempotente). Validadores estrictos; corruptos/cruzados no se escriben; sellado solo en bootstrap/migración.
+- Adaptadores JSON/localStorage, carga, escritura, runtime (`mundoRuntimeDesdeSnapshot`).
+- Pruebas: `tests/e3b-snapshot-v3.test.js`; suite 197/197. Smoke bootstrap/V2→V3/JSON/localStorage/aislamiento/acme/corrupto OK.
+- Docs: `00`, `01`, `02`, `04`, `05`. E3B pendiente de revisión. Sin E3C, sin RBAC masivo, sin Forja Training, sin merge.
