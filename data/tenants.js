@@ -9,6 +9,8 @@
  * - menu, capacidades, textosBot, aliasHistoricos
  */
 
+import { crearCatalogoWorkspaces } from '../core/organizations/workspace.js';
+
 /** @typedef {{ etiqueta: string, valor: string }} MenuOpcion */
 
 /**
@@ -347,6 +349,18 @@ export function featuresTenant(tenant) {
     gestion: f.gestion !== false,
     forja: f.forja === true,
   };
+}
+
+/**
+ * Adaptador E3A: construye un catálogo de workspaces desde la configuración activa.
+ * Core no importa data/; el catálogo se inyecta en cada uso (sin estado global en Core).
+ * @param {string[]|null} [ids]
+ */
+export function catalogoWorkspaces(ids = null) {
+  const lista = ids != null
+    ? ids
+    : idsTenantsActivos();
+  return crearCatalogoWorkspaces(lista);
 }
 
 export function menuDe(tenant) {

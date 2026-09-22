@@ -16,7 +16,7 @@ Contrato V2 con migración y rechazo de corruptos. Sigue siendo demo: sin concur
 
 ## Prioridad media
 
-- Usuarios demo estáticos; `userId` estable en E3A, sin aprovisionamiento real.
+- Usuarios demo estáticos; `userId` estable por correo (no por workspace); sin tablas productivas de memberships.
 - RBAC contractual listo; no aplicado aún a todas las rutas (E3C).
 - Sin adaptador WhatsApp Cloud API aunque la salida respeta límites.
 - Mercado Pago con contrato/adaptador, sin integración productiva segura.
@@ -25,10 +25,10 @@ Contrato V2 con migración y rechazo de corruptos. Sigue siendo demo: sin concur
 - UI (`app.js`) aún puede usar reloj de pared en timestamps visibles.
 - Acciones históricas seed en demo pueden carecer de metadatos E3A hasta regeneración/ciclo; acciones nuevas de agentes y `crearAccion` sí los llevan.
 
-## Cerrado en E0–E3A
+## Cerrado en E0–E3A (parcial)
 
-- E0–E2: Clock, Store, Snapshot V2, identidad de tenant/sede, PR #12–#15 en `main`.
-- E3A: `core/` (identidad, workspace, RBAC, features, contrato de acciones, AuditSink memoria); puente `tenantId→workspaceId`; sesión aditiva; prueba de dependencias de Core.
+- E0–E2 en `main` (PR #12–#15).
+- E3A en PR #16: `core/` + adaptadores; revisión B1–B4 (coherencia IDs, catálogo inyectable, `userId` global). E3A no declarada cerrada hasta aceptación de revisión.
 
 ## Decisiones confirmadas
 
@@ -36,11 +36,12 @@ Contrato V2 con migración y rechazo de corruptos. Sigue siendo demo: sin concur
 - Multi-tenant desde el núcleo; coach conserva control.
 - MONKEYS/SOMA son configuración, no identidad global.
 - Snapshots: V1 histórico; V2 actual. E3A no altera V1/V2 ni crea V3.
-- Durante E3: `workspaceId` = espacio de trabajo; para MONKEYS/SOMA `workspaceId === tenantId`; `tenantId` alias compatible hasta E3B. Sin reemplazo masivo de referencias.
-- Features: `gestion: true`, `forja: false` en ambos workspaces demo. Feature desconocido = deshabilitado.
-- Acciones: `origenDominio: gestion`; mensaje → `destinatarioRol: socio`; tarea → `equipo`. Sin reparación silenciosa de inválidas.
+- Durante E3: `workspaceId` = espacio de trabajo; puente E3A exige `workspaceId === tenantId` si ambos llegan; `tenantId` alias hasta E3B.
+- Catálogo de workspaces inyectable desde config activa (`registrarTenant` alimenta IDs); Core sin marcas hardcodeadas.
+- `userId` identifica al usuario; workspace/rol/permisos son contexto de pertenencia.
+- Features: `gestion: true`, `forja: false`. Feature desconocido = deshabilitado.
+- Acciones: `origenDominio: gestion`; mensaje → `socio`; tarea → `equipo`. Sin reparación silenciosa.
 - Demo solo en vacío, reset explícito o migración documentada.
-- Motor/servidor no bifurcan por marca; literales demo en fixtures; legacy `monkeys_demo_state`.
 
 ## Decisiones aún abiertas / pendientes E3
 

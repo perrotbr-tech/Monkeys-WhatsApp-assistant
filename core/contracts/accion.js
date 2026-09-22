@@ -2,9 +2,10 @@
  * Contrato de metadatos de acciones (E3A).
  * No repara silenciosamente acciones inválidas: lanza si faltan campos.
  * Fecha se recibe ya resuelta (Clock inyectado fuera de Core).
+ * No muta la acción de entrada.
  */
 
-import { workspaceIdDesdeTenantId } from '../organizations/workspace.js';
+import { resolverParTenantWorkspace, exigirCatalogo } from '../organizations/workspace.js';
 
 export const ORIGEN_DOMINIO_GESTION = 'gestion';
 export const DESTINATARIO_SOCIO = 'socio';
@@ -24,45 +25,17 @@ export function destinatarioPorTipo(tipo) {
 
 /**
  * Valida y construye metadatos obligatorios de una acción.
- * @param {{
- *   workspaceId?: string,
- *   tenantId?: string,
- *   destinatarioRol?: string,
- *   origenDominio?: string,
- *   origenTipo?: string,
- *   origenId?: string,
- *   actor?: string|null,
- *   fechaISO?: string,
- *   motivo?: string|null,
- *   estado?: string,
- *   tipo?: string,
- * }} input
+ * @param {object} input
+ * @param {import('../organizations/workspace.js').CatalogoWorkspaces} catalogo
  * @returns {object}
  */
-export function metadatosAccion(input) {
+export function metadatosAccion(input, catalogo) {
+  exigirCatalogo(catalogo);
   const src = input || {};
-  let workspaceId = src.workspaceId || null;
-  let tenantId = src.tenantId || null;
-
-  if (!workspaceId && tenantId) {
-    workspaceId = workspaceIdDesdeTenantId(tenantId);
-  }
-  if (!tenantId && workspaceId) {
-    tenantId = workspaceIdDesdeTenantId(workspaceId);
-  }
-  if (!workspaceId || !tenantId) {
-    const err = new Error('accion_sin_workspace');
-    err.code = 'accion_sin_workspace';
-    throw err;
-  }
-  if (workspaceId !== tenantId) {
-    // Compat E3A: para workspaces iniciales deben coincidir.
-    try {
-      workspaceIdDesdeTenantId(tenantId);
-    } catch (e) {
-      throw e;
-    }
-  }
+  const { workspaceId, tenantId } = resolverParTenantWorkspace({
+    workspaceId: src.workspaceId,
+    tenantId: src.tenantId,
+  }, catalogo);
 
   const tipo = src.tipo;
   const destinatarioRol = src.destinatarioRol || (tipo ? destinatarioPorTipo(tipo) : null);
@@ -116,9 +89,14 @@ export function metadatosAccion(input) {
 
 /**
  * Aplica el contrato a una acción existente sin alterar texto ni segmentación.
- * No rellena campos inválidos: exige tipo/origen/estado/fecha coherentes.
+ * No muta `accion` de entrada. Identificadores cruzados → `workspace_tenant_incoherente`.
  * @param {object} accion
- * @param {{ origenTipo?: string, origenId?: string, actor?: string|null }} [extras]
+ * @param {{
+ *   origenTipo?: string,
+ *   origenId?: string,
+ *   actor?: string|null,
+ *   catalogo: import('../organizations/workspace.js').CatalogoWorkspaces,
+ * }} extras
  * @returns {object} nueva acción con metadatos
  */
 export function aplicarContratoAccion(accion, extras = {}) {
@@ -127,6 +105,8 @@ export function aplicarContratoAccion(accion, extras = {}) {
     err.code = 'accion_invalida';
     throw err;
   }
+  const catalogo = extras.catalogo;
+  exigirCatalogo(catalogo);
   const tipo = accion.tipo;
   const origenTipo = extras.origenTipo || accion.origenTipo || accion.agente || null;
   const origenId = extras.origenId || accion.origenId || accion.agente || null;
@@ -142,7 +122,7 @@ export function aplicarContratoAccion(accion, extras = {}) {
     motivo: accion.motivo,
     estado: accion.estado,
     tipo,
-  });
+  }, catalogo);
 
   if (tipo === 'mensaje' && meta.destinatarioRol !== DESTINATARIO_SOCIO) {
     const err = new Error('mensaje_debe_ir_a_socio');

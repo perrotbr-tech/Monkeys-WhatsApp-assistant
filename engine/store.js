@@ -1,5 +1,5 @@
 import { clonarDemo, clonarMundo, clonar } from '../data/demo.js';
-import { buscarTenant, listarTenants, TENANT_DEFAULT, mismaSede, nombreSede, resolverSedeId, capacidadesDe } from '../data/tenants.js';
+import { buscarTenant, listarTenants, TENANT_DEFAULT, mismaSede, nombreSede, resolverSedeId, capacidadesDe, catalogoWorkspaces } from '../data/tenants.js';
 import { anioDe, fechaHoy, dayKey, ymKey } from './dates.js';
 import { relojActivo } from './clock.js';
 import { planSomaPorId } from '../data/planes-soma.js';
@@ -896,6 +896,7 @@ export function crearMemoria(datosIniciales, opts = {}) {
     const row = aplicarContratoAccion(borrador, {
       origenTipo: borrador.origenTipo || 'agente',
       origenId: borrador.origenId || borrador.agente || 'store',
+      catalogo: catalogoWorkspaces(),
     });
     s.automation.acciones.push(row);
     return clonar(row);

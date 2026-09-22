@@ -70,10 +70,14 @@ No eliminar entradas anteriores. Si una conclusión queda obsoleta, agregar una 
 
 ## 2026-09-21 — E3A: contratos Forkza Core y fronteras
 
-- Rama: `cursor/e3-forkza-core-boundaries-ac33` @ `fb1ab98e28b833a4054b8ff74bdeaa14ee69d0e6` desde `main` @ `4504c9b`.
+- Rama: `cursor/e3-forkza-core-boundaries-ac33` @ `fb1ab98` desde `main` @ `4504c9b`.
 - PR draft E3: #16 → `main`.
-- Nuevo `core/` ESM: identity, organizations (puente tenantId→workspaceId), authorization (RBAC deny-by-default), features (`gestion:true`/`forja:false`), contracts/acción, audit (AuditSink memoria).
-- Adaptadores: sesión/`GET /api/me` aditivos (`userId`,`workspaceId`); `baseAccion`/`crearAccion` con metadatos; features en tenants.
-- Sin Snapshot V3, sin migración masiva, sin RBAC en todas las rutas, sin Forja UI.
-- Pruebas: `npm ci` + `npm test` → 168/168 (152 previas + 16 E3A); `git diff --check` limpio; contexto &lt; 7.000 chars.
-- E3 iniciada; E3A lista. E3B/E3C/Forja no iniciados. Sin merge.
+- Nuevo `core/` ESM + adaptadores de sesión/acciones/features.
+- Pruebas iniciales E3A: 168/168. E3B/E3C/Forja no iniciados. Sin merge.
+
+## 2026-09-22 — E3A revisión B1–B4 (mismo PR #16)
+
+- B1/B2: `resolverParTenantWorkspace` rechaza `tenantId ≠ workspaceId` (`workspace_tenant_incoherente`) en identidad, sesión y acciones; entrada de acción intacta.
+- B3: `crearCatalogoWorkspaces(ids)` inyectable; adaptador `catalogoWorkspaces()` desde `idsTenantsActivos`/`registrarTenant`; Core sin hardcode monkeys/soma; tenant `acme` admitido vía catálogo; desconocido rechazado.
+- B4: `userIdEstable` solo por correo; mismo email → mismo `userId` en workspaces distintos; contextos separados por `workspaceId`/rol.
+- Pruebas: suite previa + B1–B4 en verde. E3A aún no cerrada. Sin E3B/E3C/Snapshot V3/Forja. Sin merge.

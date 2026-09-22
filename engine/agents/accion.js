@@ -1,5 +1,6 @@
 import { parseFecha } from '../dates.js';
 import { aplicarContratoAccion } from '../../core/contracts/accion.js';
+import { catalogoWorkspaces } from '../../data/tenants.js';
 
 /**
  * Acción base de agentes de Gestión.
@@ -25,6 +26,7 @@ export function baseAccion(agente, socio, fecha, tipo, prioridad, motivo, texto)
   return aplicarContratoAccion(base, {
     origenTipo: 'agente',
     origenId: agente,
+    catalogo: catalogoWorkspaces(),
   });
 }
 

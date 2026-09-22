@@ -1,6 +1,6 @@
 import { createHmac, timingSafeEqual, randomBytes } from 'node:crypto';
 import bcrypt from 'bcryptjs';
-import { USUARIOS_DEMO, CLAVE_DEMO } from '../data/tenants.js';
+import { USUARIOS_DEMO, CLAVE_DEMO, catalogoWorkspaces } from '../data/tenants.js';
 import { relojActivo } from './clock.js';
 import { crearContextoAcceso, vistaSesion } from '../core/identity/usuario.js';
 
@@ -53,8 +53,9 @@ export function verificarClave(clave, hash) {
 }
 
 export function usuariosConHash(hash) {
+  const catalogo = catalogoWorkspaces();
   return USUARIOS_DEMO.map((u) => {
-    const ctx = crearContextoAcceso(u);
+    const ctx = crearContextoAcceso(u, catalogo);
     return {
       tenantId: u.tenantId,
       email: u.email,
@@ -122,7 +123,7 @@ export function enriquecerUsuarioSesion(user) {
     rol: user.rol,
     userId: user.userId,
     workspaceId: user.workspaceId,
-  }));
+  }, catalogoWorkspaces()));
 }
 
 export function intentarLogin({ tenantId, email, password, usuarios, now = relojActivo().now() }) {

@@ -1,10 +1,10 @@
 /**
  * Contrato AuditSink (E3A).
  * Solo contrato + implementación en memoria para pruebas.
- * No audita todas las rutas ni persiste en snapshots.
+ * Catálogo de workspaces inyectado; sin estado global en Core.
  */
 
-import { workspaceIdDesdeTenantId, esWorkspaceConocido } from '../organizations/workspace.js';
+import { exigirCatalogo } from '../organizations/workspace.js';
 
 /**
  * @typedef {object} AuditEvent
@@ -22,28 +22,23 @@ import { workspaceIdDesdeTenantId, esWorkspaceConocido } from '../organizations/
 /**
  * Valida un evento de auditoría (sin datos sensibles en metadata).
  * @param {Partial<AuditEvent>} evento
+ * @param {import('../organizations/workspace.js').CatalogoWorkspaces} catalogo
  * @returns {AuditEvent}
  */
-export function validarEventoAuditoria(evento) {
+export function validarEventoAuditoria(evento, catalogo) {
+  const cat = exigirCatalogo(catalogo);
   const e = evento || {};
   if (!e.id || !e.action || !e.targetType || !e.sourceDomain || !e.timestamp) {
     const err = new Error('audit_evento_incompleto');
     err.code = 'audit_evento_incompleto';
     throw err;
   }
-  let workspaceId = e.workspaceId;
-  if (!workspaceId) {
+  if (!e.workspaceId) {
     const err = new Error('audit_sin_workspace');
     err.code = 'audit_sin_workspace';
     throw err;
   }
-  if (!esWorkspaceConocido(workspaceId)) {
-    try {
-      workspaceId = workspaceIdDesdeTenantId(workspaceId);
-    } catch (err) {
-      throw err;
-    }
-  }
+  const workspaceId = cat.workspaceIdDesdeTenantId(e.workspaceId);
   const metadata = e.metadata && typeof e.metadata === 'object' ? { ...e.metadata } : {};
   for (const key of Object.keys(metadata)) {
     const k = key.toLowerCase();
@@ -68,14 +63,10 @@ export function validarEventoAuditoria(evento) {
 
 /**
  * Implementación en memoria de AuditSink.
- * @returns {{
- *   record: (evento: Partial<AuditEvent>) => AuditEvent,
- *   listarPorWorkspace: (workspaceId: string) => AuditEvent[],
- *   todos: () => AuditEvent[],
- *   limpiar: () => void,
- * }}
+ * @param {import('../organizations/workspace.js').CatalogoWorkspaces} catalogo
  */
-export function crearAuditSinkMemoria() {
+export function crearAuditSinkMemoria(catalogo) {
+  const cat = exigirCatalogo(catalogo);
   /** @type {AuditEvent[]} */
   const eventos = [];
   let seq = 0;
@@ -87,7 +78,7 @@ export function crearAuditSinkMemoria() {
         ...evento,
         id: evento && evento.id ? evento.id : `aud-${seq}`,
       };
-      const row = validarEventoAuditoria(conId);
+      const row = validarEventoAuditoria(conId, cat);
       eventos.push(row);
       return { ...row, metadata: { ...row.metadata } };
     },

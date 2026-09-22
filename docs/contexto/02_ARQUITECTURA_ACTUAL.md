@@ -14,10 +14,12 @@
 ### Core (E3A)
 
 `core/` — contratos puros ESM: `identity/`, `organizations/`, `authorization/`, `audit/`, `contracts/`, `features/`.
-No importa `engine/`, `data/demo.js`, `server/`, `app.js`, ni futuros `gestion/`/`forja/`.
+No importa `engine/`, `data/`, `server/`, `app.js`, ni futuros `gestion/`/`forja/`.
+Catálogo de workspaces: `crearCatalogoWorkspaces(ids)` inyectado; adaptador `catalogoWorkspaces()` en `data/tenants.js` lee IDs activos (sin hardcode en Core).
+`userId` global por correo; `workspaceId`/rol = pertenencia. Si llegan ambos IDs, deben coincidir (`workspace_tenant_incoherente`).
 Prueba negativa de dependencias en `tests/e3a-core-boundaries.test.js`.
 
-Compatibilidad: `workspaceId === tenantId` para MONKEYS/SOMA; `tenantId` se conserva como alias hasta E3B.
+Compatibilidad: `workspaceId === tenantId` en el puente E3A; `tenantId` alias hasta E3B.
 
 ### Datos
 
