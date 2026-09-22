@@ -70,7 +70,7 @@ test('B1: V2 con sedeId desconocido → corrupto y fuente intacta (localStorage)
   assert.equal(validarSliceV2(snap.data, 'soma').ok, false);
 });
 
-test('B1: escritura V2 con sedeId inválido → error sin sobrescribir', () => {
+test('B1: escritura V3 con sedeId inválido → error sin sobrescribir', () => {
   const dir = mkdtempSync(join(tmpdir(), 'e2-b1w-'));
   const file = join(dir, 'data.json');
   const adapter = crearAdaptadorJson({ filePath: file, clock: CLOCK, fechaRef: FECHA });
@@ -79,7 +79,8 @@ test('B1: escritura V2 con sedeId inválido → error sin sobrescribir', () => {
   adapter.guardar(boot.world);
   const before = readFileSync(file, 'utf8');
   const bad = JSON.parse(before);
-  bad.byTenant.monkeys.leads[0].sedeId = 'Félix García';
+  const map = bad.byWorkspace || bad.byTenant;
+  map.monkeys.leads[0].sedeId = 'Félix García';
   assert.throws(() => adapter.guardar(bad));
   assert.equal(readFileSync(file, 'utf8'), before);
   rmSync(dir, { recursive: true, force: true });

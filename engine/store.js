@@ -70,15 +70,29 @@ function toWorld(datosIniciales) {
 }
 
 function stampSlice(slice, tenantId) {
+  const workspaceId = tenantId;
   const keys = ['classes', 'plans', 'bookings', 'leads', 'conversations', 'socios', 'asistencias', 'referidos', 'usuariosEquipo', 'membresias', 'pagos'];
   for (const k of keys) {
     if (!Array.isArray(slice[k])) continue;
-    slice[k] = slice[k].map((row) => ({ tenantId, ...row }));
+    slice[k] = slice[k].map((row) => ({ ...row, workspaceId, tenantId }));
   }
   if (slice.automation) {
-    slice.automation.campanias = (slice.automation.campanias || []).map((c) => ({ tenantId, ...c }));
-    slice.automation.acciones = (slice.automation.acciones || []).map((a) => ({ tenantId, ...a }));
+    slice.automation.campanias = (slice.automation.campanias || []).map((c) => ({
+      ...c,
+      workspaceId,
+      tenantId,
+      acciones: Array.isArray(c.acciones)
+        ? c.acciones.map((a) => ({ ...a, workspaceId, tenantId }))
+        : c.acciones,
+    }));
+    slice.automation.acciones = (slice.automation.acciones || []).map((a) => ({
+      ...a,
+      workspaceId,
+      tenantId,
+    }));
   }
+  slice.workspaceId = workspaceId;
+  slice.tenantId = tenantId;
   return slice;
 }
 
@@ -887,10 +901,13 @@ export function crearMemoria(datosIniciales, opts = {}) {
     const borrador = {
       id: `act-${s.automation.nextActionSeq}`,
       tenantId,
+      workspaceId: tenantId,
       canal: 'simulado',
       estado: accion.tipo === 'mensaje' ? 'enviado' : 'pendiente',
       fechaISO: clock.iso(),
       ...accion,
+      tenantId,
+      workspaceId: tenantId,
       sedeId,
     };
     const row = aplicarContratoAccion(borrador, {

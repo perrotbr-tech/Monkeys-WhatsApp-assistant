@@ -1,5 +1,5 @@
 /**
- * Migraciones: V0 → V1 (E1B) y V1 → V2 (E2 identidad estable de sedes).
+ * Migraciones: V0 → V1 (E1B), V1 → V2 (E2), V2 → V3 (E3B workspaceId).
  *
  * Excepciones MONKEYS/SOMA aquí: solo compatibilidad histórica (claves localStorage
  * y mapas de sedes). No son bifurcaciones de producto.
@@ -7,7 +7,7 @@
  */
 
 import { clonar } from '../../data/demo.js';
-import { listarTenants, buscarTenant, resolverSedeId, nombreSede } from '../../data/tenants.js';
+import { listarTenants, buscarTenant, resolverSedeId, nombreSede, catalogoWorkspaces } from '../../data/tenants.js';
 import { PLANES_SOMA } from '../../data/planes-soma.js';
 import { crearMembresiasYPagos } from '../../data/membresias-demo.js';
 import { fechaHoy } from '../dates.js';
@@ -16,15 +16,21 @@ import { PersistenciaError, CODIGOS } from './estados.js';
 import {
   SCHEMA_VERSION,
   SCHEMA_VERSION_V1,
+  SCHEMA_VERSION_V2,
   crearWorldSnapshotV1,
   crearTenantSnapshotV1,
   crearWorldSnapshotV2,
   crearTenantSnapshotV2,
+  crearWorldSnapshotV3,
+  crearWorkspaceSnapshotV3,
   normalizarSlice,
+  sellarWorkspaceEnSlice,
   esWorldSnapshotV1,
   esTenantSnapshotV1,
   esWorldSnapshotV2,
   esTenantSnapshotV2,
+  esWorldSnapshotV3,
+  esWorkspaceSnapshotV3,
 } from './snapshots.js';
 
 export const CLAVE_LOCAL_PREFIX = 'forkza_demo_state_';
@@ -273,25 +279,107 @@ export function migrateV1toV2(raw, opts) {
 }
 
 /**
- * Cadena completa hasta la versión actual: V0→V1→V2 o V1→V2.
+ * Migra Snapshot V2 → V3 (workspaceId canónico en slice y entidades).
+ * Idempotente si ya es V3. No reconstruye desde demo.
+ * Usa catálogo de workspaces inyectado (o el activo).
+ *
+ * @param {object} raw
+ * @param {{
+ *   kind: 'world'|'tenant'|'workspace',
+ *   tenantId?: string,
+ *   workspaceId?: string,
+ *   catalogo?: object,
+ * }} opts
  */
-export function migrateToCurrent(raw, opts) {
-  const kind = opts.kind;
-  if (kind === 'world' && esWorldSnapshotV2(raw)) return clonar(raw);
-  if (kind === 'tenant' && esTenantSnapshotV2(raw, opts.tenantId)) return clonar(raw);
+export function migrateV2toV3(raw, opts) {
+  const kind = opts.kind === 'workspace' ? 'tenant' : opts.kind;
+  const catalogo = opts.catalogo || catalogoWorkspaces();
+  const workspaceId = opts.workspaceId || opts.tenantId || (raw && (raw.workspaceId || raw.tenantId));
 
-  let v1 = raw;
-  if (!(raw && raw.schemaVersion === SCHEMA_VERSION_V1)) {
-    if (raw && raw.schemaVersion === SCHEMA_VERSION) {
-      return clonar(raw);
+  if (kind === 'world') {
+    if (esWorldSnapshotV3(raw, catalogo)) return clonar(raw);
+    if (!esWorldSnapshotV2(raw) && !(raw && raw.schemaVersion === SCHEMA_VERSION_V2 && raw.byTenant)) {
+      throw new PersistenciaError(CODIGOS.INCOMPATIBLE, 'migrateV2toV3 requiere WorldSnapshotV2');
     }
-    v1 = migrateV0toV1(raw, opts);
-  } else if (kind === 'world' && !esWorldSnapshotV1(raw)) {
-    throw new PersistenciaError(CODIGOS.CORRUPTO, 'WorldSnapshotV1 corrupto');
-  } else if (kind === 'tenant' && !esTenantSnapshotV1(raw, opts.tenantId)) {
-    throw new PersistenciaError(CODIGOS.CORRUPTO, 'TenantSnapshotV1 corrupto');
+    const tenants = Array.isArray(raw.tenants) ? clonar(raw.tenants) : listarTenants();
+    const byWorkspace = {};
+    for (const [id, slice] of Object.entries(raw.byTenant || {})) {
+      if (!catalogo.conoce(id)) {
+        throw new PersistenciaError(CODIGOS.AMBIGUO, `workspace desconocido en migración V2→V3: ${id}`);
+      }
+      byWorkspace[id] = sellarWorkspaceEnSlice(slice, id);
+    }
+    return crearWorldSnapshotV3({ tenants, byWorkspace }, catalogo);
   }
-  return migrateV1toV2(v1, opts);
+
+  if (kind === 'tenant') {
+    if (esWorkspaceSnapshotV3(raw, workspaceId, catalogo)) return clonar(raw);
+    const id = workspaceId;
+    if (!id) {
+      throw new Error('migrateV2toV3_tenant_requires_workspaceId');
+    }
+    if (!catalogo.conoce(id)) {
+      throw new PersistenciaError(CODIGOS.AMBIGUO, `workspace desconocido en migración V2→V3: ${id}`);
+    }
+    if (!esTenantSnapshotV2(raw, id) && !(raw && raw.schemaVersion === SCHEMA_VERSION_V2 && raw.data)) {
+      // Permitir slice V2 estructural con schemaVersion 2
+      if (!(raw && raw.schemaVersion === SCHEMA_VERSION_V2 && raw.tenantId && raw.data)) {
+        throw new PersistenciaError(CODIGOS.INCOMPATIBLE, 'migrateV2toV3 requiere TenantSnapshotV2');
+      }
+    }
+    if (raw.tenantId && raw.tenantId !== id) {
+      throw new PersistenciaError(CODIGOS.AMBIGUO, 'tenantId incoherente en migrateV2toV3');
+    }
+    const sliceSrc = raw.data && !raw.byTenant ? raw.data : raw;
+    const slice = sellarWorkspaceEnSlice(sliceSrc, id);
+    return crearWorkspaceSnapshotV3(id, slice, catalogo);
+  }
+
+  throw new Error(`migrateV2toV3_kind_unknown:${opts.kind}`);
 }
 
-export { SCHEMA_VERSION, SCHEMA_VERSION_V1 };
+/**
+ * Cadena completa hasta la versión actual: V0→…→V3, V1→…→V3, V2→V3, V3 idempotente.
+ */
+export function migrateToCurrent(raw, opts) {
+  const kind = opts.kind === 'workspace' ? 'tenant' : opts.kind;
+  const catalogo = opts.catalogo || catalogoWorkspaces();
+  const workspaceId = opts.workspaceId || opts.tenantId;
+  const optsNorm = {
+    ...opts,
+    kind,
+    catalogo,
+    workspaceId,
+    tenantId: workspaceId || opts.tenantId,
+  };
+
+  if (kind === 'world' && esWorldSnapshotV3(raw, catalogo)) return clonar(raw);
+  if (kind === 'tenant' && esWorkspaceSnapshotV3(raw, workspaceId, catalogo)) return clonar(raw);
+
+  const ver = raw && raw.schemaVersion;
+
+  if (ver === SCHEMA_VERSION) {
+    return clonar(raw);
+  }
+
+  if (ver === SCHEMA_VERSION_V2) {
+    return migrateV2toV3(raw, optsNorm);
+  }
+
+  if (ver === SCHEMA_VERSION_V1) {
+    if (kind === 'world' && !esWorldSnapshotV1(raw)) {
+      throw new PersistenciaError(CODIGOS.CORRUPTO, 'WorldSnapshotV1 corrupto');
+    }
+    if (kind === 'tenant' && !esTenantSnapshotV1(raw, workspaceId)) {
+      throw new PersistenciaError(CODIGOS.CORRUPTO, 'TenantSnapshotV1 corrupto');
+    }
+    const v2 = migrateV1toV2(raw, optsNorm);
+    return migrateV2toV3(v2, optsNorm);
+  }
+
+  const v1 = migrateV0toV1(raw, optsNorm);
+  const v2 = migrateV1toV2(v1, optsNorm);
+  return migrateV2toV3(v2, optsNorm);
+}
+
+export { SCHEMA_VERSION, SCHEMA_VERSION_V1, SCHEMA_VERSION_V2 };
