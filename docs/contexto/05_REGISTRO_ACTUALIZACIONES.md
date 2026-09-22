@@ -77,7 +77,8 @@ No eliminar entradas anteriores. Si una conclusión queda obsoleta, agregar una 
 
 ## 2026-09-22 — E3A revisión B1–B4 (mismo PR #16)
 
+- Commit: `f304106a86cc0987aac464685f0527bd7d106dd8` en `cursor/e3-forkza-core-boundaries-ac33`.
 - B1/B2: `resolverParTenantWorkspace` rechaza `tenantId ≠ workspaceId` (`workspace_tenant_incoherente`) en identidad, sesión y acciones; entrada de acción intacta.
 - B3: `crearCatalogoWorkspaces(ids)` inyectable; adaptador `catalogoWorkspaces()` desde `idsTenantsActivos`/`registrarTenant`; Core sin hardcode monkeys/soma; tenant `acme` admitido vía catálogo; desconocido rechazado.
 - B4: `userIdEstable` solo por correo; mismo email → mismo `userId` en workspaces distintos; contextos separados por `workspaceId`/rol.
-- Pruebas: suite previa + B1–B4 en verde. E3A aún no cerrada. Sin E3B/E3C/Snapshot V3/Forja. Sin merge.
+- Pruebas: `npm ci` + `npm test` → 177/177. E3A aún no cerrada. Sin E3B/E3C/Snapshot V3/Forja. Sin merge.
