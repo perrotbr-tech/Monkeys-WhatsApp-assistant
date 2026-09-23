@@ -60,4 +60,4 @@ No eliminar entradas anteriores. Si una conclusión queda obsoleta, agregar una 
 
 - B9: `POST /api/demo/reset` usa `hidratarTenant` + `clonarDemo(tid)`; no `adapter.reset()`/`clonarMundo()`; SOMA intacto al resetear MONKEYS (y viceversa); persistencia JSON OK.
 - B10: `tienePermiso` deniega rol desconocido antes de permisos explícitos; `/api/me` no expone permisos desconocidos ni efectivos de rol inválido.
-- Pruebas: `tests/e3c-brechas-b9-b10.test.js`; suite 250/250. Sin E4/E5/Forja/merge.
+- Pruebas: `tests/e3c-brechas-b9-b10.test.js`; suite 250/250 @ `beecdcd`. Sin E4/E5/Forja/merge.

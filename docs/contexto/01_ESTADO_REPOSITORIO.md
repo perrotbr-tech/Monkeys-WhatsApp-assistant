@@ -9,7 +9,7 @@ Fecha de corte: 2026-09-23.
 - Rama E3: `cursor/e3-forkza-core-boundaries-ac33` (PR draft #16 → `main`).
 - E3A cerrada en `14d24ba`.
 - E3B aceptada tras B5–B8 (base E3C: `894ad47`).
-- E3C + revisión B9–B10 en la misma rama/PR (base B9–B10: `07336a5`). Pendiente de aceptación final.
+- E3C + revisión B9–B10 en la misma rama/PR (base B9–B10: `07336a5`). Tip `beecdcd`. Pendiente de aceptación final.
 - E3 no completa hasta revisión. Sin E4/E5/Forja Training. Sin merge.
 
 ## Pull requests
