@@ -68,3 +68,11 @@ No eliminar entradas anteriores. Si una conclusión queda obsoleta, agregar una 
 - PR #16 marcado listo y fusionado por squash en `main` @ `9fb34147e75449aaef69a94d232b1f4ea2afee38`.
 - Verificación posterior sobre `main`: `npm test` 250/250; `git diff --check` limpio; todos los archivos de contexto < 7.000 caracteres.
 - E3 queda cerrada. E4, E5 y Forja Training no iniciados.
+
+## 2026-09-23 — Hotfix: grafo browser-safe en demo Pages
+
+- Rama: `cursor/hotfix-pages-standalone-auth` desde `main` @ `f90ef2c` (250/250 Node).
+- Causa: Pages cargaba `store-local.js` → `auth.js` (`node:crypto`/`bcryptjs`) y barrel `persistencia/index.js` → `json.js`; `main()` abortaba antes del chat/login.
+- Fix: `engine/auth-shared.js` (LOCK_MS, MAX_FALLOS, enriquecerUsuarioSesion); `store-local` importa solo shared + `persistencia/local|estados|migraciones`; `auth.js` reexporta shared y conserva crypto/bcrypt/sesión servidor.
+- Prueba: `tests/browser-safe-imports.test.js` (grafo transitivo desde `app.js`/`store-local.js`). Suite 252/252.
+- Validación pública Pages pendiente de merge/deploy. Sin E4/E5/Forja/merge.
