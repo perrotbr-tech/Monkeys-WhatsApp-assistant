@@ -90,4 +90,3 @@ Entradas anteriores a E3A. Continuación vigente en `05_REGISTRO_ACTUALIZACIONES
 - B8: migraciones exigen V3/V2/V1 válidos; incompletos → `PERSISTENCIA_CORRUPTA`.
 - Pruebas: `tests/e3b-brechas-b5-b8.test.js`; suite 219/219 @ `894ad47`.
 - E3B aceptada tras B5–B8 como base de E3C. Sin merge.
-

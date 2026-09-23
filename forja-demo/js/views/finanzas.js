@@ -372,6 +372,12 @@ function renderTabla(filas, navegar) {
           textContent: 'Registrar pago',
           onClick: () => ejecutarPago(row.cargo.id, 'transferencia', navegar),
         }),
+        el('button', {
+          type: 'button',
+          className: 'btn ghost',
+          textContent: 'Link demo',
+          onClick: () => ejecutarLink(row.cargo.id, navegar),
+        }),
       );
     }
     card.appendChild(rowAct);
