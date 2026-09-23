@@ -21,7 +21,7 @@ Contrato V3 con migración V0–V2→V3 y rechazo de corruptos/cruzados. Sigue s
 - UI (`app.js`) aún puede usar reloj de pared en timestamps visibles.
 - Acciones históricas seed: tras V3 llevan `workspaceId`; no se inventan actor/destinatario/origen ausentes.
 
-## Cerrado en E0–E3C (parcial)
+## Cerrado en E0–E3C
 
 - E0–E2 en `main` (PR #12–#15).
 - E3A cerrada en `14d24ba` (PR #16): `core/` + adaptadores; B1–B4.
@@ -30,6 +30,7 @@ Contrato V3 con migración V0–V2→V3 y rechazo de corruptos/cruzados. Sigue s
 - E3C B9–B10: reset solo del workspace solicitado; rol desconocido → 403 aunque traiga permisos explícitos.
 - Brecha pagos cross-tenant demo: cerrada en E3C (sin fallback global).
 - Brecha reset cross-tenant: cerrada en B9.
+- E3 verificada con 250/250 pruebas y fusionada por PR #16 en `main` @ `9fb3414`.
 
 ## Decisiones confirmadas
 
@@ -47,7 +48,6 @@ Contrato V3 con migración V0–V2→V3 y rechazo de corruptos/cruzados. Sigue s
 
 ## Decisiones aún abiertas / pendientes
 
-- Revisión independiente de E3C antes de declarar E3 completa.
 - Renombre masivo de APIs/params `tenantId` → `workspaceId`.
 - Base de datos y proveedor de despliegue.
 - Contrato Gestión ↔ Training; WhatsApp/pagos/archivos productivos.

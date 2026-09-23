@@ -1,9 +1,9 @@
 # Contexto vivo de FORKZA IA
 
-Estado de referencia: 2026-09-22
+Estado de referencia: 2026-09-23
 Repositorio: `perrotbr-tech/Monkeys-WhatsApp-assistant`
-Base funcional E2: `main` @ `4504c9b99eca9614f241f29276e806604a607f2e` (descendiente de E2 `0e20df0`)
-Etapa en curso: E3 — Forkza Core y fronteras. E3A cerrada. E3B aceptada. E3C + B9–B10 en rama (pendiente aceptación). E3 no completa hasta revisión.
+Base funcional E3: `main` @ `9fb34147e75449aaef69a94d232b1f4ea2afee38` (PR #16 fusionado)
+Etapa cerrada: E3 — Forkza Core y fronteras. E3A, E3B y E3C aceptadas; B1–B10 verificadas. Próxima etapa: E4, aún no iniciada.
 
 ## Propósito
 

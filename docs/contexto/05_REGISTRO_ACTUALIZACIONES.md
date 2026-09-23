@@ -61,3 +61,10 @@ No eliminar entradas anteriores. Si una conclusión queda obsoleta, agregar una 
 - B9: `POST /api/demo/reset` usa `hidratarTenant` + `clonarDemo(tid)`; no `adapter.reset()`/`clonarMundo()`; SOMA intacto al resetear MONKEYS (y viceversa); persistencia JSON OK.
 - B10: `tienePermiso` deniega rol desconocido antes de permisos explícitos; `/api/me` no expone permisos desconocidos ni efectivos de rol inválido.
 - Pruebas: `tests/e3c-brechas-b9-b10.test.js`; suite 250/250 @ `beecdcd`. Sin E4/E5/Forja/merge.
+
+## 2026-09-23 — Cierre y fusión de E3
+
+- Revisión independiente del tip `eeb3e658fc47440929ba4de5fd824add6a29f31d`: B9 reproducida con SOMA intacto tras reset MONKEYS; B10 reproducida con rol desconocido + permiso explícito → 403 y sin mutación.
+- PR #16 marcado listo y fusionado por squash en `main` @ `9fb34147e75449aaef69a94d232b1f4ea2afee38`.
+- Verificación posterior sobre `main`: `npm test` 250/250; `git diff --check` limpio; todos los archivos de contexto < 7.000 caracteres.
+- E3 queda cerrada. E4, E5 y Forja Training no iniciados.
