@@ -5,7 +5,7 @@ Fecha de corte: 2026-09-23.
 ## Repositorio y base
 
 - Repositorio: `perrotbr-tech/Monkeys-WhatsApp-assistant`.
-- `main` @ `a428313` (Demo Forja Training PR #19 fusionada; tip sobre hotfix Pages PR #18 `2629fdc` y E3 `9fb3414`).
+- `main` @ `85475bf` (Finanzas demo PR #21 fusionada; incluye Demo Forja PR #19 `a428313`, hotfix Pages PR #18 `2629fdc` y E3 `9fb3414`).
 - E3 fusionada: PR #16 → `main` @ `9fb3414`; docs cierre PR #17 @ `f90ef2c`.
 - E3A/E3B/E3C + B1–B10 aceptadas. **E4 y E5 no iniciados.**
 - **Forja Training productivo no iniciado.** Existe solo demo estática de validación en `forja-demo/`.
@@ -19,7 +19,8 @@ Fecha de corte: 2026-09-23.
 | #17 | Fusionado | Docs cierre E3 |
 | #18 | Fusionado | Hotfix Pages: auth browser-safe |
 | #19 | Fusionado | Demo Forja Training (coach Powerlifting) |
-| demo Finanzas | Draft | `cursor/demo-forja-finanzas-cb40` → `main` |
+| #20 | Cerrado sin merge | Duplicado, sustituido por #21 |
+| #21 | Fusionado | Demo Forja: módulo Finanzas para validación coach |
 
 ## Demo Forja Training (validación)
 
@@ -28,7 +29,7 @@ Fecha de corte: 2026-09-23.
 - Módulo **Finanzas** (demo): KPIs CLP, cargos/pagos, ficha, alertas, asistente con aprobación humana. Sin bancos ni pagos reales.
 - No conectada a la navegación de Forkza Gestión.
 - No altera Snapshot V3 ni MONKEYS/SOMA.
-- Suite Node base `main` pre-Finanzas: 265/265; rama Finanzas agrega `tests/forja-demo-finanzas.test.js`.
+- Suite Node de la entrega Finanzas: 283/283; `git diff --check` limpio antes de fusionar.
 
 ## Documentos maestros
 

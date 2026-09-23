@@ -67,3 +67,9 @@ No eliminar entradas anteriores. Si una conclusión queda obsoleta, agregar una 
 - Modelo: Plan → Cargo → Pago (+ medios, auditoría); IDs workspace/coach/alumno; aislamiento en tests con workspace/coach ALT.
 - Persistencia: migración explícita estado v1→v2; corrupto sin auto-reset; clave `forja-demo-v1` (no Gestión).
 - Pruebas: `tests/forja-demo-finanzas.test.js`. Sin pagos reales, sin bancos, sin E4/E5, sin Forja productivo, sin merge.
+
+## 2026-09-23 — Revisión y fusión de Finanzas demo
+
+- Se compararon las PR #20 y #21 desde la misma base `main` @ `a428313`; ambas pasaron la suite y `git diff --check` (`#20`: 284/284; `#21`: 283/283).
+- PR #20 cerrada sin merge como duplicada. PR #21 seleccionada por incorporar las correcciones posteriores de móvil, mensajes vacíos y banner de datos ficticios.
+- PR #21 fusionada por squash en `main` @ `85475bf`. Finanzas queda disponible solo como módulo de la demo estática; no inicia E4/E5 ni Forja Training productivo.
