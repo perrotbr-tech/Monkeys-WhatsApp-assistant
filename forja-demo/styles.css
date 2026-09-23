@@ -407,6 +407,80 @@ textarea.field-input { min-height: 88px; resize: vertical; }
 .badge.rechazada { background: rgba(229, 72, 77, 0.2); color: #ff8b8f; }
 .badge.pendiente { background: rgba(143, 163, 189, 0.2); color: var(--muted); }
 
+.fin-disclaimer {
+  margin: 0 0 14px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px dashed var(--aviso);
+  background: rgba(240, 180, 41, 0.1);
+  color: var(--aviso);
+  font-weight: 800;
+  font-size: 13px;
+  letter-spacing: 0.02em;
+}
+.fin-kpis {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.fin-monto {
+  font-variant-numeric: tabular-nums;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+.fin-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.fin-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  min-width: 960px;
+}
+.fin-table th,
+.fin-table td {
+  padding: 10px 8px;
+  border-bottom: 1px solid var(--linea);
+  text-align: left;
+  vertical-align: top;
+}
+.fin-table th {
+  color: var(--muted);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.fin-acciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-width: 160px;
+}
+.btn.compact {
+  min-height: 40px;
+  padding: 8px 10px;
+  font-size: 12px;
+}
+.badge.fin-estado.fin-paid {
+  background: rgba(46, 204, 113, 0.2);
+  color: var(--exito);
+}
+.badge.fin-estado.fin-pending {
+  background: rgba(143, 163, 189, 0.2);
+  color: var(--muted);
+}
+.badge.fin-estado.fin-overdue {
+  background: rgba(229, 72, 77, 0.2);
+  color: #ff8b8f;
+}
+.badge.fin-estado.fin-exempt {
+  background: rgba(30, 91, 255, 0.2);
+  color: #9cbcff;
+}
+.fin-cards-mobile { display: none; }
+.fin-filtros .field-input { flex: 1 1 140px; }
+
 .ex-bank.is-coach {
   border-color: rgba(240, 180, 41, 0.55);
   box-shadow: inset 3px 0 0 var(--coach);
@@ -541,13 +615,17 @@ textarea.field-input { min-height: 88px; resize: vertical; }
   .grid.two,
   .grid.metrics,
   .fields-grid,
-  .scale-row {
+  .scale-row,
+  .fin-kpis {
     grid-template-columns: 1fr;
   }
   .coach-chip { display: none; }
   .nav-desktop { display: none; }
   .btn-nav-toggle { display: inline-flex; align-items: center; margin-left: auto; }
   .topbar #btn-reset { order: 3; width: 100%; }
+  .fin-table-wrap { display: none; }
+  .fin-cards-mobile { display: grid; gap: 12px; }
+  .fin-monto { white-space: normal; word-break: break-word; }
 }
 
 @media (max-width: 420px) {

@@ -8,7 +8,7 @@ PR #18 fusionado en `main` @ `2629fdc`: `auth-shared.js` (browser) separado de `
 
 ### Demo Forja Training (solo validación)
 
-`forja-demo/` es un prototipo estático para entrevistar a un coach de Powerlifting. **No es Forja Training productivo**, no inicia E4/E5, no cambia Snapshot V3 ni el feature flag `forja`. Riesgo: confundir la demo con implementación completa; documentar siempre como validación con datos ficticios. Escala de bienestar: **5 = mejor / 1 = peor** (corregida en PR #19).
+`forja-demo/` es un prototipo estático para entrevistar a un coach de Powerlifting. **No es Forja Training productivo**, no inicia E4/E5, no cambia Snapshot V3 ni el feature flag `forja`. Incluye módulo **Finanzas** de validación (KPIs, cargos/pagos, aislamiento multi-coach/workspace en tests): **no es integración bancaria**, no procesa pagos reales, no Mercado Pago. Riesgo: confundir la demo con implementación completa; documentar siempre como validación con datos ficticios. Escala de bienestar: **5 = mejor / 1 = peor** (PR #19). Estado local `forja-demo-v1` con migración v1→v2 (Finanzas); corrupto solo se restaura con acción explícita.
 
 ### Webhook de pagos
 

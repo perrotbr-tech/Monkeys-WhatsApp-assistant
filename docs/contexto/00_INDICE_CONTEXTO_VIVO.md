@@ -2,8 +2,8 @@
 
 Estado de referencia: 2026-09-23
 Repositorio: `perrotbr-tech/Monkeys-WhatsApp-assistant`
-Base `main`: `2629fdc` (hotfix Pages PR #18; E3 en `9fb3414`).
-Etapa cerrada: E3. E4/E5 no iniciadas. Forja Training productivo no iniciado (solo demo `forja-demo/`).
+Base `main`: `a428313` (Demo Forja Training PR #19; tip sobre hotfix Pages `2629fdc` y E3 `9fb3414`).
+Etapa cerrada: E3. E4/E5 no iniciadas. Forja Training productivo no iniciado (solo demo `forja-demo/`, con módulo Finanzas de validación).
 
 ## Propósito
 
