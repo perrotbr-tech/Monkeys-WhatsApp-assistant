@@ -52,6 +52,13 @@ function appendAll(root, ...nodes) {
   }
 }
 
+function bannerFicticio() {
+  return el('p', {
+    className: 'fin-disclaimer',
+    textContent: 'Datos financieros ficticios para validación del prototipo',
+  });
+}
+
 function aplicarFiltros(filas, filtro, st) {
   return filas.filter((row) => {
     if (filtro.estado && row.cargo.estado !== filtro.estado) return false;
