@@ -550,8 +550,76 @@ textarea.field-input { min-height: 88px; resize: vertical; }
   .topbar #btn-reset { order: 3; width: 100%; }
 }
 
+.badge.exento { background: rgba(143, 163, 189, 0.25); color: #c5d4e8; }
+.badge.pagado { background: rgba(46, 204, 113, 0.2); color: var(--exito); }
+.badge.vencido { background: rgba(229, 72, 77, 0.22); color: #ff8b8f; }
+.badge.sin-plan { background: rgba(240, 180, 41, 0.2); color: var(--aviso); }
+
+.fin-disclaimer {
+  margin: 10px 0 0;
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--aviso);
+  letter-spacing: 0.02em;
+}
+.fin-kpis {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.fin-monto {
+  font-variant-numeric: tabular-nums;
+  font-weight: 800;
+  white-space: nowrap;
+}
+.fin-filtros .field-input {
+  flex: 1 1 140px;
+  max-width: 220px;
+}
+.fin-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.fin-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.fin-table th,
+.fin-table td {
+  border-bottom: 1px solid var(--linea);
+  padding: 10px 8px;
+  text-align: left;
+  vertical-align: top;
+}
+.fin-table th {
+  color: var(--muted);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.fin-acciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.fin-acciones .btn {
+  min-height: 44px;
+  padding: 8px 12px;
+  font-size: 12px;
+}
+.fin-cards-mobile { display: none; }
+
+@media (max-width: 900px) {
+  .fin-kpis { grid-template-columns: 1fr 1fr; }
+  .fin-table-wrap { display: none; }
+  .fin-cards-mobile { display: grid; gap: 12px; }
+  .fin-filtros .field-input { max-width: none; flex: 1 1 100%; }
+}
+
 @media (max-width: 420px) {
   .app-root { padding: 14px 12px 72px; }
   .module-name { font-size: 1.25rem; }
   .kv { grid-template-columns: 1fr; }
+  .fin-kpis { grid-template-columns: 1fr; }
 }
+

@@ -1,11 +1,17 @@
 import { el } from '../util.js';
 import { obtenerEstado, mutar } from '../state.js';
+import {
+  actorDesdeEstado,
+  sugerenciasFinancieras,
+} from '../finanzas/modelo.js';
 
 export function renderAsistente(root, navegar) {
   const e = obtenerEstado();
+  const finSug = sugerenciasFinancieras(e, actorDesdeEstado(e));
+  const todas = [...finSug, ...e.sugerencias];
 
   const lista = el('div', { className: 'sug-list' });
-  for (const sug of e.sugerencias) {
+  for (const sug of todas) {
     const card = el('article', {
       className: `card sug-card estado-${sug.estado}`,
     });
@@ -22,9 +28,20 @@ export function renderAsistente(root, navegar) {
       el('p', {
         className: 'note-ipf',
         textContent:
-          'La IA propone. El coach revisa. La IA nunca publica ni modifica planes automáticamente ni diagnostica lesiones.',
+          sug.tipo === 'finanzas'
+            ? 'La IA resume y sugiere. No cobra, no cambia precios, no bloquea alumnos, no envía mensajes reales ni marca pagos sin aprobación del coach.'
+            : 'La IA propone. El coach revisa. La IA nunca publica ni modifica planes automáticamente ni diagnostica lesiones.',
       }),
     );
+
+    if (sug.borradorMensaje) {
+      card.append(
+        el('p', {
+          className: 'evidence',
+          textContent: `Borrador (requiere aprobación): ${sug.borradorMensaje}`,
+        }),
+      );
+    }
 
     if (sug.estado === 'pendiente') {
       const modBox = el('div', { className: 'mod-box hidden' });
@@ -41,13 +58,22 @@ export function renderAsistente(root, navegar) {
           className: 'btn primary',
           textContent: 'Guardar modificación',
           onClick: () => {
-            mutar((st) => {
-              const s = st.sugerencias.find((x) => x.id === sug.id);
-              if (!s) return;
-              s.estado = 'modificada';
-              s.detalle = ta.value.trim() || s.detalle;
-              s.evidencia = `${s.evidencia} · ajustada por el coach`;
-            });
+            if (sug.tipo === 'finanzas') {
+              mutar((st) => {
+                st.ui.mensajeUi = {
+                  texto: 'Sugerencia financiera modificada (solo demo, sin cobro automático).',
+                  tipo: 'ok',
+                };
+              });
+            } else {
+              mutar((st) => {
+                const s = st.sugerencias.find((x) => x.id === sug.id);
+                if (!s) return;
+                s.estado = 'modificada';
+                s.detalle = ta.value.trim() || s.detalle;
+                s.evidencia = `${s.evidencia} · ajustada por el coach`;
+              });
+            }
             navegar('asistente');
           },
         }),
@@ -60,10 +86,20 @@ export function renderAsistente(root, navegar) {
             className: 'btn primary',
             textContent: 'Aprobar',
             onClick: () => {
-              mutar((st) => {
-                const s = st.sugerencias.find((x) => x.id === sug.id);
-                if (s) s.estado = 'aprobada';
-              });
+              if (sug.tipo === 'finanzas') {
+                mutar((st) => {
+                  st.ui.mensajeUi = {
+                    texto:
+                      'Sugerencia financiera aprobada por el coach. No se ejecutó cobro ni envío real.',
+                    tipo: 'ok',
+                  };
+                });
+              } else {
+                mutar((st) => {
+                  const s = st.sugerencias.find((x) => x.id === sug.id);
+                  if (s) s.estado = 'aprobada';
+                });
+              }
               navegar('asistente');
             },
           }),
@@ -80,10 +116,19 @@ export function renderAsistente(root, navegar) {
             className: 'btn danger',
             textContent: 'Rechazar',
             onClick: () => {
-              mutar((st) => {
-                const s = st.sugerencias.find((x) => x.id === sug.id);
-                if (s) s.estado = 'rechazada';
-              });
+              if (sug.tipo === 'finanzas') {
+                mutar((st) => {
+                  st.ui.mensajeUi = {
+                    texto: 'Sugerencia financiera rechazada.',
+                    tipo: 'info',
+                  };
+                });
+              } else {
+                mutar((st) => {
+                  const s = st.sugerencias.find((x) => x.id === sug.id);
+                  if (s) s.estado = 'rechazada';
+                });
+              }
               navegar('asistente');
             },
           }),
@@ -114,6 +159,10 @@ export function renderAsistente(root, navegar) {
         el('li', { textContent: 'La IA nunca publica ni modifica planes automáticamente.' }),
         el('li', { textContent: 'La IA no diagnostica lesiones.' }),
         el('li', { textContent: 'Toda sugerencia muestra su evidencia.' }),
+        el('li', {
+          textContent:
+            'Finanzas: no cobra, no cambia precios, no bloquea, no cancela planes, no envía mensajes reales.',
+        }),
       ]),
     ]),
     lista,

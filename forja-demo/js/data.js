@@ -3,15 +3,18 @@
  * Solo demo de validación — no es Forja productivo.
  */
 
+import {
+  ALUMNO_AISLAMIENTO,
+  enriquecerAlumnosConFinanzas,
+  finanzasSeedCompleto,
+  coachVisibleSeed,
+  sesionDemoSeed,
+} from './finanzas/seed.js';
+import { VERSION_ACTUAL } from './finanzas/migracion.js';
+
 export const STORAGE_KEY = 'forja-demo-v1';
 
-export const COACH = {
-  id: 'coach-matias',
-  nombre: 'Matías Rojas',
-  modalidad: 'Powerlifting',
-  rol: 'Entrenador',
-  workspace: 'FORJA DEMO',
-};
+export const COACH = coachVisibleSeed();
 
 export const GRUPOS = [
   { id: 'grp-inicial', nombre: 'Powerlifting Inicial' },
@@ -650,11 +653,15 @@ export const SUGERENCIAS_IA_SEED = [
 ];
 
 export function estadoInicial() {
+  const alumnos = enriquecerAlumnosConFinanzas(
+    ALUMNOS_SEED.map((a) => ({ ...a })),
+  );
+  alumnos.push({ ...ALUMNO_AISLAMIENTO });
   return {
-    version: 1,
+    version: VERSION_ACTUAL,
     coach: { ...COACH },
     grupos: GRUPOS.map((g) => ({ ...g })),
-    alumnos: ALUMNOS_SEED.map((a) => ({ ...a })),
+    alumnos,
     ejercicios: EJERCICIOS_SISTEMA.map((e) => ({ ...e })),
     macro: structuredClone(MACRO_SEED),
     micro: structuredClone(MICRO_SEED),
@@ -662,6 +669,8 @@ export function estadoInicial() {
     panel: structuredClone(PANEL_SEED),
     seguimiento: structuredClone(SEGUIMIENTO_SEED),
     sugerencias: SUGERENCIAS_IA_SEED.map((s) => ({ ...s })),
+    finanzas: finanzasSeedCompleto(),
+    sesionDemo: sesionDemoSeed(),
     wellness: null,
     registroSesion: null,
     ui: {
@@ -671,6 +680,15 @@ export function estadoInicial() {
       filtroBanco: { texto: '', tipo: '', fuente: '' },
       ejercicioEditId: null,
       modoAlumno: false,
+      filtrosFinanzas: {
+        texto: '',
+        estado: '',
+        grupoId: '',
+        modalidad: '',
+        coachId: '',
+      },
+      fichaFinancieraAlumnoId: null,
+      mensajeUi: null,
     },
   };
 }

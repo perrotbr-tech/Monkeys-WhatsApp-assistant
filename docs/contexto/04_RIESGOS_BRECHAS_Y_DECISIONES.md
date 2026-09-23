@@ -8,7 +8,7 @@ PR #18 fusionado en `main` @ `2629fdc`: `auth-shared.js` (browser) separado de `
 
 ### Demo Forja Training (solo validación)
 
-`forja-demo/` es un prototipo estático para entrevistar a un coach de Powerlifting. **No es Forja Training productivo**, no inicia E4/E5, no cambia Snapshot V3 ni el feature flag `forja`. Riesgo: confundir la demo con implementación completa; documentar siempre como validación con datos ficticios. Escala de bienestar: **5 = mejor / 1 = peor** (corregida en PR #19).
+`forja-demo/` es un prototipo estático para entrevistar a un coach de Powerlifting. Incluye módulo **Finanzas** ficticio (planes → cargos → pagos, KPI CLP, aislamiento workspace/coach). **No es Forja Training productivo**, no inicia E4/E5, no integra bancos ni Mercado Pago, no cambia Snapshot V3 ni el feature flag `forja`. Riesgo: confundir la demo con implementación completa o con cobros reales; documentar siempre como validación con datos ficticios. Escala de bienestar: **5 = mejor / 1 = peor** (PR #19).
 
 ### Webhook de pagos
 
@@ -59,7 +59,7 @@ Contrato V3 con migración V0–V2→V3 y rechazo de corruptos/cruzados. Sigue s
 - Renombre masivo de APIs/params `tenantId` → `workspaceId`.
 - Base de datos y proveedor de despliegue.
 - Contrato Gestión ↔ Training; WhatsApp/pagos/archivos productivos.
-- Alcance del primer MVP de Forja Training (la demo `forja-demo/` no cierra ese alcance).
+- Alcance del primer MVP de Forja Training (la demo `forja-demo/` con Finanzas ficticias no cierra ese alcance ni sustituye E4/E5).
 - Si la demo de validación se acepta, cuándo y cómo iniciar el esqueleto productivo (E6 del plan), sin mezclarlo con E4/E5 de Gestión.
 - Firma real Mercado Pago, idempotencia y Snapshot V4 (E5 / fuera de E3).
 

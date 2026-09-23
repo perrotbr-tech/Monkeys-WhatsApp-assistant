@@ -1,11 +1,13 @@
 import { el } from '../util.js';
 import { obtenerEstado, mutar, grupoPorId } from '../state.js';
+import { actorDesdeEstado, alumnosVisibles } from '../finanzas/modelo.js';
 
 export function renderAlumnos(root, navegar) {
   const e = obtenerEstado();
   const lista = el('div', { className: 'alumno-grid' });
+  const visibles = alumnosVisibles(e, actorDesdeEstado(e));
 
-  for (const a of e.alumnos) {
+  for (const a of visibles) {
     const g = grupoPorId(a.grupoId);
     lista.appendChild(
       el('article', { className: `card alumno-card estado-${a.estadoHoy}` }, [

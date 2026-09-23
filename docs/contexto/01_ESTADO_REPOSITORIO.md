@@ -5,10 +5,10 @@ Fecha de corte: 2026-09-23.
 ## Repositorio y base
 
 - Repositorio: `perrotbr-tech/Monkeys-WhatsApp-assistant`.
-- `main` @ `2629fdc` (hotfix GitHub Pages PR #18 fusionado; tip sobre cierre E3).
+- `main` @ `a428313` (Demo Forja Training PR #19 fusionada; incluye hotfix Pages `2629fdc` y cierre E3).
 - E3 fusionada: PR #16 → `main` @ `9fb3414`; docs cierre PR #17 @ `f90ef2c`.
 - E3A/E3B/E3C + B1–B10 aceptadas. **E4 y E5 no iniciados.**
-- **Forja Training productivo no iniciado.** Existe solo demo estática de validación.
+- **Forja Training productivo no iniciado.** Existe solo demo estática de validación en `forja-demo/`.
 
 ## Pull requests
 
@@ -18,15 +18,17 @@ Fecha de corte: 2026-09-23.
 | #16 | Fusionado | E3A + E3B + E3C + B1–B10 |
 | #17 | Fusionado | Docs cierre E3 |
 | #18 | Fusionado | Hotfix Pages: auth browser-safe |
-| demo Forja | Draft | `cursor/demo-coach-powerlifting` → `main` |
+| #19 | Fusionado | Demo Forja Training coach Powerlifting |
+| demo Finanzas | Draft | `cursor/demo-forja-finanzas-ee6e` → `main` |
 
 ## Demo Forja Training (validación)
 
 - Ubicación aislada: `forja-demo/` (entrada `forja-demo/index.html`).
 - Persona: coach Matías Rojas, Powerlifting, workspace FORJA DEMO.
+- Módulo **Finanzas** (demo): panel KPI CLP, cargos/pagos, ficha, alertas, auditoría local. Sin bancos ni Mercado Pago.
 - No conectada a la navegación de Forkza Gestión.
 - No altera Snapshot V3 ni MONKEYS/SOMA.
-- Suite Node base `main`: 252/252; la rama demo agrega pruebas de grafo browser-safe.
+- Suite Node base `main`: 265/265; la rama Finanzas agrega pruebas de cálculos/aislamiento.
 
 ## Documentos maestros
 

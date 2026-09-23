@@ -54,3 +54,27 @@ Entradas anteriores a E3A. Continuación vigente en `05_REGISTRO_ACTUALIZACIONES
 
 - B1–B4: `sedeId` semántico; B5: catálogo persistido manda. PR #13 squash → `main` @ `0e20df0` (152/152).
 - PR #14/#15 docs; `main` @ `4504c9b`.
+
+## 2026-09-21 — E3A: contratos Forkza Core y fronteras
+
+- Rama: `cursor/e3-forkza-core-boundaries-ac33` @ `fb1ab98`. PR #16. Suite 168/168.
+
+## 2026-09-22 — E3A revisión B1–B4
+
+- Tip `14d24ba`. Suite 177/177. E3A cerrada en ese tip.
+
+## 2026-09-22 — E3B: Snapshot V3
+
+- `schemaVersion: 3`; `byWorkspace`. Suite 197/197.
+
+## 2026-09-22 — E3B revisión B5–B8
+
+- Suite 219/219 @ `894ad47`. Base de E3C.
+
+## 2026-09-22 — E3C: RBAC de rutas
+
+- Suite 242/242. Deny-by-default.
+
+## 2026-09-23 — E3C revisión B9–B10
+
+- Suite 250/250 @ `beecdcd`. Continuación en `05_REGISTRO_ACTUALIZACIONES.md`.

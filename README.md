@@ -51,7 +51,7 @@ Si `GET ./api/health` no responde en 1,5 s, el mismo engine corre en el navegado
 
 ## Demo Forja Training (validación)
 
-Prototipo estático aislado en `forja-demo/` para entrevistar a un coach de Powerlifting. Entrada: `forja-demo/index.html` (GitHub Pages: `/Monkeys-WhatsApp-assistant/forja-demo/`). Datos ficticios, estado en `localStorage` (`forja-demo-v1`), botón «Restablecer demo». **No es Forja Training productivo**; no inicia E4/E5 ni se conecta a la navegación de Forkza Gestión.
+Prototipo estático aislado en `forja-demo/` para entrevistar a un coach de Powerlifting. Entrada: `forja-demo/index.html` (GitHub Pages: `/Monkeys-WhatsApp-assistant/forja-demo/`). Incluye módulo **Finanzas** ficticio (KPI CLP, cargos/pagos, sin bancos). Datos ficticios, estado en `localStorage` (`forja-demo-v1`, versión interna 2 con migración), botón «Restablecer demo». **No es Forja Training productivo**; no inicia E4/E5 ni se conecta a la navegación de Forkza Gestión; no procesa pagos reales.
 
 ## Uso
 

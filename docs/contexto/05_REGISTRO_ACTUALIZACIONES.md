@@ -1,6 +1,6 @@
 # Registro de actualizaciones del contexto (bloque vigente)
 
-Continuación de `06_REGISTRO_ACTUALIZACIONES_HISTORICO.md` (entradas hasta E2 post-docs).
+Continuación de `06_REGISTRO_ACTUALIZACIONES_HISTORICO.md` (entradas hasta E3C B9–B10).
 
 ## Plantilla para próximas entradas
 
@@ -16,80 +16,31 @@ AAAA-MM-DD — título
 
 No eliminar entradas anteriores. Si una conclusión queda obsoleta, agregar una nueva entrada que la reemplace y actualizar el bloque temático correspondiente.
 
-## 2026-09-21 — E3A: contratos Forkza Core y fronteras
-
-- Rama: `cursor/e3-forkza-core-boundaries-ac33` @ `fb1ab98` desde `main` @ `4504c9b`.
-- PR draft E3: #16 → `main`.
-- Nuevo `core/` ESM + adaptadores de sesión/acciones/features.
-- Pruebas iniciales E3A: 168/168. E3B/E3C/Forja no iniciados. Sin merge.
-
-## 2026-09-22 — E3A revisión B1–B4 (mismo PR #16)
-
-- Commit: `f304106a86cc0987aac464685f0527bd7d106dd8` en `cursor/e3-forkza-core-boundaries-ac33`.
-- B1/B2: `resolverParTenantWorkspace` rechaza `tenantId ≠ workspaceId` (`workspace_tenant_incoherente`) en identidad, sesión y acciones; entrada de acción intacta.
-- B3: `crearCatalogoWorkspaces(ids)` inyectable; adaptador `catalogoWorkspaces()` desde `idsTenantsActivos`/`registrarTenant`; Core sin hardcode monkeys/soma; tenant `acme` admitido vía catálogo; desconocido rechazado.
-- B4: `userIdEstable` solo por correo; mismo email → mismo `userId` en workspaces distintos; contextos separados por `workspaceId`/rol.
-- Docs tip: `14d24baede77e5ffbd82866d551a8197d35419d1`. Suite 177/177. E3A cerrada en ese tip. Sin E3B aún en ese commit. Sin merge.
-
-## 2026-09-22 — E3B: Snapshot V3 y persistencia por workspaceId (mismo PR #16)
-
-- Rama: `cursor/e3-forkza-core-boundaries-ac33` desde tip E3A `14d24ba`.
-- Contrato actual: `schemaVersion: 3`; `WorldSnapshotV3.byWorkspace`; `WorkspaceSnapshotV3` / `WorkspaceSliceV3` con `workspaceId` canónico (`tenantId` alias; deben coincidir).
-- `migrateV2toV3` + cadena `migrateToCurrent` (V0/V1/V2→V3; V3 idempotente). Validadores estrictos; corruptos/cruzados no se escriben; sellado solo en bootstrap/migración.
-- Adaptadores JSON/localStorage, carga, escritura, runtime (`mundoRuntimeDesdeSnapshot`).
-- Pruebas: `tests/e3b-snapshot-v3.test.js`; suite 197/197. Smoke bootstrap/V2→V3/JSON/localStorage/aislamiento/acme/corrupto OK.
-- Docs: `00`, `01`, `02`, `04`, `05`. E3B pendiente de revisión. Sin E3C, sin RBAC masivo, sin Forja Training, sin merge.
-
-## 2026-09-22 — E3B revisión B5–B8 (mismo PR #16)
-
-- Rama: `cursor/e3-forkza-core-boundaries-ac33` desde tip E3B `f33f229`.
-- B5: fábricas de dominio nacen con `workspaceId` + `tenantId`.
-- B6: escritura runtime sin sellar; cruces → rechazo; entrada/destino intactos.
-- B7: mundo/slice incompleto rechazado; sin `normalizarSlice` en escritura ordinaria.
-- B8: migraciones exigen V3/V2/V1 válidos; incompletos → `PERSISTENCIA_CORRUPTA`.
-- Pruebas: `tests/e3b-brechas-b5-b8.test.js`; suite 219/219 @ `894ad47`.
-- E3B aceptada tras B5–B8 como base de E3C. Sin merge.
-
-## 2026-09-22 — E3C: RBAC de rutas, aislamiento y auditoría (mismo PR #16)
-
-- Rama: `cursor/e3-forkza-core-boundaries-ac33` desde base `894ad47`; tip previo `07336a5`.
-- `server/acceso.js` + cableado deny-by-default; catálogo permisos ampliado; `pagarDemo(tenantId, ref, fecha)` sin fallback global; `AuditSink` inyectable; `/api/me` con permisos/features; UI oculta según permisos; store-local dinámico en standalone.
-- Pruebas: `tests/e3c-rbac-rutas.test.js`; suite 242/242 en ese tip.
-
-## 2026-09-23 — E3C revisión B9–B10 (mismo PR #16)
-
-- B9: `POST /api/demo/reset` usa `hidratarTenant` + `clonarDemo(tid)`; no `adapter.reset()`/`clonarMundo()`; SOMA intacto al resetear MONKEYS (y viceversa); persistencia JSON OK.
-- B10: `tienePermiso` deniega rol desconocido antes de permisos explícitos; `/api/me` no expone permisos desconocidos ni efectivos de rol inválido.
-- Pruebas: `tests/e3c-brechas-b9-b10.test.js`; suite 250/250 @ `beecdcd`. Sin E4/E5/Forja/merge.
-
 ## 2026-09-23 — Cierre y fusión de E3
 
-- Revisión independiente del tip `eeb3e658fc47440929ba4de5fd824add6a29f31d`: B9 reproducida con SOMA intacto tras reset MONKEYS; B10 reproducida con rol desconocido + permiso explícito → 403 y sin mutación.
-- PR #16 marcado listo y fusionado por squash en `main` @ `9fb34147e75449aaef69a94d232b1f4ea2afee38`.
-- Verificación posterior sobre `main`: `npm test` 250/250; `git diff --check` limpio; todos los archivos de contexto < 7.000 caracteres.
-- E3 queda cerrada. E4, E5 y Forja Training no iniciados.
+- Revisión tip `eeb3e658`: B9 SOMA intacto tras reset MONKEYS; B10 rol desconocido → 403.
+- PR #16 fusionado squash → `main` @ `9fb3414`. Suite 250/250. E4/E5/Forja no iniciados.
 
 ## 2026-09-23 — Hotfix: grafo browser-safe en demo Pages
 
-- Rama: `cursor/hotfix-pages-standalone-auth` desde `main` @ `f90ef2c` (250/250 Node).
-- Causa: Pages cargaba `store-local.js` → `auth.js` (`node:crypto`/`bcryptjs`) y barrel `persistencia/index.js` → `json.js`; `main()` abortaba antes del chat/login.
-- Fix: `engine/auth-shared.js` (LOCK_MS, MAX_FALLOS, enriquecerUsuarioSesion); `store-local` importa solo shared + `persistencia/local|estados|migraciones`; `auth.js` reexporta shared y conserva crypto/bcrypt/sesión servidor.
-- Prueba: `tests/browser-safe-imports.test.js` (grafo transitivo desde `app.js`/`store-local.js`). Suite 252/252.
-- Fusionado: PR #18 → `main` @ `2629fdc`. Sin E4/E5/Forja productivo.
+- Rama: `cursor/hotfix-pages-standalone-auth` desde `main` @ `f90ef2c`.
+- Fix: `engine/auth-shared.js`; store-local sin `node:crypto`/`bcryptjs`/barrel JSON.
+- Suite 252/252. Fusionado PR #18 → `main` @ `2629fdc`.
 
 ## 2026-09-23 — Demo web Forja Training (coach Powerlifting)
 
-- Rama: `cursor/demo-coach-powerlifting` desde `main` @ `2629fdc` (252/252).
-- Módulo estático aislado `forja-demo/` (HTML/CSS/JS modular, localStorage, sin backend/CDN/Node en navegador).
-- Persona demo: Matías Rojas · Powerlifting · workspace FORJA DEMO; grupos Inicial/Competencia; alumnos ficticios.
-- Pantallas: Inicio, Planificación, Sesión, Alumnos, Banco, Wellness, Registro, Seguimiento, Asistente FORJA.
-- Prueba nueva: `tests/forja-demo-browser-safe.test.js` (grafo + no cruce con Gestión).
-- Hechos: es demo de validación; no es Forja productivo; no inicia E4/E5; no cambia Snapshot V3; Gestión MONKEYS/SOMA intacta.
-- Docs: `01`, `04`, `05`. Sin merge.
+- Rama: `cursor/demo-coach-powerlifting` desde `main` @ `2629fdc`.
+- Módulo `forja-demo/` aislado; Matías Rojas · Powerlifting · FORJA DEMO.
+- Prueba: `tests/forja-demo-browser-safe.test.js`. Fusionado PR #19 → `main` @ `a428313`.
 
 ## 2026-09-23 — Corrección escala Test de Bienestar (demo Forja)
 
-- Rama: `cursor/demo-coach-powerlifting` (PR #19). Contrato: **5 = mejor / 1 = peor** en fatiga, sueño, dolor muscular, estrés y ánimo.
-- Alertas: dolor alto; cualquier dimensión = 1; dos o más ≤ 2. Valores 4–5 no alertan solos. Solo informa al coach.
-- Semilla/IA: eliminada escala invertida (`fatiga 5/5`, `estrés 4/5`, `fatiga ≥4`).
-- Pruebas: `tests/forja-demo-wellness-scale.test.js`. Sin E4/E5/Forja productivo/merge.
+- Incluido en PR #19. Contrato: **5 = mejor / 1 = peor**.
+- Pruebas: `tests/forja-demo-wellness-scale.test.js`. Suite base `main`: 265/265.
+
+## 2026-09-23 — Demo Forja: módulo Finanzas (ficticio)
+
+- Rama: `cursor/demo-forja-finanzas-ee6e` desde `main` @ `a428313` (265/265).
+- Alcance solo `forja-demo/`: planes → cargos → pagos, KPI CLP, filtros, ficha, alertas, auditoría, migración v1→v2, aislamiento workspace/coach/alumno.
+- No es integración bancaria ni Mercado Pago; no procesa pagos reales; no es Forja productivo; no inicia E4/E5; Gestión/MONKEYS/SOMA sin cambios funcionales.
+- Pruebas: `tests/forja-demo-finanzas.test.js`. Docs: `00`, `01`, `04`, `05`. Sin merge.
