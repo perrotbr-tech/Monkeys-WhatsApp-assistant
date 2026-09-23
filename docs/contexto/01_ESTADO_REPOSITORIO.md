@@ -17,11 +17,11 @@ Fecha de corte: 2026-09-23.
 | #12–#15 | Fusionados | E0–E2 en `main` |
 | #16 | Fusionado | E3A + E3B + E3C + B1–B10 |
 | #17 | Fusionado | Docs cierre E3 |
-| Hotfix Pages | Draft | Separación auth browser/Node |
+| #18 | Draft | Hotfix Pages: auth browser-safe |
 
 ## Resultado de la rama
 
-Sobre hotfix desde `main` @ `f90ef2c`: suite Node 252/252 (250 previas + 2 browser-safe). Validación pública Pages pendiente de merge/deploy.
+Sobre hotfix desde `main` @ `f90ef2c`: tip `b9629db`; suite Node 252/252; smoke estático MONKEYS/SOMA OK. Validación pública Pages pendiente de merge/deploy.
 
 ## Documentos maestros
 
