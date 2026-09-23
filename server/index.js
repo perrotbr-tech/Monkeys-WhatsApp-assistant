@@ -14,7 +14,7 @@ import {
   intentarLogin, usuariosConHash, hashClave, resetLocks,
 } from '../engine/auth.js';
 import {
-  crearAdaptadorJson, CARGA, PersistenciaError,
+  crearAdaptadorJson, CARGA, PersistenciaError, mundoRuntimeDesdeSnapshot,
 } from '../engine/persistencia/index.js';
 import { crearAuditSinkMemoria } from '../core/audit/sink.js';
 import { featuresDe } from '../core/features/flags.js';
@@ -250,7 +250,13 @@ export function crearApp({
   });
 
   app.post('/api/demo/reset', requireTenant, featGestion, requireAuth, requirePermission('gestion:configurar'), (req, res) => {
-    const seed = adapter ? adapter.reset() : clonarMundo();
+    let seed;
+    if (adapter) {
+      const snap = adapter.reset();
+      seed = mundoRuntimeDesdeSnapshot(snap);
+    } else {
+      seed = clonarMundo();
+    }
     memoria.hidratar(seed);
     reiniciarMotores();
     if (persist && !adapter) saveState();
