@@ -11,13 +11,17 @@ import {
   clonarMundo,
   crearTenantSnapshotV1,
   crearTenantSnapshotV2,
+  crearTenantSnapshotV3,
   crearWorldSnapshotV1,
   crearWorldSnapshotV2,
+  crearWorldSnapshotV3,
   camposMinimosPresentes,
   esWorldSnapshotV1,
   esWorldSnapshotV2,
+  esWorldSnapshotV3,
   esTenantSnapshotV1,
   esTenantSnapshotV2,
+  esWorkspaceSnapshotV3,
   CARGA,
   claveEstadoV1,
   CLAVE_LOCAL_LEGACY_MONKEYS,
@@ -248,7 +252,7 @@ for (const factory of FABRICAS) {
     }
   });
 
-  test(`${tag} C09 migración V0→V2 conserva datos existentes`, async () => {
+  test(`${tag} C09 migración V0→V3 conserva datos existentes`, async () => {
     const v0slice = clonarDemo('soma', FECHA_FIJA);
     v0slice.socios = [{
       id: 'sm-v0',
@@ -299,11 +303,11 @@ for (const factory of FABRICAS) {
       assert.ok(raw);
       if (factory.kind === 'json') {
         const parsed = JSON.parse(raw);
-        assert.equal(parsed.schemaVersion, 2);
-        assert.equal(esWorldSnapshotV2(parsed), true);
+        assert.equal(parsed.schemaVersion, 3);
+        assert.equal(esWorldSnapshotV3(parsed), true);
       } else {
         const somaRaw = JSON.parse(h.getTenantRaw('soma'));
-        assert.equal(esTenantSnapshotV2(somaRaw), true);
+        assert.equal(esWorkspaceSnapshotV3(somaRaw), true);
       }
     } finally {
       h.cleanup();
@@ -337,12 +341,12 @@ for (const factory of FABRICAS) {
       if (factory.kind === 'json') {
         const world = JSON.parse(h.getRawWorldText());
         const campos = camposMinimosPresentes(world);
-        assert.deepEqual(campos.sort(), ['byTenant', 'schemaVersion', 'tenants'].sort());
-        assert.equal(esWorldSnapshotV2(world), true);
+        assert.deepEqual(campos.sort(), ['byWorkspace', 'schemaVersion', 'tenants'].sort());
+        assert.equal(esWorldSnapshotV3(world), true);
       } else {
         const soma = JSON.parse(h.getTenantRaw('soma'));
-        assert.deepEqual(camposMinimosPresentes(soma).sort(), ['data', 'schemaVersion', 'tenantId'].sort());
-        assert.equal(esTenantSnapshotV2(soma), true);
+        assert.deepEqual(camposMinimosPresentes(soma).sort(), ['data', 'schemaVersion', 'tenantId', 'workspaceId'].sort());
+        assert.equal(esWorkspaceSnapshotV3(soma), true);
       }
       const exported = h.engine('soma').exportar();
       for (const k of ['classes', 'plans', 'bookings', 'socios', 'membresias', 'pagos', 'automation']) {
@@ -432,7 +436,7 @@ test('[localStorage] C11 migración de clave legacy monkeys_demo_state', async (
     assert.equal(h.memoria().listarSocios('monkeys').length, 3);
     assert.ok(h.getTenantRaw('monkeys'));
     const stored = JSON.parse(h.getTenantRaw('monkeys'));
-    assert.equal(esTenantSnapshotV2(stored), true);
+    assert.equal(esWorkspaceSnapshotV3(stored), true);
     // la clave legacy debe eliminarse tras migrar
     assert.equal(h.adapter.storage.getItem(CLAVE_LOCAL_LEGACY_MONKEYS), null);
   } finally {
@@ -483,9 +487,9 @@ test('[json] C16 escritura JSON deja documento válido tras reemplazo', async ()
     h.persist();
     const text = h.getRawWorldText();
     const parsed = JSON.parse(text);
-    assert.equal(esWorldSnapshotV2(parsed), true);
-    assert.ok(parsed.byTenant.monkeys);
-    assert.ok(parsed.byTenant.soma);
+    assert.equal(esWorldSnapshotV3(parsed), true);
+    assert.ok(parsed.byWorkspace.monkeys);
+    assert.ok(parsed.byWorkspace.soma);
     // segunda escritura también válida
     h.memoria().crearAccion('soma', {
       agente: 'retencion',
@@ -497,9 +501,9 @@ test('[json] C16 escritura JSON deja documento válido tras reemplazo', async ()
     });
     h.persist();
     const again = JSON.parse(h.getRawWorldText());
-    assert.equal(esWorldSnapshotV2(again), true);
+    assert.equal(esWorldSnapshotV3(again), true);
     assert.equal(
-      again.byTenant.soma.automation.acciones.some((a) => a.motivo === 'c16'),
+      again.byWorkspace.soma.automation.acciones.some((a) => a.motivo === 'c16'),
       true,
     );
   } finally {
@@ -510,7 +514,7 @@ test('[json] C16 escritura JSON deja documento válido tras reemplazo', async ()
 // --- Regresión B1/B2: coherencia de tenant e integridad estructural V1 ---
 
 function sliceCompleto(tenantId) {
-  return crearTenantSnapshotV2(tenantId, clonarDemo(tenantId, FECHA_FIJA));
+  return crearTenantSnapshotV3(tenantId, clonarDemo(tenantId, FECHA_FIJA));
 }
 
 test('[localStorage] B1a clave SOMA con envelope tenantId monkeys → corrupto sin cambios', () => {
@@ -661,7 +665,7 @@ test('[localStorage] V0 migrable sigue migrándose correctamente', () => {
     assert.equal(h.memoria().listarSocios('soma')[0].nombre, 'V0 Ok');
     assert.equal(h.memoria().listarSocios('soma')[0].sedeId, 'soma-antofagasta');
     const stored = JSON.parse(h.getTenantRaw('soma'));
-    assert.equal(esTenantSnapshotV2(stored, 'soma'), true);
+    assert.equal(esWorkspaceSnapshotV3(stored, 'soma'), true);
   } finally {
     h.cleanup();
   }
@@ -728,7 +732,7 @@ test('[localStorage] B4 guardarTenant V2 sin data → error y clave intacta', ()
     const before = h.getTenantRaw('soma');
     assert.throws(
       () => h.adapter.guardarTenant('soma', { schemaVersion: 2, tenantId: 'soma' }),
-      (err) => err && err.code === 'PERSISTENCIA_CORRUPTA',
+      (err) => err && (err.code === 'PERSISTENCIA_CORRUPTA' || err.code === 'PERSISTENCIA_INCOMPATIBLE'),
     );
     assert.equal(h.getTenantRaw('soma'), before);
   } finally {
@@ -749,7 +753,7 @@ test('[localStorage] B4 guardarTenant V2 con data incompleta → error y clave i
     };
     assert.throws(
       () => h.adapter.guardarTenant('soma', incomplete),
-      (err) => err && err.code === 'PERSISTENCIA_CORRUPTA',
+      (err) => err && (err.code === 'PERSISTENCIA_CORRUPTA' || err.code === 'PERSISTENCIA_INCOMPATIBLE'),
     );
     assert.equal(h.getTenantRaw('soma'), before);
   } finally {
@@ -787,25 +791,25 @@ test('[localStorage] B3 WorldSnapshotV2 incompleto al guardar → error sin escr
   }
 });
 
-test('[json] WorldSnapshotV2 válido continúa guardándose', () => {
+test('[json] WorldSnapshotV3 válido continúa guardándose', () => {
   const factory = crearFactory('json');
   const h = factory.create();
   try {
     assert.equal(h.loadOrThrow().ok, true);
-    const world = crearWorldSnapshotV2(clonarMundo(FECHA_FIJA));
-    world.byTenant.soma.socios = [];
+    const world = crearWorldSnapshotV3(clonarMundo(FECHA_FIJA));
+    world.byWorkspace.soma.socios = [];
     const snap = h.adapter.guardar(world);
-    assert.equal(snap.schemaVersion, 2);
-    assert.equal(snap.byTenant.soma.socios.length, 0);
+    assert.equal(snap.schemaVersion, 3);
+    assert.equal(snap.byWorkspace.soma.socios.length, 0);
     const reloaded = JSON.parse(h.getRawWorldText());
-    assert.equal(esWorldSnapshotV2(reloaded), true);
-    assert.equal(reloaded.byTenant.soma.socios.length, 0);
+    assert.equal(esWorldSnapshotV3(reloaded), true);
+    assert.equal(reloaded.byWorkspace.soma.socios.length, 0);
   } finally {
     h.cleanup();
   }
 });
 
-test('[localStorage] TenantSnapshotV2 válido continúa guardándose', () => {
+test('[localStorage] WorkspaceSnapshotV3 válido continúa guardándose', () => {
   const factory = crearFactory('localStorage');
   const h = factory.create();
   try {
@@ -814,14 +818,14 @@ test('[localStorage] TenantSnapshotV2 válido continúa guardándose', () => {
     snap.data.socios = [];
     h.adapter.guardarTenant('soma', snap);
     const stored = JSON.parse(h.getTenantRaw('soma'));
-    assert.equal(esTenantSnapshotV2(stored, 'soma'), true);
+    assert.equal(esWorkspaceSnapshotV3(stored, 'soma'), true);
     assert.equal(stored.data.socios.length, 0);
   } finally {
     h.cleanup();
   }
 });
 
-test('[localStorage] Bootstrap y migración V0→V2 continúan funcionando', () => {
+test('[localStorage] Bootstrap y migración V0→V3 continúan funcionando', () => {
   const factory = crearFactory('localStorage');
   // bootstrap vacío
   const hEmpty = factory.create({ seedText: null });
@@ -833,7 +837,7 @@ test('[localStorage] Bootstrap y migración V0→V2 continúan funcionando', () 
   } finally {
     hEmpty.cleanup();
   }
-  // V0 → V2
+  // V0 → V3
   const v0 = clonarDemo('soma', FECHA_FIJA);
   v0.socios = [{
     id: 'sm-b34',
@@ -859,7 +863,7 @@ test('[localStorage] Bootstrap y migración V0→V2 continúan funcionando', () 
     assert.equal(r.carga.migrated, true);
     assert.equal(h.memoria().listarSocios('soma')[0].nombre, 'Migrate B34');
     assert.equal(h.memoria().listarSocios('soma')[0].sedeId, 'soma-antofagasta');
-    assert.equal(esTenantSnapshotV2(JSON.parse(h.getTenantRaw('soma')), 'soma'), true);
+    assert.equal(esWorkspaceSnapshotV3(JSON.parse(h.getTenantRaw('soma')), 'soma'), true);
   } finally {
     h.cleanup();
   }

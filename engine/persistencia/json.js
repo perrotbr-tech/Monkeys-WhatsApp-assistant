@@ -8,9 +8,10 @@ import {
 import { basename, dirname, join } from 'node:path';
 import { fechaHoy } from '../dates.js';
 import { relojActivo } from '../clock.js';
-import { CARGA, PersistenciaError, CODIGOS } from './estados.js';
 import { parsearJsonSeguro, resolverCarga, bootstrapMundo } from './cargar.js';
 import { prepararMundoParaEscritura } from './escritura.js';
+import { mundoRuntimeDesdeSnapshot } from './snapshots.js';
+import { CARGA, PersistenciaError, CODIGOS } from './estados.js';
 
 /**
  * @param {{ filePath: string, clock?: object, fechaRef?: string }} opts
@@ -95,9 +96,9 @@ export function crearAdaptadorJson(opts) {
   function guardar(world) {
     const snap = escribirAtomico(world);
     cargaActual = {
-      status: CARGA.V1_VALIDO,
+      status: CARGA.V3_VALIDO,
       snapshot: snap,
-      world: snap,
+      world: mundoRuntimeDesdeSnapshot(snap),
       migrated: false,
       bootstrapped: false,
     };

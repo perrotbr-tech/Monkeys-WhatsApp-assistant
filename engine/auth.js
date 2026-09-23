@@ -1,7 +1,8 @@
 import { createHmac, timingSafeEqual, randomBytes } from 'node:crypto';
 import bcrypt from 'bcryptjs';
-import { USUARIOS_DEMO, CLAVE_DEMO } from '../data/tenants.js';
+import { USUARIOS_DEMO, CLAVE_DEMO, catalogoWorkspaces } from '../data/tenants.js';
 import { relojActivo } from './clock.js';
+import { crearContextoAcceso, vistaSesion } from '../core/identity/usuario.js';
 
 export const LOCK_MS = 10 * 60 * 1000;
 export const MAX_FALLOS = 5;
@@ -52,13 +53,19 @@ export function verificarClave(clave, hash) {
 }
 
 export function usuariosConHash(hash) {
-  return USUARIOS_DEMO.map((u) => ({
-    tenantId: u.tenantId,
-    email: u.email,
-    nombre: u.nombre,
-    rol: u.rol,
-    hash,
-  }));
+  const catalogo = catalogoWorkspaces();
+  return USUARIOS_DEMO.map((u) => {
+    const ctx = crearContextoAcceso(u, catalogo);
+    return {
+      tenantId: u.tenantId,
+      email: u.email,
+      nombre: u.nombre,
+      rol: u.rol,
+      userId: ctx.userId,
+      workspaceId: ctx.workspaceId,
+      hash,
+    };
+  });
 }
 
 export function buscarUsuario(lista, tenantId, email) {
@@ -104,6 +111,21 @@ export function parseCookies(header) {
   return out;
 }
 
+/**
+ * Enriquecimiento aditivo de identidad (E3A): userId + workspaceId.
+ * Conserva tenantId, email, nombre y rol.
+ */
+export function enriquecerUsuarioSesion(user) {
+  return vistaSesion(crearContextoAcceso({
+    tenantId: user.tenantId,
+    email: user.email,
+    nombre: user.nombre,
+    rol: user.rol,
+    userId: user.userId,
+    workspaceId: user.workspaceId,
+  }, catalogoWorkspaces()));
+}
+
 export function intentarLogin({ tenantId, email, password, usuarios, now = relojActivo().now() }) {
   const lock = estadoBloqueo(tenantId, email, now);
   if (lock.bloqueado) {
@@ -117,7 +139,7 @@ export function intentarLogin({ tenantId, email, password, usuarios, now = reloj
   limpiarFallos(tenantId, email);
   return {
     ok: true,
-    usuario: { tenantId: user.tenantId, email: user.email, nombre: user.nombre, rol: user.rol },
+    usuario: enriquecerUsuarioSesion(user),
   };
 }
 

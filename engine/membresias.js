@@ -43,11 +43,13 @@ export function vencidaMasDe(mem, fechaRef, dias = 15) {
   return d > dias;
 }
 
-export function crearMembresia({ tenantId, id, socioId, planId, inicio, plan, fechaRef }) {
+export function crearMembresia({ tenantId, workspaceId, id, socioId, planId, inicio, plan, fechaRef }) {
   const start = dayKey(inicio || fechaRef);
   const fin = dayKey(addDays(start, diasPeriodo(plan)));
+  const ws = workspaceId || tenantId;
   return {
-    tenantId,
+    workspaceId: ws,
+    tenantId: ws,
     id,
     socioId,
     planId: planId || (plan && plan.id),

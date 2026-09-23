@@ -1,17 +1,24 @@
-/** Estados de carga del contrato de persistencia E1B. */
+/** Estados de carga del contrato de persistencia (E1B–E3B). */
 
 export const CARGA = Object.freeze({
   VACIO: 'empty',
   V0_MIGABLE: 'v0_migratable',
-  /** Snapshot V1 (E1B) válido; requiere migrateV1toV2. */
+  /** Snapshot V1 (E1B) válido; requiere migrateV1toV2→V3. */
   V1_MIGABLE: 'v1_migratable',
-  /** Snapshot de la versión actual (V2) válido. */
-  V2_VALIDO: 'v2_valid',
+  /** Snapshot V2 (E2) válido; requiere migrateV2toV3. */
+  V2_MIGABLE: 'v2_migratable',
   /**
-   * Alias histórico E1B: en E2 significa “snapshot actual válido” (V2).
-   * Conservado para no romper harnesses que aún importan el nombre.
+   * Alias E2: históricamente significaba “snapshot actual válido” (entonces V2).
+   * En E3B el actual es V3; V2_VALIDO pasa a significar V2 migrable.
    */
-  V1_VALIDO: 'v2_valid',
+  V2_VALIDO: 'v2_migratable',
+  /** Snapshot de la versión actual (V3) válido. */
+  V3_VALIDO: 'v3_valid',
+  /**
+   * Alias histórico E1B/E2: “snapshot actual válido”.
+   * En E3B apunta a V3.
+   */
+  V1_VALIDO: 'v3_valid',
   CORRUPTO: 'corrupt',
 });
 

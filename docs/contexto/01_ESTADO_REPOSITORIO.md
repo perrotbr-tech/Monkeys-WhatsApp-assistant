@@ -1,41 +1,32 @@
 # Estado verificado del repositorio
 
-Fecha de corte: 2026-09-21.
+Fecha de corte: 2026-09-23.
 
 ## Repositorio y base
 
 - Repositorio: `perrotbr-tech/Monkeys-WhatsApp-assistant`.
-- `main` contiene el commit funcional de E2 `0e20df0e7382ed373c65a2f506540a2e3f7a24d7` (squash merge PR #13) y su cierre documental posterior.
-- E0, E1 y E2 terminadas y fusionadas en `main` vía PR #12 y PR #13.
-- E3 y Forja Training no iniciados.
+- `main` @ `4504c9b` (E2 cerrada; PR #12–#15).
+- Rama E3: `cursor/e3-forkza-core-boundaries-ac33` (PR draft #16 → `main`).
+- E3A cerrada en `14d24ba`.
+- E3B aceptada tras B5–B8 (base E3C: `894ad47`).
+- E3C + revisión B9–B10 en la misma rama/PR (base B9–B10: `07336a5`). Tip `beecdcd`. Pendiente de aceptación final.
+- E3 no completa hasta revisión. Sin E4/E5/Forja Training. Sin merge.
 
 ## Pull requests
 
 | PR | Estado | Notas |
 |---|---|---|
-| #12 | Fusionado | Consolidación E0+E1 → `main` @ `cf24445` |
-| #4 | Fusionado por consolidación | Multi-gimnasio SOMA (contenido en #12) |
-| #5 | Cerrado como sustituido | Socios/pagos; contenido en #12 |
-| #6 | Cerrado previamente | Docs maestros sustituidos por #8 |
-| #7–#11 | Cerrados como sustituidos | Contexto, maestro, E0, E1A, E1B → #12 |
-| #13 | Fusionado | E2 identidad/tenant config + revisiones B1–B5 → `main` @ `0e20df0` |
-| E2 | Cerrada | 152/152 pruebas; squash merge completado |
+| #12–#15 | Fusionados | E0–E2 en `main` |
+| #16 | Draft abierto | E3A + E3B + E3C + B9–B10 |
 
-## Resultado base vigente
+## Resultado de la rama
 
-Sobre el commit funcional E2 `0e20df0` y sus descendientes documentales en `main`:
-
-```bash
-npm ci && npm test
-```
-
-152/152 aprobadas. Base obligatoria para la próxima etapa.
+Pre-E3C: 219/219. E3C: 242/242. Tras B9–B10: `npm test` → 250/250.
 
 ## Documentos maestros
 
-Vigentes en `main`. E2 cerró contrato de tenant, identidad estable y Snapshot V2. E3/Forja no iniciados.
+Vigentes. Persistencia = Snapshot V3. RBAC deny-by-default. Reset demo por workspace.
 
 ## Restricción operativa
 
-Un PR por etapa. Antes de iniciar E3, crear rama desde la punta vigente de `main` (descendiente de `0e20df0`) y definir su alcance.
-1444 docs/contexto/01_ESTADO_REPOSITORIO.md
+Un PR draft por E3. No merge automático. No iniciar E4/E5/Forja.

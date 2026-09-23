@@ -9,6 +9,8 @@
  * - menu, capacidades, textosBot, aliasHistoricos
  */
 
+import { crearCatalogoWorkspaces } from '../core/organizations/workspace.js';
+
 /** @typedef {{ etiqueta: string, valor: string }} MenuOpcion */
 
 /**
@@ -55,6 +57,7 @@
  * @property {MenuOpcion[]} menu
  * @property {CapacidadesTenant} capacidades
  * @property {AliasHistoricos} aliasHistoricos
+ * @property {{ gestion: boolean, forja: boolean }} features
  */
 
 const MENU_BASE = Object.freeze([
@@ -124,6 +127,7 @@ const TENANTS_BASE = [
         'Alta Vista': 'alta-vista',
       },
     },
+    features: { gestion: true, forja: false },
   },
   {
     id: 'soma',
@@ -186,6 +190,7 @@ const TENANTS_BASE = [
         Antofagasta: 'soma-antofagasta',
       },
     },
+    features: { gestion: true, forja: false },
   },
 ];
 
@@ -205,6 +210,10 @@ function clonarTenant(t) {
     aliasHistoricos: {
       localStorageKeys: [...((t.aliasHistoricos && t.aliasHistoricos.localStorageKeys) || [])],
       sedes: { ...((t.aliasHistoricos && t.aliasHistoricos.sedes) || {}) },
+    },
+    features: {
+      gestion: !(t.features && t.features.gestion === false),
+      forja: !!(t.features && t.features.forja === true),
     },
   };
 }
@@ -333,6 +342,27 @@ export function capacidadesDe(tenant) {
   };
 }
 
+/** Features de módulo del workspace (E3A). Adaptador fuera de core. */
+export function featuresTenant(tenant) {
+  const f = (tenant && tenant.features) || {};
+  return {
+    gestion: f.gestion !== false,
+    forja: f.forja === true,
+  };
+}
+
+/**
+ * Adaptador E3A: construye un catálogo de workspaces desde la configuración activa.
+ * Core no importa data/; el catálogo se inyecta en cada uso (sin estado global en Core).
+ * @param {string[]|null} [ids]
+ */
+export function catalogoWorkspaces(ids = null) {
+  const lista = ids != null
+    ? ids
+    : idsTenantsActivos();
+  return crearCatalogoWorkspaces(lista);
+}
+
 export function menuDe(tenant) {
   const m = tenant && Array.isArray(tenant.menu) && tenant.menu.length
     ? tenant.menu
@@ -358,6 +388,10 @@ export function varsMarca(marca) {
 
 export const USUARIOS_DEMO = [
   { tenantId: 'monkeys', email: 'dueno@monkeys.demo', nombre: 'Dueña demo', rol: 'dueño' },
+  { tenantId: 'monkeys', email: 'recepcion@monkeys.demo', nombre: 'Recepción demo', rol: 'recepcion' },
+  { tenantId: 'monkeys', email: 'ventas@monkeys.demo', nombre: 'Ventas demo', rol: 'ventas' },
+  { tenantId: 'monkeys', email: 'coach@monkeys.demo', nombre: 'Coach demo', rol: 'coach' },
+  { tenantId: 'monkeys', email: 'alumno@monkeys.demo', nombre: 'Alumno demo', rol: 'alumno' },
   { tenantId: 'soma', email: 'dueno@soma.demo', nombre: 'Dueña demo', rol: 'dueño' },
   { tenantId: 'soma', email: 'coach@soma.demo', nombre: 'Coach demo', rol: 'coach' },
 ];

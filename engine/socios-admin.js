@@ -88,8 +88,10 @@ export function validarFilaSocio(row, { plans, sedes, telefonos }) {
 }
 
 export function prepararSocio(tenantId, id, datos, fechaRef) {
+  const workspaceId = (datos && datos.workspaceId) || tenantId;
   return {
-    tenantId,
+    workspaceId,
+    tenantId: workspaceId,
     id,
     nombre: datos.nombre,
     telefono: datos.telefono,

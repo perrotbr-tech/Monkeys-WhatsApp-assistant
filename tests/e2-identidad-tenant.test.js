@@ -32,6 +32,8 @@ import {
   migrateV1toV2,
   esWorldSnapshotV2,
   esTenantSnapshotV2,
+  esWorldSnapshotV3,
+  esWorkspaceSnapshotV3,
   SCHEMA_VERSION,
   CARGA,
   claveEstadoV1,
@@ -279,23 +281,23 @@ test('E2: datos ambiguos o corruptos se rechazan sin sobrescritura', () => {
   rmSync(dir, { recursive: true, force: true });
 });
 
-test('E2: JSON y localStorage mantienen conformidad V2', () => {
+test('E2: JSON y localStorage mantienen conformidad (actual V3 tras E3B)', () => {
   const dir = mkdtempSync(join(tmpdir(), 'forkza-e2j-'));
   const file = join(dir, 'data.json');
   const json = crearAdaptadorJson({ filePath: file, clock: CLOCK, fechaRef: FECHA });
   const boot = json.cargar();
   assert.equal(boot.bootstrapped, true);
-  assert.equal(boot.world.schemaVersion, SCHEMA_VERSION);
+  assert.equal(boot.snapshot.schemaVersion, SCHEMA_VERSION);
   json.guardar(boot.world);
   const re = JSON.parse(readFileSync(file, 'utf8'));
-  assert.equal(esWorldSnapshotV2(re), true);
+  assert.equal(esWorldSnapshotV3(re), true);
 
   const storage = crearStorageMemoria();
   storage.setItem(CLAVE_LOCAL_LEGACY_MONKEYS, JSON.stringify(clonarDemo('monkeys', FECHA)));
   const local = crearAdaptadorLocal({ storage, clock: CLOCK, fechaRef: FECHA });
   const lc = local.cargarTenant('monkeys');
   assert.ok(lc.status !== CARGA.CORRUPTO);
-  assert.equal(esTenantSnapshotV2(JSON.parse(storage.getItem(claveEstadoV1('monkeys'))), 'monkeys'), true);
+  assert.equal(esWorkspaceSnapshotV3(JSON.parse(storage.getItem(claveEstadoV1('monkeys'))), 'monkeys'), true);
   assert.equal(storage.getItem(CLAVE_LOCAL_LEGACY_MONKEYS), null);
   rmSync(dir, { recursive: true, force: true });
 });

@@ -16,15 +16,15 @@ El mismo despliegue sirve a varios gimnasios vía configuración de tenant, sin 
 | Código de reserva | `GYM-YYYY-NNNN` | `SOMA-YYYY-NNNN` |
 | Sedes (ids) | `felix-garcia`, `alta-vista` | `soma-antofagasta` |
 
-Persistencia: Snapshot V2 (`schemaVersion: 2`). Clave localStorage `forkza_demo_state_<tenantId>` (legacy `monkeys_demo_state` solo migración histórica).
+Persistencia: Snapshot V3 (`schemaVersion: 3`, `byWorkspace`). Clave localStorage `forkza_demo_state_<tenantId>` (legacy `monkeys_demo_state` solo migración histórica).
 
 Usuarios demo del equipo (clave `demo1234`):
 
-- `dueno@monkeys.demo`
-- `dueno@soma.demo`
+- `dueno@monkeys.demo` / `dueno@soma.demo` (propietario)
+- `recepcion@monkeys.demo`, `ventas@monkeys.demo`, `coach@monkeys.demo`, `alumno@monkeys.demo`
 - `coach@soma.demo`
 
-El asistente (`#asistente`) es público. `#dashboard` y `#automatizaciones` piden login. En GitHub Pages el login es simulado (modo demostración).
+El asistente (`#asistente`) es público. Vistas de Gestión piden login y respetan permisos RBAC (servidor = autoridad). En GitHub Pages el login es simulado (modo demostración).
 
 API: header `X-Tenant` (default `monkeys`). `GET /api/tenants/:slug/theme` entrega la marca.
 

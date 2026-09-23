@@ -6,7 +6,7 @@ import { fechaHoy } from '../dates.js';
 import { relojActivo } from '../clock.js';
 import { listarTenants } from '../../data/tenants.js';
 import { CARGA, PersistenciaError, CODIGOS } from './estados.js';
-import { sliceDe, SCHEMA_VERSION } from './snapshots.js';
+import { sliceDe, SCHEMA_VERSION, mundoRuntimeDesdeSnapshot } from './snapshots.js';
 import {
   claveEstadoV1, resolverClaveLocal, clavesLegacyLocal,
 } from './migraciones.js';
@@ -95,7 +95,7 @@ export function crearAdaptadorLocal(opts) {
   function guardarTenant(tenantId, slice) {
     const snap = escribirTenant(tenantId, slice);
     cargaActual = {
-      status: CARGA.V1_VALIDO,
+      status: CARGA.V3_VALIDO,
       tenantId,
       snapshot: snap,
       slice: sliceDe(snap, tenantId),
@@ -105,7 +105,7 @@ export function crearAdaptadorLocal(opts) {
     return snap;
   }
 
-  /** Carga el mundo componiendo tenants; bootstrap por tenant vacío. */
+  /** Carga el mundo componiendo workspaces; bootstrap por workspace vacío. */
   function cargar() {
     ultimoError = null;
     const byTenant = {};
@@ -121,11 +121,11 @@ export function crearAdaptadorLocal(opts) {
       if (r.bootstrapped) bootstrapped = true;
       if (r.migrated || r.legacyMigrated) migrated = true;
     }
-    const world = componerMundo(byTenant);
+    const worldSnap = componerMundo(byTenant);
     cargaActual = {
-      status: bootstrapped ? CARGA.VACIO : (migrated ? CARGA.V0_MIGABLE : CARGA.V1_VALIDO),
-      world,
-      snapshot: world,
+      status: bootstrapped ? CARGA.VACIO : (migrated ? CARGA.V0_MIGABLE : CARGA.V3_VALIDO),
+      world: mundoRuntimeDesdeSnapshot(worldSnap),
+      snapshot: worldSnap,
       bootstrapped,
       migrated,
     };
@@ -133,18 +133,20 @@ export function crearAdaptadorLocal(opts) {
   }
 
   function guardar(world) {
-    // Validar original antes de cualquier normalización; V1 inválido no se sanitiza
+    // Validar original antes de cualquier normalización; V3 inválido no se sanitiza
     const snap = prepararMundoParaEscritura(world);
-    for (const [id, slice] of Object.entries(snap.byTenant || {})) {
+    const map = snap.byWorkspace || {};
+    for (const [id, slice] of Object.entries(map)) {
       escribirTenant(id, {
         schemaVersion: SCHEMA_VERSION,
+        workspaceId: id,
         tenantId: id,
         data: slice,
       });
     }
     cargaActual = {
-      status: CARGA.V1_VALIDO,
-      world: snap,
+      status: CARGA.V3_VALIDO,
+      world: mundoRuntimeDesdeSnapshot(snap),
       snapshot: snap,
       migrated: false,
       bootstrapped: false,

@@ -5,6 +5,7 @@
 import { enVentana, daysAgo, parseFecha, addDays, dayKey } from '../dates.js';
 import { plantillas, aplicarPlantilla, textoValido } from '../../data/templates.js';
 import { etiquetaSedeSocio, horarioSugerido } from './sedes.js';
+import { base as baseCompartida } from './accion.js';
 
 export function crearAgenteRetencion() {
   return {
@@ -175,20 +176,7 @@ function tareaSilencioso(socio, fecha) {
 }
 
 function baseAccion({ socio, fecha, tipo, prioridad, motivo, texto }) {
-  return {
-    id: null,
-    tenantId: socio.tenantId || null,
-    agente: 'retencion',
-    tipo,
-    socioId: socio.id,
-    canal: 'simulado',
-    texto,
-    motivo,
-    prioridad,
-    estado: 'pendiente',
-    fechaISO: parseFecha(fecha).toISOString(),
-    sedeId: socio.sedeId,
-  };
+  return baseCompartida('retencion', socio, fecha, tipo, prioridad, motivo, texto);
 }
 
 function campaniaAnterior(campanias, hoy) {

@@ -1,7 +1,7 @@
 import { fechaHoy, fechaDesdeQuery } from './engine/dates.js';
 import { TENANT_DEFAULT, tenantActivo, varsMarca, USUARIOS_DEMO, CLAVE_DEMO, listarTenants, nombreSede, capacidadesDe } from './data/tenants.js';
-import { crearStoreLocal } from './engine/store-local.js';
 import { i18n } from './data/i18n.js';
+
 
 const TENANT_KEY = 'forkza_tenant';
 
@@ -35,7 +35,56 @@ let pagosFiltro = { estado: '' };
 let socioSel = null;
 let pagoMarcarId = null;
 let session = null;
+let sessionPermisos = [];
+let sessionFeatures = {};
 let standalone = false;
+
+function tienePermisoUi(permiso) {
+  return Array.isArray(sessionPermisos) && sessionPermisos.includes(permiso);
+}
+
+function aplicarVisibilidadNav() {
+  if (session) {
+    navD.classList.toggle('hidden', !tienePermisoUi('gestion:panel'));
+    navSocios.classList.toggle('hidden', !tienePermisoUi('gestion:socios:leer'));
+    navPagos.classList.toggle('hidden', !tienePermisoUi('gestion:pagos:leer'));
+    navAuto.classList.toggle('hidden', !tienePermisoUi('gestion:automatizacion'));
+  } else {
+    navD.classList.remove('hidden');
+    navSocios.classList.remove('hidden');
+    navPagos.classList.remove('hidden');
+    navAuto.classList.remove('hidden');
+  }
+  const btnAlta = document.getElementById('btn-socio-alta');
+  const btnCsv = document.getElementById('btn-csv-plantilla');
+  const puedeEscribirSocios = tienePermisoUi('gestion:socios:escribir');
+  if (btnAlta) btnAlta.classList.toggle('hidden', Boolean(session) && !puedeEscribirSocios);
+  if (btnCsv) btnCsv.classList.toggle('hidden', Boolean(session) && !tienePermisoUi('gestion:socios:leer'));
+  const csvLabel = document.querySelector('label.file-btn');
+  if (csvLabel) csvLabel.classList.toggle('hidden', Boolean(session) && !puedeEscribirSocios);
+  const btnReset = document.getElementById('btn-reset');
+  const btnRun = document.getElementById('btn-run-cycle');
+  if (btnReset) btnReset.classList.toggle('hidden', Boolean(session) && !tienePermisoUi('gestion:configurar'));
+  if (btnRun) btnRun.classList.toggle('hidden', Boolean(session) && !tienePermisoUi('gestion:automatizacion'));
+  const btnPagosCsv = document.getElementById('btn-pagos-csv');
+  if (btnPagosCsv) btnPagosCsv.classList.toggle('hidden', Boolean(session) && !tienePermisoUi('gestion:pagos:leer'));
+}
+
+async function refrescarSesion() {
+  const me = await store.me();
+  if (!me) {
+    session = null;
+    sessionPermisos = [];
+    sessionFeatures = {};
+    aplicarVisibilidadNav();
+    return null;
+  }
+  session = me.usuario || me;
+  sessionPermisos = me.permisos || (session && session.permisos) || [];
+  sessionFeatures = me.features || {};
+  aplicarVisibilidadNav();
+  return session;
+}
 
 function apiUrl(path) {
   const u = new URL(path, import.meta.url);
@@ -303,7 +352,7 @@ class StoreApi {
   async me() {
     const res = await fetch(apiUrl('./api/me'), { headers: headers() });
     if (!res.ok) return null;
-    return (await res.json()).usuario;
+    return res.json();
   }
 }
 
@@ -450,7 +499,27 @@ function route() {
     return;
   }
 
+  if (session) {
+    if (hash === 'dashboard' && !tienePermisoUi('gestion:panel')) {
+      location.hash = 'asistente';
+      return;
+    }
+    if (hash === 'automatizaciones' && !tienePermisoUi('gestion:automatizacion')) {
+      location.hash = 'asistente';
+      return;
+    }
+    if (hash === 'socios' && !tienePermisoUi('gestion:socios:leer')) {
+      location.hash = 'asistente';
+      return;
+    }
+    if (hash === 'pagos' && !tienePermisoUi('gestion:pagos:leer')) {
+      location.hash = 'asistente';
+      return;
+    }
+  }
+
   hideAllViews();
+  aplicarVisibilidadNav();
   navA.classList.toggle('is-active', hash === 'asistente' || hash === '');
   navD.classList.toggle('is-active', hash === 'dashboard');
   navAuto.classList.toggle('is-active', hash === 'automatizaciones');
@@ -803,22 +872,24 @@ async function pintarFicha(id) {
     box.appendChild(el('p', null, `${b.codigo} · ${b.clase} · ${b.estado}`));
   }
   const actions = el('div', 'form-row');
-  if (s.estado !== 'baja') {
-    const ed = el('button', null, 'Editar');
-    ed.addEventListener('click', () => abrirFormSocio(s));
-    const baja = el('button', 'ghost', 'Dar de baja');
-    baja.addEventListener('click', () => abrirBaja(s.id));
-    actions.appendChild(ed);
-    actions.appendChild(baja);
-  } else {
-    const re = el('button', null, 'Reactivar');
-    re.addEventListener('click', async () => {
-      await store.reactivarSocio(s.id);
-      renderSocios();
-    });
-    actions.appendChild(re);
+  if (tienePermisoUi('gestion:socios:escribir')) {
+    if (s.estado !== 'baja') {
+      const ed = el('button', null, 'Editar');
+      ed.addEventListener('click', () => abrirFormSocio(s));
+      const baja = el('button', 'ghost', 'Dar de baja');
+      baja.addEventListener('click', () => abrirBaja(s.id));
+      actions.appendChild(ed);
+      actions.appendChild(baja);
+    } else {
+      const re = el('button', null, 'Reactivar');
+      re.addEventListener('click', async () => {
+        await store.reactivarSocio(s.id);
+        renderSocios();
+      });
+      actions.appendChild(re);
+    }
+    box.appendChild(actions);
   }
-  box.appendChild(actions);
 }
 
 function abrirBaja(id) {
@@ -916,7 +987,7 @@ async function renderPagos() {
     tr.appendChild(el('td', null, p.estado));
     tr.appendChild(el('td', null, p.referencia || p.linkReferencia || '—'));
     const td = document.createElement('td');
-    if (p.estado === 'pendiente' || p.estado === 'vencida') {
+    if (tienePermisoUi('gestion:pagos:escribir') && (p.estado === 'pendiente' || p.estado === 'vencida')) {
       const m = el('button', 'linkish', 'Marcar pagado');
       m.addEventListener('click', () => {
         pagoMarcarId = p.id;
@@ -992,15 +1063,17 @@ async function main() {
       store = new StoreApi();
       standalone = false;
     } else {
+      const { crearStoreLocal } = await import('./engine/store-local.js');
       store = crearStoreLocal(tenant.id, localStorage, { fechaRef: fechaActiva() });
       standalone = true;
     }
   } catch {
+    const { crearStoreLocal } = await import('./engine/store-local.js');
     store = crearStoreLocal(tenant.id, localStorage, { fechaRef: fechaActiva() });
     standalone = true;
   }
 
-  session = await store.me();
+  session = await refrescarSesion();
 
   sendEl.addEventListener('click', () => send(inputEl.value));
   inputEl.addEventListener('keydown', (e) => {
@@ -1045,6 +1118,7 @@ async function main() {
       return;
     }
     session = r.usuario;
+    await refrescarSesion();
     location.hash = 'dashboard';
     route();
   });

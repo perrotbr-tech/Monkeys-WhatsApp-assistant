@@ -1,26 +1,31 @@
 /**
- * Clasificación de carga y resolución segura (vacío / V0 / V1 / V2 / corrupto).
+ * Clasificación de carga y resolución segura (vacío / V0 / V1 / V2 / V3 / corrupto).
  */
 
 import { clonar, clonarMundo, clonarDemo } from '../../data/demo.js';
-import { listarTenants } from '../../data/tenants.js';
+import { listarTenants, catalogoWorkspaces } from '../../data/tenants.js';
 import { fechaHoy } from '../dates.js';
 import { relojActivo } from '../clock.js';
 import { CARGA, PersistenciaError, CODIGOS } from './estados.js';
 import {
   SCHEMA_VERSION,
   SCHEMA_VERSION_V1,
-  crearWorldSnapshotV2,
-  crearTenantSnapshotV2,
+  SCHEMA_VERSION_V2,
+  crearWorldSnapshotV3,
+  crearWorkspaceSnapshotV3,
   esWorldSnapshotV1,
   esTenantSnapshotV1,
   esWorldSnapshotV2,
   esTenantSnapshotV2,
+  esWorldSnapshotV3,
+  esWorkspaceSnapshotV3,
   sliceDe,
-  validarSliceV2,
-  coherenciaTenantIds,
+  validarSliceV3,
+  coherenciaWorkspaceIds,
+  mundoRuntimeDesdeSnapshot,
 } from './snapshots.js';
-import { migrateV0toV1, migrateV1toV2, migrateToCurrent } from './migraciones.js';
+import { migrateV1toV2, migrateV2toV3, migrateToCurrent } from './migraciones.js';
+import { proyectarRuntimeAWorldV3 } from './escritura.js';
 
 /**
  * Parsea texto JSON. Fallo de parse → corrupto (no demo).
@@ -57,16 +62,18 @@ export function parsearJsonSeguro(text) {
 /**
  * @param {unknown} value
  * @param {'world'|'tenant'} kind
- * @param {{ expectedTenantId?: string }} [opts]
+ * @param {{ expectedTenantId?: string, catalogo?: object }} [opts]
  * @returns {typeof CARGA[keyof typeof CARGA]}
  */
 export function clasificarDocumento(value, kind, opts = {}) {
   if (value == null) return CARGA.VACIO;
   if (typeof value !== 'object' || Array.isArray(value)) return CARGA.CORRUPTO;
 
+  const catalogo = opts.catalogo || catalogoWorkspaces();
   const version = value.schemaVersion;
   if (version != null
     && version !== SCHEMA_VERSION
+    && version !== SCHEMA_VERSION_V2
     && version !== SCHEMA_VERSION_V1) {
     return CARGA.CORRUPTO;
   }
@@ -74,7 +81,12 @@ export function clasificarDocumento(value, kind, opts = {}) {
   if (kind === 'world') {
     if (version === SCHEMA_VERSION) {
       if (Object.prototype.hasOwnProperty.call(value, 'data')) return CARGA.CORRUPTO;
-      return esWorldSnapshotV2(value) ? CARGA.V2_VALIDO : CARGA.CORRUPTO;
+      if (Object.prototype.hasOwnProperty.call(value, 'byTenant')) return CARGA.CORRUPTO;
+      return esWorldSnapshotV3(value, catalogo) ? CARGA.V3_VALIDO : CARGA.CORRUPTO;
+    }
+    if (version === SCHEMA_VERSION_V2) {
+      if (Object.prototype.hasOwnProperty.call(value, 'data')) return CARGA.CORRUPTO;
+      return esWorldSnapshotV2(value) ? CARGA.V2_MIGABLE : CARGA.CORRUPTO;
     }
     if (version === SCHEMA_VERSION_V1) {
       if (Object.prototype.hasOwnProperty.call(value, 'data')) return CARGA.CORRUPTO;
@@ -89,45 +101,61 @@ export function clasificarDocumento(value, kind, opts = {}) {
     return CARGA.CORRUPTO;
   }
 
-  // tenant
+  // tenant / workspace
+  const expected = opts.expectedTenantId;
   if (version === SCHEMA_VERSION) {
     if (Object.prototype.hasOwnProperty.call(value, 'byTenant')) return CARGA.CORRUPTO;
-    return esTenantSnapshotV2(value, opts.expectedTenantId) ? CARGA.V2_VALIDO : CARGA.CORRUPTO;
+    if (Object.prototype.hasOwnProperty.call(value, 'byWorkspace')) return CARGA.CORRUPTO;
+    return esWorkspaceSnapshotV3(value, expected, catalogo) ? CARGA.V3_VALIDO : CARGA.CORRUPTO;
+  }
+  if (version === SCHEMA_VERSION_V2) {
+    if (Object.prototype.hasOwnProperty.call(value, 'byTenant')) return CARGA.CORRUPTO;
+    return esTenantSnapshotV2(value, expected) ? CARGA.V2_MIGABLE : CARGA.CORRUPTO;
   }
   if (version === SCHEMA_VERSION_V1) {
     if (Object.prototype.hasOwnProperty.call(value, 'byTenant')) return CARGA.CORRUPTO;
-    return esTenantSnapshotV1(value, opts.expectedTenantId) ? CARGA.V1_MIGABLE : CARGA.CORRUPTO;
+    return esTenantSnapshotV1(value, expected) ? CARGA.V1_MIGABLE : CARGA.CORRUPTO;
   }
   if (Object.prototype.hasOwnProperty.call(value, 'byTenant')) return CARGA.CORRUPTO;
   return CARGA.V0_MIGABLE;
 }
 
 /**
- * Resuelve un documento ya parseado a snapshot actual (V2), bootstrap o error.
+ * Resuelve un documento ya parseado a snapshot actual (V3), bootstrap o error.
  * Nunca reemplaza datos corruptos con demo.
  *
  * @param {object|null|undefined} value
- * @param {{ kind: 'world'|'tenant', tenantId?: string, fechaRef?: string, clock?: object }} opts
+ * @param {{ kind: 'world'|'tenant', tenantId?: string, workspaceId?: string, fechaRef?: string, clock?: object, catalogo?: object }} opts
  */
 export function resolverCarga(value, opts) {
   const kind = opts.kind;
   const clock = opts.clock || relojActivo();
   const fechaRef = opts.fechaRef || fechaHoy(undefined, clock);
-  const status = clasificarDocumento(value, kind, { expectedTenantId: opts.tenantId });
+  const catalogo = opts.catalogo || catalogoWorkspaces();
+  const workspaceId = opts.workspaceId || opts.tenantId;
+  const status = clasificarDocumento(value, kind, {
+    expectedTenantId: workspaceId,
+    catalogo,
+  });
 
   if (status === CARGA.VACIO) {
     if (kind === 'world') {
-      const world = crearWorldSnapshotV2(clonarMundo(fechaRef));
-      return { status, snapshot: world, world, bootstrapped: true };
-    }
-    const tenantId = opts.tenantId;
-    if (!tenantId) {
+      const snap = crearWorldSnapshotV3(clonarMundo(fechaRef), catalogo);
       return {
-        status: CARGA.CORRUPTO,
-        error: new PersistenciaError(CODIGOS.CORRUPTO, 'tenant vacío sin tenantId'),
+        status,
+        snapshot: snap,
+        world: mundoRuntimeDesdeSnapshot(snap),
+        bootstrapped: true,
       };
     }
-    const snap = crearTenantSnapshotV2(tenantId, clonarDemo(tenantId, fechaRef));
+    const id = workspaceId;
+    if (!id) {
+      return {
+        status: CARGA.CORRUPTO,
+        error: new PersistenciaError(CODIGOS.CORRUPTO, 'tenant vacío sin workspaceId'),
+      };
+    }
+    const snap = crearWorkspaceSnapshotV3(id, clonarDemo(id, fechaRef), catalogo);
     return {
       status,
       snapshot: snap,
@@ -142,6 +170,7 @@ export function resolverCarga(value, opts) {
       error: new PersistenciaError(
         value && value.schemaVersion != null
           && value.schemaVersion !== SCHEMA_VERSION
+          && value.schemaVersion !== SCHEMA_VERSION_V2
           && value.schemaVersion !== SCHEMA_VERSION_V1
           ? CODIGOS.INCOMPATIBLE
           : CODIGOS.CORRUPTO,
@@ -150,25 +179,31 @@ export function resolverCarga(value, opts) {
     };
   }
 
-  if (status === CARGA.V2_VALIDO || status === CARGA.V1_VALIDO) {
+  if (status === CARGA.V3_VALIDO || status === CARGA.V1_VALIDO) {
     if (kind === 'world') {
-      const world = clonar(value);
-      return { status: CARGA.V2_VALIDO, snapshot: world, world, migrated: false, bootstrapped: false };
+      const snap = clonar(value);
+      return {
+        status: CARGA.V3_VALIDO,
+        snapshot: snap,
+        world: mundoRuntimeDesdeSnapshot(snap),
+        migrated: false,
+        bootstrapped: false,
+      };
     }
     const snap = clonar(value);
-    const coh = coherenciaTenantIds({
-      solicitado: opts.tenantId,
-      envelope: snap.tenantId,
-      slice: snap.data && snap.data.tenantId,
+    const coh = coherenciaWorkspaceIds({
+      solicitado: workspaceId,
+      envelope: snap.workspaceId || snap.tenantId,
+      slice: snap.data && (snap.data.workspaceId || snap.data.tenantId),
     });
-    if (!coh.ok || !validarSliceV2(snap.data, snap.tenantId).ok) {
+    if (!coh.ok || !validarSliceV3(snap.data, snap.workspaceId || snap.tenantId, null, catalogo).ok) {
       return {
         status: CARGA.CORRUPTO,
-        error: new PersistenciaError(CODIGOS.CORRUPTO, 'TenantSnapshotV2 incoherente o incompleto'),
+        error: new PersistenciaError(CODIGOS.CORRUPTO, 'WorkspaceSnapshotV3 incoherente o incompleto'),
       };
     }
     return {
-      status: CARGA.V2_VALIDO,
+      status: CARGA.V3_VALIDO,
       snapshot: snap,
       slice: clonar(snap.data),
       migrated: false,
@@ -176,20 +211,39 @@ export function resolverCarga(value, opts) {
     };
   }
 
-  // V0_MIGABLE o V1_MIGABLE
+  // V0_MIGABLE, V1_MIGABLE o V2_MIGABLE
   try {
     let snapshot;
-    if (status === CARGA.V1_MIGABLE) {
-      snapshot = migrateV1toV2(value, {
+    if (status === CARGA.V2_MIGABLE || status === CARGA.V2_VALIDO) {
+      snapshot = migrateV2toV3(value, {
         kind,
-        tenantId: opts.tenantId,
+        tenantId: workspaceId,
+        workspaceId,
+        catalogo,
+        fechaRef,
+        clock,
+      });
+    } else if (status === CARGA.V1_MIGABLE) {
+      const v2 = migrateV1toV2(value, {
+        kind,
+        tenantId: workspaceId,
+        fechaRef,
+        clock,
+      });
+      snapshot = migrateV2toV3(v2, {
+        kind,
+        tenantId: workspaceId,
+        workspaceId,
+        catalogo,
         fechaRef,
         clock,
       });
     } else {
       snapshot = migrateToCurrent(value, {
         kind,
-        tenantId: opts.tenantId,
+        tenantId: workspaceId,
+        workspaceId,
+        catalogo,
         fechaRef,
         clock,
       });
@@ -198,7 +252,7 @@ export function resolverCarga(value, opts) {
       return {
         status,
         snapshot,
-        world: snapshot,
+        world: mundoRuntimeDesdeSnapshot(snapshot),
         migrated: true,
         bootstrapped: false,
       };
@@ -206,7 +260,7 @@ export function resolverCarga(value, opts) {
     return {
       status,
       snapshot,
-      slice: sliceDe(snapshot, opts.tenantId || snapshot.tenantId),
+      slice: sliceDe(snapshot, workspaceId || snapshot.workspaceId || snapshot.tenantId),
       migrated: true,
       bootstrapped: false,
     };
@@ -214,37 +268,43 @@ export function resolverCarga(value, opts) {
     const code = err && err.code === CODIGOS.AMBIGUO ? CODIGOS.AMBIGUO : CODIGOS.CORRUPTO;
     return {
       status: CARGA.CORRUPTO,
-      error: new PersistenciaError(code, 'migración a V2 fallida', { cause: err }),
+      error: new PersistenciaError(code, 'migración a V3 fallida', { cause: err }),
     };
   }
 }
 
 /**
- * Bootstrap explícito de mundo demo (reset).
+ * Bootstrap explícito de mundo demo (reset) → V3.
  */
 export function bootstrapMundo(opts = {}) {
   const clock = opts.clock || relojActivo();
   const fechaRef = opts.fechaRef || fechaHoy(undefined, clock);
-  return crearWorldSnapshotV2(clonarMundo(fechaRef));
+  const catalogo = opts.catalogo || catalogoWorkspaces();
+  return crearWorldSnapshotV3(clonarMundo(fechaRef), catalogo);
 }
 
 /**
- * Bootstrap explícito de tenant demo (reset).
+ * Bootstrap explícito de workspace/tenant demo (reset) → V3.
  */
 export function bootstrapTenant(tenantId, opts = {}) {
   const clock = opts.clock || relojActivo();
   const fechaRef = opts.fechaRef || fechaHoy(undefined, clock);
-  return crearTenantSnapshotV2(tenantId, clonarDemo(tenantId, fechaRef));
+  const catalogo = opts.catalogo || catalogoWorkspaces();
+  return crearWorkspaceSnapshotV3(tenantId, clonarDemo(tenantId, fechaRef), catalogo);
 }
+
+/** Alias E3B. */
+export const bootstrapWorkspace = bootstrapTenant;
 
 /**
- * Compone un WorldSnapshotV2 a partir de slices por tenant.
+ * Compone un WorldSnapshotV3 a partir de slices por workspace.
+ * No sella: cada slice debe ya ser V3 válido.
  */
-export function componerMundo(byTenantSlices, tenants) {
-  return crearWorldSnapshotV2({
+export function componerMundo(byTenantSlices, tenants, catalogo) {
+  return proyectarRuntimeAWorldV3({
     tenants: tenants || listarTenants(),
-    byTenant: byTenantSlices,
-  });
+    byWorkspace: byTenantSlices,
+  }, catalogo || catalogoWorkspaces());
 }
 
-export { CARGA, PersistenciaError, CODIGOS, migrateV0toV1, migrateV1toV2 };
+export { CARGA, PersistenciaError, CODIGOS, migrateToCurrent, migrateV2toV3 };

@@ -2,9 +2,10 @@ import { crearEngine } from './conversation.js';
 import { crearAutomation } from './automation.js';
 import { fechaHoy } from './dates.js';
 import { relojActivo } from './clock.js';
-import { USUARIOS_DEMO, CLAVE_DEMO } from '../data/tenants.js';
+import { USUARIOS_DEMO, CLAVE_DEMO, catalogoWorkspaces, featuresTenant, tenantActivo } from '../data/tenants.js';
+import { enriquecerUsuarioSesion, LOCK_MS, MAX_FALLOS } from './auth.js';
+import { crearContextoAcceso } from '../core/identity/usuario.js';
 import { combinarPersistencia } from './store.js';
-import { LOCK_MS, MAX_FALLOS } from './auth.js';
 import {
   crearAdaptadorLocal,
   claveEstadoV1,
@@ -110,8 +111,8 @@ export function crearStoreLocal(tenantId, storage, opts = {}) {
       return { modo: 'demo', pasarela: 'Pasarela en modo demostración', datosBancarios: engine.datosBancarios() };
     },
     async getPagoDemo(ref) {
-      const hit = engine.memoria.buscarPagoEnTenants(ref);
-      return hit ? hit.pago : null;
+      const pago = engine.memoria.pagoPorReferencia(engine.tenantId, ref);
+      return pago || null;
     },
     async plantillaCsv() {
       return 'nombre,telefono,email,plan,fechaInicio,sede\n';
@@ -157,7 +158,7 @@ export function crearStoreLocal(tenantId, storage, opts = {}) {
       }
       delete lock[k];
       storage.setItem(lockKey, JSON.stringify(lock));
-      const usuario = { email: user.email, nombre: user.nombre, rol: user.rol, tenantId: user.tenantId };
+      const usuario = enriquecerUsuarioSesion(user);
       storage.setItem('forkza_session', JSON.stringify(usuario));
       return { ok: true, usuario };
     },
@@ -166,7 +167,21 @@ export function crearStoreLocal(tenantId, storage, opts = {}) {
         const raw = storage.getItem('forkza_session');
         if (!raw) return null;
         const u = JSON.parse(raw);
-        return u.tenantId === tenantId ? u : null;
+        if (u.tenantId !== tenantId) return null;
+        const ctx = crearContextoAcceso(u, catalogoWorkspaces());
+        const t = tenantActivo(tenantId);
+        return {
+          usuario: {
+            email: ctx.email,
+            nombre: ctx.nombre,
+            rol: ctx.rol,
+            tenantId: ctx.tenantId,
+            userId: ctx.userId,
+            workspaceId: ctx.workspaceId,
+          },
+          permisos: [...(ctx.permisos || [])],
+          features: featuresTenant(t),
+        };
       } catch {
         return null;
       }

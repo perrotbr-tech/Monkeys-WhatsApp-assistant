@@ -2,55 +2,57 @@
 
 ## Prioridad alta
 
-### Posible cruce de tenant en pagos demo
-
-Las rutas públicas de pago pueden buscar la referencia en todos los tenants. Fuera de alcance E2; pendiente post-E2.
-
 ### Webhook de pagos
 
-Sin verificación de firma, replay ni idempotencia. No listo para producción.
+Sin verificación de firma, replay ni idempotencia. No listo para producción (E5).
 
-### Persistencia demo (E1B/E2)
+### Persistencia demo (E1B–E3B)
 
-Contrato V2 con migración y rechazo de corruptos. Sigue siendo demo: sin concurrencia multi-proceso, auditoría inmutable ni recuperación productiva. Postgres/Supabase fuera de alcance.
+Contrato V3 con migración V0–V2→V3 y rechazo de corruptos/cruzados. Sigue siendo demo: sin concurrencia multi-proceso, auditoría inmutable ni recuperación productiva. Postgres/Supabase fuera de alcance. AuditSink E3C en memoria inyectable; no persiste en snapshots (Snapshot V4 fuera de alcance).
 
 ## Prioridad media
 
-- Usuarios demo estáticos; sin aprovisionamiento real (E2 registra tenants por config, no usuarios productivos).
-- Interfaz sin RBAC granular.
+- Usuarios demo estáticos ampliados (dueño, recepción, ventas, coach, alumno en MONKEYS); sin tablas productivas de memberships.
+- Runtime aún proyecta `byTenant` desde `byWorkspace`; consumidores legacy no renombrados de golpe.
 - Sin adaptador WhatsApp Cloud API aunque la salida respeta límites.
 - Mercado Pago con contrato/adaptador, sin integración productiva segura.
 - Escritura JSON de proceso único.
 - Sin observabilidad, colas ni política de respaldo formal.
 - UI (`app.js`) aún puede usar reloj de pared en timestamps visibles.
+- Acciones históricas seed: tras V3 llevan `workspaceId`; no se inventan actor/destinatario/origen ausentes.
 
-## Cerrado en E0–E2
+## Cerrado en E0–E3C (parcial)
 
-- E0: línea base 68/68 (dependencia de fecha en chat).
-- E1A: Clock determinístico.
-- E1B: Store, snapshots V1, conformidad JSON/localStorage.
-- PR #12 fusionado en `main` @ `cf24445`.
-- E2: contrato de tenant, IDs estables de sede, registro dinámico, Snapshot V2, migración V1→V2.
-- E2 B1–B4: validación semántica V2 de `sedeId`; edición de socios con resolución/rechazo; agentes con nombres visibles; filtros panel por ID estable.
-- E2 B5: `WorldSnapshotV2.tenants` es fuente de verdad para validar `sedeId` (no el catálogo global).
+- E0–E2 en `main` (PR #12–#15).
+- E3A cerrada en `14d24ba` (PR #16): `core/` + adaptadores; B1–B4.
+- E3B aceptada tras B5–B8: Snapshot V3 + escritura sin sellar/normalizar.
+- E3C (PR #16): RBAC deny-by-default; pagos demo/webhook sin cruce; auditoría; `/api/me` permisos/features; UI oculta.
+- E3C B9–B10: reset solo del workspace solicitado; rol desconocido → 403 aunque traiga permisos explícitos.
+- Brecha pagos cross-tenant demo: cerrada en E3C (sin fallback global).
+- Brecha reset cross-tenant: cerrada en B9.
 
 ## Decisiones confirmadas
 
 - Nombre paraguas: FORKZA IA; módulos Forkza Gestión y Forja Training.
 - Multi-tenant desde el núcleo; coach conserva control.
-- MONKEYS/SOMA son configuración de tenant, no identidad global del producto.
-- Snapshots: V1 histórico; V2 actual con `sedeId` estable. No se altera el significado de V1.
-- En `WorldSnapshotV2`, el catálogo `tenants` persistido es la fuente de verdad para validar `sedeId`; el catálogo global solo respalda cuando no hay catálogo persistido (`TenantSnapshotV2`).
-- Demo solo en vacío, reset explícito o migración de campo documentada.
-- Motor y servidor no bifurcan por marca (`monkeys`/`soma`). Siguen existiendo literales en fixtures demo (`data/socios.js`, `data/membresias-demo.js`). La excepción de migración histórica es la clave legacy `monkeys_demo_state`.
+- MONKEYS/SOMA son configuración, no identidad global; `workspaceId === tenantId` en esta migración.
+- Snapshots: V1/V2 históricos; **V3 actual** (`byWorkspace`). `tenantId` alias compatible; si ambos existen deben coincidir.
+- `sellarWorkspaceEnSlice` / `normalizarSlice` solo en bootstrap y migraciones documentadas; nunca en escritura runtime.
+- Catálogo de workspaces inyectable; Core sin marcas hardcodeadas; `acme` vía registro dinámico.
+- `userId` identifica al usuario; workspace/rol/permisos son contexto de pertenencia.
+- Features: `gestion: true`, `forja: false`. Feature desconocido = deshabilitado.
+- Acciones nuevas: `origenDominio: gestion`; mensaje → `socio`; tarea → `equipo`.
+- Demo solo en vacío, reset explícito o migración documentada. V3/V2/V1 declarados incompletos no se rellenan en silencio.
+- RBAC: propietario/admin = Gestión completa; recepción sin config/automatización/pagos escribir; ventas lee pagos; entrenador lee reservas/socios; alumno sin Gestión interna.
 
-## Decisiones aún abiertas
+## Decisiones aún abiertas / pendientes
 
+- Revisión independiente de E3C antes de declarar E3 completa.
+- Renombre masivo de APIs/params `tenantId` → `workspaceId`.
 - Base de datos y proveedor de despliegue.
-- Modelo final de RBAC y alcance por sede/equipo.
-- `workspaceId` transversal (E3).
 - Contrato Gestión ↔ Training; WhatsApp/pagos/archivos productivos.
 - Alcance del primer MVP de Forja Training.
+- Firma real Mercado Pago, idempotencia y Snapshot V4 (E5 / fuera de E3).
 
 ## Regla de interpretación
 

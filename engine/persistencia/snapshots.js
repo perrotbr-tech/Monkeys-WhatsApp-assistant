@@ -1,14 +1,17 @@
-/** Snapshots versionados: V1 (histórico) y V2 (identidad estable de sedes). */
+/** Snapshots versionados: V1/V2 históricos; V3 actual (workspaceId canónico). */
 
 import { clonar } from '../../data/demo.js';
-import { listarTenants, buscarTenant } from '../../data/tenants.js';
+import { listarTenants, buscarTenant, catalogoWorkspaces } from '../../data/tenants.js';
+import { crearCatalogoWorkspaces } from '../../core/organizations/workspace.js';
 
-/** Versión actual del contrato persistido. */
-export const SCHEMA_VERSION = 2;
+/** Versión actual del contrato persistido (E3B). */
+export const SCHEMA_VERSION = 3;
+/** Versión histórica E2 (sedeId estable). */
+export const SCHEMA_VERSION_V2 = 2;
 /** Versión histórica E1B; solo lectura/migración. */
 export const SCHEMA_VERSION_V1 = 1;
 
-/** Campos mínimos obligatorios de un Slice (V1 y V2). */
+/** Campos mínimos obligatorios de un Slice (V1–V3). */
 export const CAMPOS_SLICE = Object.freeze([
   'classes',
   'plans',
@@ -20,6 +23,21 @@ export const CAMPOS_SLICE = Object.freeze([
   'membresias',
   'pagos',
   'automation',
+]);
+
+/** Entidades de negocio que llevan workspaceId en V3. */
+export const CAMPOS_ENTIDAD_V3 = Object.freeze([
+  'classes',
+  'plans',
+  'bookings',
+  'leads',
+  'conversations',
+  'socios',
+  'asistencias',
+  'membresias',
+  'pagos',
+  'referidos',
+  'usuariosEquipo',
 ]);
 
 const CAMPOS_ARRAY = Object.freeze(CAMPOS_SLICE.filter((k) => k !== 'automation'));
@@ -259,17 +277,17 @@ export function crearTenantSnapshotV1(tenantId, slice) {
 }
 
 /**
- * Snapshot actual (V2).
+ * Snapshot V2 (histórico E2).
  * @param {object} world
  */
 export function crearWorldSnapshotV2(world) {
   const byTenant = {};
-  const src = (world && world.byTenant) || {};
+  const src = (world && world.byTenant) || (world && world.byWorkspace) || {};
   for (const [id, slice] of Object.entries(src)) {
     byTenant[id] = normalizarSlice(slice, id);
   }
   return {
-    schemaVersion: SCHEMA_VERSION,
+    schemaVersion: SCHEMA_VERSION_V2,
     tenants: clonar((world && world.tenants) || listarTenants()),
     byTenant,
   };
@@ -281,15 +299,11 @@ export function crearWorldSnapshotV2(world) {
  */
 export function crearTenantSnapshotV2(tenantId, slice) {
   return {
-    schemaVersion: SCHEMA_VERSION,
+    schemaVersion: SCHEMA_VERSION_V2,
     tenantId,
     data: normalizarSlice(slice, tenantId),
   };
 }
-
-/** Alias: creación del snapshot actual. */
-export const crearWorldSnapshot = crearWorldSnapshotV2;
-export const crearTenantSnapshot = crearTenantSnapshotV2;
 
 function esWorldDeVersion(obj, version, validarSlice) {
   if (!obj || typeof obj !== 'object') return false;
@@ -331,24 +345,28 @@ export function esTenantSnapshotV1(obj, expectedTenantId) {
 
 /** Valida WorldSnapshotV2 (schemaVersion === 2) con sedeId semántico. */
 export function esWorldSnapshotV2(obj) {
-  return esWorldDeVersion(obj, SCHEMA_VERSION, validarSliceV2);
+  return esWorldDeVersion(obj, SCHEMA_VERSION_V2, validarSliceV2);
 }
 
 /** Valida TenantSnapshotV2 con sedeId semántico. */
 export function esTenantSnapshotV2(obj, expectedTenantId) {
-  return esTenantDeVersion(obj, SCHEMA_VERSION, expectedTenantId, validarSliceV2);
+  return esTenantDeVersion(obj, SCHEMA_VERSION_V2, expectedTenantId, validarSliceV2);
 }
 
 /**
- * Extrae Slice; normaliza solo si no es un TenantSnapshot ya validado.
+ * Extrae Slice; normaliza solo si no es un Tenant/WorkspaceSnapshot ya validado.
  * @param {object} snap
  * @param {string} [tenantId]
  */
 export function sliceDe(snap, tenantId) {
-  if (snap && (snap.schemaVersion === SCHEMA_VERSION || snap.schemaVersion === SCHEMA_VERSION_V1) && snap.data) {
+  if (snap && snap.data && (
+    snap.schemaVersion === SCHEMA_VERSION
+    || snap.schemaVersion === SCHEMA_VERSION_V2
+    || snap.schemaVersion === SCHEMA_VERSION_V1
+  )) {
     return clonar(snap.data);
   }
-  return normalizarSlice(snap, tenantId || (snap && snap.tenantId));
+  return normalizarSlice(snap, tenantId || (snap && (snap.workspaceId || snap.tenantId)));
 }
 
 /**
@@ -357,13 +375,297 @@ export function sliceDe(snap, tenantId) {
  * @returns {string[]}
  */
 export function camposMinimosPresentes(snap) {
-  if (snap && (snap.schemaVersion === SCHEMA_VERSION || snap.schemaVersion === SCHEMA_VERSION_V1)
+  if (snap && snap.schemaVersion === SCHEMA_VERSION && snap.byWorkspace && !snap.data) {
+    return ['schemaVersion', 'tenants', 'byWorkspace'].filter((k) => k in snap);
+  }
+  if (snap && (snap.schemaVersion === SCHEMA_VERSION_V2 || snap.schemaVersion === SCHEMA_VERSION_V1)
     && snap.byTenant && !snap.data) {
     return ['schemaVersion', 'tenants', 'byTenant'].filter((k) => k in snap);
   }
-  if (snap && (snap.schemaVersion === SCHEMA_VERSION || snap.schemaVersion === SCHEMA_VERSION_V1)
+  if (snap && snap.schemaVersion === SCHEMA_VERSION && snap.data && snap.workspaceId) {
+    return ['schemaVersion', 'workspaceId', 'tenantId', 'data'].filter((k) => k in snap);
+  }
+  if (snap && (snap.schemaVersion === SCHEMA_VERSION_V2 || snap.schemaVersion === SCHEMA_VERSION_V1)
     && snap.data && snap.tenantId) {
     return ['schemaVersion', 'tenantId', 'data'].filter((k) => k in snap);
   }
   return CAMPOS_SLICE.filter((k) => k in (snap || {}));
 }
+
+/**
+ * Coherencia workspace/tenant (E3B).
+ * @param {{ solicitado?: string, envelope?: string, slice?: string, workspace?: string }} ids
+ */
+export function coherenciaWorkspaceIds(ids) {
+  const vals = [ids.solicitado, ids.envelope, ids.slice, ids.workspace]
+    .filter((v) => v != null && v !== '');
+  if (vals.length === 0) return { ok: false, reason: 'workspaceId_ausente' };
+  const first = vals[0];
+  for (const v of vals) {
+    if (v !== first) return { ok: false, reason: 'workspace_tenant_incoherente' };
+  }
+  return { ok: true };
+}
+
+/**
+ * Sella workspaceId (+ tenantId alias) en entidades de un slice.
+ * Solo bootstrap / migración documentada.
+ * @param {object} slice
+ * @param {string} workspaceId
+ * @returns {object}
+ */
+export function sellarWorkspaceEnSlice(slice, workspaceId) {
+  const s = normalizarSlice(slice, workspaceId);
+  s.workspaceId = workspaceId;
+  s.tenantId = workspaceId;
+
+  function sellarRow(row) {
+    if (!row || typeof row !== 'object') return row;
+    return {
+      ...row,
+      workspaceId,
+      tenantId: workspaceId,
+    };
+  }
+
+  for (const campo of CAMPOS_ENTIDAD_V3) {
+    if (!Array.isArray(s[campo])) continue;
+    s[campo] = s[campo].map(sellarRow);
+  }
+
+  if (s.automation && typeof s.automation === 'object') {
+    if (Array.isArray(s.automation.acciones)) {
+      s.automation.acciones = s.automation.acciones.map(sellarRow);
+    }
+    if (Array.isArray(s.automation.campanias)) {
+      s.automation.campanias = s.automation.campanias.map((camp) => {
+        if (!camp || typeof camp !== 'object') return camp;
+        const out = sellarRow(camp);
+        if (Array.isArray(camp.acciones)) {
+          out.acciones = camp.acciones.map(sellarRow);
+        }
+        return out;
+      });
+    }
+  }
+  return s;
+}
+
+/**
+ * Valida workspaceId en entidades V3 (obligatorio y coherente).
+ * clasificacion anidada en campañas no exige workspaceId propio (deriva del padre).
+ * @param {object} slice
+ * @param {string} workspaceId
+ */
+export function validarWorkspaceEnEntidades(slice, workspaceId) {
+  function checkRow(row, path) {
+    if (!row || typeof row !== 'object') {
+      return { ok: false, reason: `fila_invalida:${path}` };
+    }
+    if (row.workspaceId == null || row.workspaceId === '') {
+      return { ok: false, reason: `workspaceId_ausente:${path}` };
+    }
+    if (typeof row.workspaceId !== 'string') {
+      return { ok: false, reason: `workspaceId_tipo:${path}` };
+    }
+    if (row.workspaceId !== workspaceId) {
+      return { ok: false, reason: `workspaceId_cruzado:${path}` };
+    }
+    if (row.tenantId != null && row.tenantId !== '' && row.tenantId !== workspaceId) {
+      return { ok: false, reason: `tenantId_cruzado:${path}` };
+    }
+    return { ok: true };
+  }
+
+  for (const campo of CAMPOS_ENTIDAD_V3) {
+    if (!Object.prototype.hasOwnProperty.call(slice, campo)) continue;
+    if (!Array.isArray(slice[campo])) {
+      return { ok: false, reason: `tipo_invalido:${campo}` };
+    }
+    for (let i = 0; i < slice[campo].length; i += 1) {
+      const v = checkRow(slice[campo][i], `${campo}[${i}]`);
+      if (!v.ok) return v;
+    }
+  }
+
+  const auto = slice.automation;
+  if (auto && typeof auto === 'object') {
+    if (Array.isArray(auto.acciones)) {
+      for (let i = 0; i < auto.acciones.length; i += 1) {
+        const v = checkRow(auto.acciones[i], `automation.acciones[${i}]`);
+        if (!v.ok) return v;
+      }
+    }
+    if (Array.isArray(auto.campanias)) {
+      for (let c = 0; c < auto.campanias.length; c += 1) {
+        const camp = auto.campanias[c];
+        const vCamp = checkRow(camp, `automation.campanias[${c}]`);
+        if (!vCamp.ok) return vCamp;
+        if (Array.isArray(camp.acciones)) {
+          for (let i = 0; i < camp.acciones.length; i += 1) {
+            const v = checkRow(camp.acciones[i], `automation.campanias[${c}].acciones[${i}]`);
+            if (!v.ok) return v;
+          }
+        }
+      }
+    }
+  }
+  return { ok: true };
+}
+
+/**
+ * Slice V3: estructura V2 + workspaceId canónico en slice y entidades.
+ * @param {unknown} slice
+ * @param {string} [expectedWorkspaceId]
+ * @param {object[]} [tenantsExtra]
+ * @param {import('../../core/organizations/workspace.js').CatalogoWorkspaces} [catalogo]
+ */
+export function validarSliceV3(slice, expectedWorkspaceId, tenantsExtra, catalogo) {
+  const base = validarSliceV2(slice, expectedWorkspaceId || (slice && slice.tenantId), tenantsExtra);
+  if (!base.ok) return base;
+  if (!slice.workspaceId || typeof slice.workspaceId !== 'string') {
+    return { ok: false, reason: 'workspaceId_ausente' };
+  }
+  if (slice.tenantId && slice.tenantId !== slice.workspaceId) {
+    return { ok: false, reason: 'workspace_tenant_incoherente' };
+  }
+  if (expectedWorkspaceId != null && slice.workspaceId !== expectedWorkspaceId) {
+    return { ok: false, reason: 'workspaceId_slice_incoherente' };
+  }
+  const cat = catalogo || (Array.isArray(tenantsExtra)
+    ? crearCatalogoWorkspaces(tenantsExtra.map((t) => t && t.id).filter(Boolean))
+    : catalogoWorkspaces());
+  if (!cat.conoce(slice.workspaceId)) {
+    return { ok: false, reason: 'workspace_desconocido' };
+  }
+  return validarWorkspaceEnEntidades(slice, slice.workspaceId);
+}
+
+/**
+ * @param {object} world
+ * @param {import('../../core/organizations/workspace.js').CatalogoWorkspaces} [catalogo]
+ */
+export function crearWorldSnapshotV3(world, catalogo) {
+  const cat = catalogo || catalogoWorkspaces();
+  const byWorkspace = {};
+  const src = (world && world.byWorkspace) || (world && world.byTenant) || {};
+  for (const [id, slice] of Object.entries(src)) {
+    if (!cat.conoce(id)) {
+      const err = new Error('workspace_desconocido');
+      err.code = 'workspace_desconocido';
+      throw err;
+    }
+    byWorkspace[id] = sellarWorkspaceEnSlice(slice, id);
+  }
+  return {
+    schemaVersion: SCHEMA_VERSION,
+    tenants: clonar((world && world.tenants) || listarTenants()),
+    byWorkspace,
+  };
+}
+
+/**
+ * Alias legacy del nombre TenantSnapshot → WorkspaceSnapshotV3.
+ * @param {string} workspaceId
+ * @param {object} slice
+ * @param {import('../../core/organizations/workspace.js').CatalogoWorkspaces} [catalogo]
+ */
+export function crearWorkspaceSnapshotV3(workspaceId, slice, catalogo) {
+  const cat = catalogo || catalogoWorkspaces();
+  if (!cat.conoce(workspaceId)) {
+    const err = new Error('workspace_desconocido');
+    err.code = 'workspace_desconocido';
+    throw err;
+  }
+  return {
+    schemaVersion: SCHEMA_VERSION,
+    workspaceId,
+    tenantId: workspaceId,
+    data: sellarWorkspaceEnSlice(slice, workspaceId),
+  };
+}
+
+/** Alias de compatibilidad: nombre histórico TenantSnapshot. */
+export const crearTenantSnapshotV3 = crearWorkspaceSnapshotV3;
+
+function validarSliceV3Bound(slice, expectedId, tenantsExtra) {
+  return validarSliceV3(slice, expectedId, tenantsExtra);
+}
+
+function esWorldDeVersionV3(obj, catalogo) {
+  if (!obj || typeof obj !== 'object') return false;
+  if (obj.schemaVersion !== SCHEMA_VERSION) return false;
+  if (!Array.isArray(obj.tenants)) return false;
+  if (!obj.byWorkspace || typeof obj.byWorkspace !== 'object' || Array.isArray(obj.byWorkspace)) return false;
+  if (Object.prototype.hasOwnProperty.call(obj, 'byTenant')) return false;
+  if (Object.prototype.hasOwnProperty.call(obj, 'data')) return false;
+  const cat = catalogo || crearCatalogoWorkspaces(
+    (obj.tenants || []).map((t) => t && t.id).filter(Boolean),
+  );
+  for (const [id, slice] of Object.entries(obj.byWorkspace)) {
+    if (id !== (slice && slice.workspaceId)) return false;
+    const v = validarSliceV3(slice, id, obj.tenants, cat);
+    if (!v.ok) return false;
+  }
+  return true;
+}
+
+/** Valida WorldSnapshotV3. */
+export function esWorldSnapshotV3(obj, catalogo) {
+  return esWorldDeVersionV3(obj, catalogo);
+}
+
+/**
+ * Valida WorkspaceSnapshotV3 (alias TenantSnapshotV3).
+ * @param {object} obj
+ * @param {string} [expectedWorkspaceId]
+ * @param {import('../../core/organizations/workspace.js').CatalogoWorkspaces} [catalogo]
+ */
+export function esWorkspaceSnapshotV3(obj, expectedWorkspaceId, catalogo) {
+  if (!obj || typeof obj !== 'object') return false;
+  if (obj.schemaVersion !== SCHEMA_VERSION) return false;
+  if (typeof obj.workspaceId !== 'string' || !obj.workspaceId) return false;
+  if (typeof obj.tenantId === 'string' && obj.tenantId !== obj.workspaceId) return false;
+  if (!obj.data || typeof obj.data !== 'object' || Array.isArray(obj.data)) return false;
+  if (Object.prototype.hasOwnProperty.call(obj, 'byWorkspace')) return false;
+  if (Object.prototype.hasOwnProperty.call(obj, 'byTenant')) return false;
+  const coh = coherenciaWorkspaceIds({
+    solicitado: expectedWorkspaceId,
+    envelope: obj.workspaceId,
+    slice: obj.data && obj.data.workspaceId,
+    workspace: obj.tenantId,
+  });
+  if (!coh.ok) return false;
+  const cat = catalogo || catalogoWorkspaces();
+  return validarSliceV3(obj.data, obj.workspaceId, null, cat).ok;
+}
+
+/** Alias legacy. */
+export const esTenantSnapshotV3 = esWorkspaceSnapshotV3;
+
+/**
+ * Convierte un WorldSnapshotV3 (u V2) a forma runtime `{ tenants, byTenant }`.
+ * Una sola fuente de verdad en disco (byWorkspace); byTenant es vista runtime.
+ * @param {object} snap
+ */
+export function mundoRuntimeDesdeSnapshot(snap) {
+  if (!snap || typeof snap !== 'object') return { tenants: listarTenants(), byTenant: {} };
+  if (snap.schemaVersion === SCHEMA_VERSION && snap.byWorkspace) {
+    return {
+      tenants: clonar(snap.tenants || listarTenants()),
+      byTenant: clonar(snap.byWorkspace),
+    };
+  }
+  if (snap.byTenant) {
+    return {
+      tenants: clonar(snap.tenants || listarTenants()),
+      byTenant: clonar(snap.byTenant),
+    };
+  }
+  return { tenants: clonar(snap.tenants || listarTenants()), byTenant: {} };
+}
+
+/** Alias: creación del snapshot actual (V3). */
+export const crearWorldSnapshot = crearWorldSnapshotV3;
+export const crearTenantSnapshot = crearWorkspaceSnapshotV3;
+export const crearWorkspaceSnapshot = crearWorkspaceSnapshotV3;

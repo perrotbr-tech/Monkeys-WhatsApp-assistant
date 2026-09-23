@@ -1,5 +1,5 @@
 import { clonarDemo, clonarMundo, clonar } from '../data/demo.js';
-import { buscarTenant, listarTenants, TENANT_DEFAULT, mismaSede, nombreSede, resolverSedeId, capacidadesDe } from '../data/tenants.js';
+import { buscarTenant, listarTenants, TENANT_DEFAULT, mismaSede, nombreSede, resolverSedeId, capacidadesDe, catalogoWorkspaces } from '../data/tenants.js';
 import { anioDe, fechaHoy, dayKey, ymKey } from './dates.js';
 import { relojActivo } from './clock.js';
 import { planSomaPorId } from '../data/planes-soma.js';
@@ -11,6 +11,7 @@ import {
 import { parseCsv, validarFilaSocio, prepararSocio, PLANTILLA_CSV_SOCIOS } from './socios-admin.js';
 import { proveedorDe, modoPasarela } from './services/pagos.js';
 import { migrarSedesSliceV1aV2 } from './persistencia/migraciones.js';
+import { aplicarContratoAccion } from '../core/contracts/accion.js';
 
 export { normalizarTelefono, nombreValido, PLANTILLA_CSV_SOCIOS };
 
@@ -52,9 +53,13 @@ function anioCodigo(fechaRef, clock = relojActivo()) {
 }
 
 function toWorld(datosIniciales) {
-  if (!datosIniciales) return clonarMundo();
+  if (!datosIniciales) return toWorld(clonarMundo());
   if (datosIniciales.byTenant) {
-    return clonar(datosIniciales);
+    const world = clonar(datosIniciales);
+    for (const [id, slice] of Object.entries(world.byTenant || {})) {
+      stampSlice(slice, id);
+    }
+    return world;
   }
   const tenantId = datosIniciales.tenantId
     || (datosIniciales.classes && datosIniciales.classes[0] && datosIniciales.classes[0].tenantId)
@@ -69,15 +74,29 @@ function toWorld(datosIniciales) {
 }
 
 function stampSlice(slice, tenantId) {
+  const workspaceId = tenantId;
   const keys = ['classes', 'plans', 'bookings', 'leads', 'conversations', 'socios', 'asistencias', 'referidos', 'usuariosEquipo', 'membresias', 'pagos'];
   for (const k of keys) {
     if (!Array.isArray(slice[k])) continue;
-    slice[k] = slice[k].map((row) => ({ tenantId, ...row }));
+    slice[k] = slice[k].map((row) => ({ ...row, workspaceId, tenantId }));
   }
   if (slice.automation) {
-    slice.automation.campanias = (slice.automation.campanias || []).map((c) => ({ tenantId, ...c }));
-    slice.automation.acciones = (slice.automation.acciones || []).map((a) => ({ tenantId, ...a }));
+    slice.automation.campanias = (slice.automation.campanias || []).map((c) => ({
+      ...c,
+      workspaceId,
+      tenantId,
+      acciones: Array.isArray(c.acciones)
+        ? c.acciones.map((a) => ({ ...a, workspaceId, tenantId }))
+        : c.acciones,
+    }));
+    slice.automation.acciones = (slice.automation.acciones || []).map((a) => ({
+      ...a,
+      workspaceId,
+      tenantId,
+    }));
   }
+  slice.workspaceId = workspaceId;
+  slice.tenantId = tenantId;
   return slice;
 }
 
@@ -91,7 +110,7 @@ export function crearMemoria(datosIniciales, opts = {}) {
     if (!state.byTenant[id]) {
       const t = buscarTenant(id);
       if (!t || !t.activo) return null;
-      state.byTenant[id] = clonarDemo(id);
+      state.byTenant[id] = stampSlice(clonarDemo(id), id);
     }
     return state.byTenant[id];
   }
@@ -306,6 +325,7 @@ export function crearMemoria(datosIniciales, opts = {}) {
     const dup = pagoDelPeriodo(s, membresia.id, membresia.inicio);
     if (dup) return { ok: false, error: 'Ya existe un pago para este período.', pago: clonar(dup) };
     const pago = {
+      workspaceId: tenantId,
       tenantId,
       id: siguientePagoId(tenantId),
       socioId: socio.id,
@@ -544,10 +564,17 @@ export function crearMemoria(datosIniciales, opts = {}) {
     return null;
   }
 
-  function pagarDemo(referencia, fechaRef = hoy()) {
-    const hit = buscarPagoEnTenants(referencia);
-    if (!hit) return { ok: false, error: 'pago no encontrado' };
-    return marcarPagado(hit.tenantId, hit.pago.id, referencia, fechaRef);
+  /**
+   * Pago demo acotado al workspace explícito (E3C).
+   * No busca referencias en otros tenants.
+   * @param {string} tenantId
+   * @param {string} referencia
+   * @param {string} [fechaRef]
+   */
+  function pagarDemo(tenantId, referencia, fechaRef = hoy()) {
+    const pago = pagoPorReferencia(tenantId, referencia);
+    if (!pago) return { ok: false, error: 'pago no encontrado' };
+    return marcarPagado(tenantId, pago.id, referencia, fechaRef);
   }
 
   function webhookPago(tenantId, payload, opts = {}) {
@@ -784,6 +811,7 @@ export function crearMemoria(datosIniciales, opts = {}) {
     clase.reserved += 1;
     const sedeId = sedeIdAccion;
     const booking = {
+      workspaceId: tenantId,
       tenantId,
       codigo: siguienteCodigo(tenantId),
       cliente: nombre,
@@ -833,8 +861,11 @@ export function crearMemoria(datosIniciales, opts = {}) {
     const row = {
       id,
       estado: 'nuevo',
+      workspaceId: tenantId,
       tenantId,
       ...lead,
+      workspaceId: tenantId,
+      tenantId,
       sedeId,
       sede: nombreSede(tenant, sedeId) || lead.sede || null,
     };
@@ -850,6 +881,7 @@ export function crearMemoria(datosIniciales, opts = {}) {
     const sedeId = resolverSedeId(tenant, base.sedeId || base.sede) || base.sedeId || null;
     const conv = {
       id,
+      workspaceId: tenantId,
       tenantId,
       sede: null,
       sedeId: null,
@@ -861,6 +893,8 @@ export function crearMemoria(datosIniciales, opts = {}) {
       motivo: null,
       messages: [],
       ...base,
+      workspaceId: tenantId,
+      tenantId,
       sedeId,
       sede: nombreSede(tenant, sedeId) || base.sede || null,
     };
@@ -883,15 +917,23 @@ export function crearMemoria(datosIniciales, opts = {}) {
     const sedeId = resolverSedeId(tenant, accion && (accion.sedeId || accion.sede))
       || (accion && accion.sedeId)
       || null;
-    const row = {
+    const borrador = {
       id: `act-${s.automation.nextActionSeq}`,
       tenantId,
+      workspaceId: tenantId,
       canal: 'simulado',
       estado: accion.tipo === 'mensaje' ? 'enviado' : 'pendiente',
       fechaISO: clock.iso(),
       ...accion,
+      tenantId,
+      workspaceId: tenantId,
       sedeId,
     };
+    const row = aplicarContratoAccion(borrador, {
+      origenTipo: borrador.origenTipo || 'agente',
+      origenId: borrador.origenId || borrador.agente || 'store',
+      catalogo: catalogoWorkspaces(),
+    });
     s.automation.acciones.push(row);
     return clonar(row);
   }

@@ -1162,7 +1162,7 @@ export function crearEngine(datosIniciales, tenantId = TENANT_DEFAULT, opts = {}
     importarSociosCsv: (csv, fecha) => memoria.importarSociosCsv(tid, csv, fecha),
     marcarPagado: (id, ref, fecha) => memoria.marcarPagado(tid, id, ref, fecha),
     enviarLinkPago: (id, opts) => memoria.enviarLinkPago(tid, id, opts),
-    pagarDemo: (ref, fecha) => memoria.pagarDemo(ref, fecha),
+    pagarDemo: (ref, fecha) => memoria.pagarDemo(tid, ref, fecha),
     conciliacionMes: (fecha) => memoria.conciliacionMes(tid, fecha),
     exportarPagosCsv: (fecha) => memoria.exportarPagosCsv(tid, fecha),
     datosBancarios: () => memoria.datosBancarios(tid),

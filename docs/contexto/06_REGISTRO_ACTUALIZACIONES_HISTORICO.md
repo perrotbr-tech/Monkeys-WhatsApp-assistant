@@ -1,6 +1,6 @@
 # Registro histórico de actualizaciones (bloque 06)
 
-Entradas anteriores al cierre de E1 / merge PR #12. Continuación vigente en `05_REGISTRO_ACTUALIZACIONES.md`.
+Entradas anteriores a E3A. Continuación vigente en `05_REGISTRO_ACTUALIZACIONES.md`.
 
 ## 2026-09-19 — Auditoría inicial
 
@@ -36,3 +36,21 @@ Entradas anteriores al cierre de E1 / merge PR #12. Continuación vigente en `05
 
 - Rama: `cursor/e1b-store-persistencia-f516` (PR #11).
 - Snapshots V1, migración V0→V1, adaptadores; 111→120→129/129 tras fixes B1–B4.
+
+## 2026-09-21 — Consolidación E0+E1
+
+- Rama: `integration/forkza-e1-complete` desde E1B `5eaf8e2`.
+- Pruebas: 129/129. E1 completa; consolidación PR #12.
+
+## 2026-09-21 — PR #12 fusionado; base E2
+
+- `main` @ `cf24445` = merge PR #12. E0 y E1 terminadas. 129/129.
+
+## 2026-09-21 — E2: Identidad estable y tenant config
+
+- Rama: `cursor/e2-identidad-tenant-config`. Snapshot V2; sedes estables; 139/139.
+
+## 2026-09-21 — E2 revisiones B1–B5 y cierre
+
+- B1–B4: `sedeId` semántico; B5: catálogo persistido manda. PR #13 squash → `main` @ `0e20df0` (152/152).
+- PR #14/#15 docs; `main` @ `4504c9b`.
