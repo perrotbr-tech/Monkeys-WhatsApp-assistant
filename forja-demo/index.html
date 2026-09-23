@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>FORJA TRAINING · Demo coach Powerlifting</title>
+  <link rel="icon" href="../brand/favicon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <div class="banner" id="banner-demo">Prototipo demostrativo · datos ficticios</div>
+
+  <header class="topbar forkza-bar">
+    <div class="brand-block">
+      <img src="../brand/simbolo_F_blanco.svg" alt="" width="36" height="36" />
+      <div class="brand-text">
+        <p class="umbrella">FORKZA <span class="ai">IA</span></p>
+        <h1 class="module-name">FORJA TRAINING</h1>
+        <p class="module-sub">Planificación y seguimiento deportivo</p>
+      </div>
+    </div>
+    <div class="coach-chip" id="coach-chip">
+      <span class="coach-name">Matías Rojas</span>
+      <span class="coach-meta">Powerlifting · Entrenador · FORJA DEMO</span>
+    </div>
+    <button type="button" class="btn ghost" id="btn-reset">Restablecer demo</button>
+    <button
+      type="button"
+      class="btn-nav-toggle"
+      id="btn-nav-toggle"
+      aria-label="Menú"
+      aria-expanded="false"
+      aria-controls="nav-mobile"
+    >
+      Menú
+    </button>
+  </header>
+
+  <nav class="nav-desktop" id="nav-principal" aria-label="Secciones"></nav>
+  <nav class="nav-mobile" id="nav-mobile" aria-label="Secciones móviles"></nav>
+
+  <main id="app-root" class="app-root"></main>
+
+  <footer class="site-foot">
+    <p>
+      FORKZA IA · FORJA TRAINING — demo de validación con entrenador.
+      No es la implementación productiva. No inicia E4 ni E5 de Forkza Gestión.
+    </p>
+  </footer>
+
+  <script type="module" src="./js/app.js"></script>
+</body>
+</html>

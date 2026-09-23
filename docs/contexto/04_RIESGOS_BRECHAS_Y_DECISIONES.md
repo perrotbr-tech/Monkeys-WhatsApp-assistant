@@ -2,9 +2,13 @@
 
 ## Prioridad alta
 
-### Demo GitHub Pages (hotfix en curso)
+### Demo GitHub Pages (hotfix fusionado)
 
-E3 pasó 250/250 en Node, pero la prueba manual en Pages detectó que `store-local.js` arrastraba `auth.js` (`node:crypto`, `bcryptjs`) y el barrel `persistencia/index.js` → `json.js`. El hotfix separa `auth-shared.js` (browser) de `auth.js` (servidor) y evita el barrel en standalone. Validación pública definitiva pendiente de fusionar y desplegar el PR.
+PR #18 fusionado en `main` @ `2629fdc`: `auth-shared.js` (browser) separado de `auth.js` (servidor); standalone no arrastra `node:crypto`/`bcryptjs` ni el barrel `persistencia/index.js`. Suite Node 252/252 en esa base. Despliegue público de Pages depende del hosting.
+
+### Demo Forja Training (solo validación)
+
+`forja-demo/` es un prototipo estático para entrevistar a un coach de Powerlifting. **No es Forja Training productivo**, no inicia E4/E5, no cambia Snapshot V3 ni el feature flag `forja`. Riesgo: confundir la demo con implementación completa; documentar siempre como validación con datos ficticios.
 
 ### Webhook de pagos
 
@@ -55,7 +59,8 @@ Contrato V3 con migración V0–V2→V3 y rechazo de corruptos/cruzados. Sigue s
 - Renombre masivo de APIs/params `tenantId` → `workspaceId`.
 - Base de datos y proveedor de despliegue.
 - Contrato Gestión ↔ Training; WhatsApp/pagos/archivos productivos.
-- Alcance del primer MVP de Forja Training.
+- Alcance del primer MVP de Forja Training (la demo `forja-demo/` no cierra ese alcance).
+- Si la demo de validación se acepta, cuándo y cómo iniciar el esqueleto productivo (E6 del plan), sin mezclarlo con E4/E5 de Gestión.
 - Firma real Mercado Pago, idempotencia y Snapshot V4 (E5 / fuera de E3).
 
 ## Regla de interpretación

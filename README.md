@@ -49,6 +49,10 @@ Node 20 + Express. JavaScript ES modules. Sin bundler. Frontend estático: `inde
 
 Si `GET ./api/health` no responde en 1,5 s, el mismo engine corre en el navegador con `localStorage` (`forkza_demo_state_<slug>`). Rutas relativas `./`. Incluye `.nojekyll`. El último tenant queda en `forkza_tenant`.
 
+## Demo Forja Training (validación)
+
+Prototipo estático aislado en `forja-demo/` para entrevistar a un coach de Powerlifting. Entrada: `forja-demo/index.html` (GitHub Pages: `/Monkeys-WhatsApp-assistant/forja-demo/`). Datos ficticios, estado en `localStorage` (`forja-demo-v1`), botón «Restablecer demo». **No es Forja Training productivo**; no inicia E4/E5 ni se conecta a la navegación de Forkza Gestión.
+
 ## Uso
 
 ```bash

@@ -75,4 +75,14 @@ No eliminar entradas anteriores. Si una conclusión queda obsoleta, agregar una 
 - Causa: Pages cargaba `store-local.js` → `auth.js` (`node:crypto`/`bcryptjs`) y barrel `persistencia/index.js` → `json.js`; `main()` abortaba antes del chat/login.
 - Fix: `engine/auth-shared.js` (LOCK_MS, MAX_FALLOS, enriquecerUsuarioSesion); `store-local` importa solo shared + `persistencia/local|estados|migraciones`; `auth.js` reexporta shared y conserva crypto/bcrypt/sesión servidor.
 - Prueba: `tests/browser-safe-imports.test.js` (grafo transitivo desde `app.js`/`store-local.js`). Suite 252/252.
-- Validación pública Pages pendiente de merge/deploy. Sin E4/E5/Forja/merge.
+- Fusionado: PR #18 → `main` @ `2629fdc`. Sin E4/E5/Forja productivo.
+
+## 2026-09-23 — Demo web Forja Training (coach Powerlifting)
+
+- Rama: `cursor/demo-coach-powerlifting` desde `main` @ `2629fdc` (252/252).
+- Módulo estático aislado `forja-demo/` (HTML/CSS/JS modular, localStorage, sin backend/CDN/Node en navegador).
+- Persona demo: Matías Rojas · Powerlifting · workspace FORJA DEMO; grupos Inicial/Competencia; alumnos ficticios.
+- Pantallas: Inicio, Planificación, Sesión, Alumnos, Banco, Wellness, Registro, Seguimiento, Asistente FORJA.
+- Prueba nueva: `tests/forja-demo-browser-safe.test.js` (grafo + no cruce con Gestión).
+- Hechos: es demo de validación; no es Forja productivo; no inicia E4/E5; no cambia Snapshot V3; Gestión MONKEYS/SOMA intacta.
+- Docs: `01`, `04`, `05`. Sin merge.

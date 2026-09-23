@@ -2,8 +2,8 @@
 
 Estado de referencia: 2026-09-23
 Repositorio: `perrotbr-tech/Monkeys-WhatsApp-assistant`
-Base funcional E3: `main` @ `9fb34147e75449aaef69a94d232b1f4ea2afee38` (PR #16 fusionado)
-Etapa cerrada: E3 — Forkza Core y fronteras. E3A, E3B y E3C aceptadas; B1–B10 verificadas. Próxima etapa: E4, aún no iniciada.
+Base `main`: `2629fdc` (hotfix Pages PR #18; E3 en `9fb3414`).
+Etapa cerrada: E3. E4/E5 no iniciadas. Forja Training productivo no iniciado (solo demo `forja-demo/`).
 
 ## Propósito
 
