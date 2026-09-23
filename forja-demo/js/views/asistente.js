@@ -1,11 +1,42 @@
 import { el } from '../util.js';
 import { obtenerEstado, mutar } from '../state.js';
+import {
+  sugerenciasFinancierasAsistente,
+  sincronizarEstadosCargos,
+  filtrarPorActor,
+} from '../finanzas/modelo.js';
+import { FECHA_REF_FINANZAS, WORKSPACE_DEMO, COACH_DEMO } from '../finanzas/seed.js';
+
+function estadoSugFin(st, id, fallback) {
+  const map = st.finanzas?.asistenteEstados || {};
+  return map[id] || fallback || 'pendiente';
+}
 
 export function renderAsistente(root, navegar) {
   const e = obtenerEstado();
+  const fin = sincronizarEstadosCargos(
+    e.finanzas || { cargos: [], pagos: [], asignaciones: [] },
+    e.finanzas?.fechaRef || FECHA_REF_FINANZAS,
+  );
+  const visible = filtrarPorActor(fin, {
+    rol: 'coach',
+    workspaceId: e.finanzas?.workspaceActivoId || WORKSPACE_DEMO.id,
+    coachId: e.finanzas?.coachActivoId || COACH_DEMO.id,
+  });
+  const finVis = { ...fin, ...visible };
+  const sugFin = (e.finanzas
+    ? sugerenciasFinancierasAsistente(
+      finVis,
+      e.alumnos,
+      fin.fechaRef || FECHA_REF_FINANZAS,
+    )
+    : []
+  ).map((s) => ({ ...s, estado: estadoSugFin(e, s.id, s.estado) }));
+  const todas = [...sugFin, ...e.sugerencias];
 
   const lista = el('div', { className: 'sug-list' });
-  for (const sug of e.sugerencias) {
+  for (const sug of todas) {
+    const esFin = sug.tipo === 'finanzas';
     const card = el('article', {
       className: `card sug-card estado-${sug.estado}`,
     });
@@ -19,10 +50,17 @@ export function renderAsistente(root, navegar) {
       ]),
       el('p', { textContent: sug.detalle }),
       el('p', { className: 'evidence', textContent: `Evidencia: ${sug.evidencia}` }),
+      sug.borradorMensaje
+        ? el('p', {
+          className: 'note',
+          textContent: `Borrador (no enviado): ${sug.borradorMensaje}`,
+        })
+        : null,
       el('p', {
         className: 'note-ipf',
-        textContent:
-          'La IA propone. El coach revisa. La IA nunca publica ni modifica planes automáticamente ni diagnostica lesiones.',
+        textContent: esFin
+          ? 'La IA resume y sugiere contactar. No cobra, no cambia precios, no bloquea alumnos, no cancela planes, no envía mensajes reales ni marca pagos sin aprobación del coach.'
+          : 'La IA propone. El coach revisa. La IA nunca publica ni modifica planes automáticamente ni diagnostica lesiones.',
       }),
     );
 
@@ -42,6 +80,21 @@ export function renderAsistente(root, navegar) {
           textContent: 'Guardar modificación',
           onClick: () => {
             mutar((st) => {
+              if (esFin) {
+                if (!st.finanzas.asistenteEstados) st.finanzas.asistenteEstados = {};
+                st.finanzas.asistenteEstados[sug.id] = 'modificada';
+                st.finanzas.auditoria = st.finanzas.auditoria || [];
+                st.finanzas.auditoria.push({
+                  id: `aud-fin-${Date.now()}`,
+                  ts: new Date().toISOString(),
+                  workspaceId: st.finanzas.workspaceActivoId,
+                  coachId: st.finanzas.coachActivoId,
+                  accion: 'aprobar_sugerencia_fin_modificada',
+                  sugerenciaId: sug.id,
+                  detalle: ta.value.trim() || sug.detalle,
+                });
+                return;
+              }
               const s = st.sugerencias.find((x) => x.id === sug.id);
               if (!s) return;
               s.estado = 'modificada';
@@ -61,6 +114,20 @@ export function renderAsistente(root, navegar) {
             textContent: 'Aprobar',
             onClick: () => {
               mutar((st) => {
+                if (esFin) {
+                  if (!st.finanzas.asistenteEstados) st.finanzas.asistenteEstados = {};
+                  st.finanzas.asistenteEstados[sug.id] = 'aprobada';
+                  st.finanzas.auditoria = st.finanzas.auditoria || [];
+                  st.finanzas.auditoria.push({
+                    id: `aud-fin-${Date.now()}`,
+                    ts: new Date().toISOString(),
+                    workspaceId: st.finanzas.workspaceActivoId,
+                    coachId: st.finanzas.coachActivoId,
+                    accion: 'aprobar_sugerencia_fin',
+                    sugerenciaId: sug.id,
+                  });
+                  return;
+                }
                 const s = st.sugerencias.find((x) => x.id === sug.id);
                 if (s) s.estado = 'aprobada';
               });
@@ -81,6 +148,11 @@ export function renderAsistente(root, navegar) {
             textContent: 'Rechazar',
             onClick: () => {
               mutar((st) => {
+                if (esFin) {
+                  if (!st.finanzas.asistenteEstados) st.finanzas.asistenteEstados = {};
+                  st.finanzas.asistenteEstados[sug.id] = 'rechazada';
+                  return;
+                }
                 const s = st.sugerencias.find((x) => x.id === sug.id);
                 if (s) s.estado = 'rechazada';
               });
@@ -102,7 +174,7 @@ export function renderAsistente(root, navegar) {
       el('p', {
         className: 'lead',
         textContent:
-          'Panel demo: la IA propone con evidencia; el coach aprueba, modifica o rechaza.',
+          'Panel demo: la IA propone con evidencia; el coach aprueba, modifica o rechaza. Incluye resumen financiero sin cobros automáticos.',
       }),
     ]),
     el('aside', { className: 'alert-box' }, [
@@ -113,6 +185,10 @@ export function renderAsistente(root, navegar) {
         el('li', { textContent: 'El coach aprueba, modifica o rechaza.' }),
         el('li', { textContent: 'La IA nunca publica ni modifica planes automáticamente.' }),
         el('li', { textContent: 'La IA no diagnostica lesiones.' }),
+        el('li', {
+          textContent:
+            'En finanzas: no cobra, no cambia precios, no bloquea, no cancela planes, no envía mensajes reales.',
+        }),
         el('li', { textContent: 'Toda sugerencia muestra su evidencia.' }),
       ]),
     ]),
@@ -123,6 +199,12 @@ export function renderAsistente(root, navegar) {
         className: 'btn ghost',
         textContent: 'Volver al panel',
         onClick: () => navegar('inicio'),
+      }),
+      el('button', {
+        type: 'button',
+        className: 'btn ghost',
+        textContent: 'Ir a Finanzas',
+        onClick: () => navegar('finanzas'),
       }),
     ]),
   );

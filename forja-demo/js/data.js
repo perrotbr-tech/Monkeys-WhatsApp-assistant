@@ -3,14 +3,21 @@
  * Solo demo de validación — no es Forja productivo.
  */
 
+import { finanzasInicial, WORKSPACE_DEMO, COACH_DEMO } from './finanzas/seed.js';
+
+/** Clave localStorage exclusiva de forja-demo (no usar claves de Forkza Gestión). */
 export const STORAGE_KEY = 'forja-demo-v1';
 
+/** Versión del documento de estado (v2 agrega Finanzas). */
+export const STATE_VERSION = 2;
+
 export const COACH = {
-  id: 'coach-matias',
-  nombre: 'Matías Rojas',
-  modalidad: 'Powerlifting',
-  rol: 'Entrenador',
-  workspace: 'FORJA DEMO',
+  id: COACH_DEMO.id,
+  nombre: COACH_DEMO.nombre,
+  modalidad: COACH_DEMO.modalidad,
+  rol: COACH_DEMO.rol,
+  workspace: WORKSPACE_DEMO.nombre,
+  workspaceId: WORKSPACE_DEMO.id,
 };
 
 export const GRUPOS = [
@@ -651,7 +658,7 @@ export const SUGERENCIAS_IA_SEED = [
 
 export function estadoInicial() {
   return {
-    version: 1,
+    version: STATE_VERSION,
     coach: { ...COACH },
     grupos: GRUPOS.map((g) => ({ ...g })),
     alumnos: ALUMNOS_SEED.map((a) => ({ ...a })),
@@ -664,13 +671,67 @@ export function estadoInicial() {
     sugerencias: SUGERENCIAS_IA_SEED.map((s) => ({ ...s })),
     wellness: null,
     registroSesion: null,
+    finanzas: finanzasInicial(),
     ui: {
       vista: 'inicio',
       alumnoId: null,
+      cargoId: null,
       mesoId: 'meso-2',
       filtroBanco: { texto: '', tipo: '', fuente: '' },
+      filtroFinanzas: {
+        estado: '',
+        grupoId: '',
+        modalidad: '',
+        coachId: '',
+        texto: '',
+      },
       ejercicioEditId: null,
       modoAlumno: false,
+      mensajeFinanzas: null,
+    },
+  };
+}
+
+/**
+ * Migración explícita v1 → v2: preserva planificación, alumnos, wellness,
+ * ejercicios y registros; agrega bloque finanzas sin borrar datos deportivos.
+ */
+export function migrarEstadoV1aV2(v1) {
+  if (!v1 || typeof v1 !== 'object') {
+    throw new Error('estado_v1_invalido');
+  }
+  const base = estadoInicial();
+  return {
+    ...base,
+    version: STATE_VERSION,
+    coach: { ...base.coach, ...(v1.coach || {}) },
+    grupos: Array.isArray(v1.grupos) ? v1.grupos.map((g) => ({ ...g })) : base.grupos,
+    alumnos: Array.isArray(v1.alumnos) ? v1.alumnos.map((a) => ({ ...a })) : base.alumnos,
+    ejercicios: Array.isArray(v1.ejercicios)
+      ? v1.ejercicios.map((e) => ({ ...e }))
+      : base.ejercicios,
+    macro: v1.macro ? structuredClone(v1.macro) : base.macro,
+    micro: v1.micro ? structuredClone(v1.micro) : base.micro,
+    sesion: v1.sesion ? structuredClone(v1.sesion) : base.sesion,
+    panel: v1.panel ? structuredClone(v1.panel) : base.panel,
+    seguimiento: v1.seguimiento
+      ? structuredClone(v1.seguimiento)
+      : base.seguimiento,
+    sugerencias: Array.isArray(v1.sugerencias)
+      ? v1.sugerencias.map((s) => ({ ...s }))
+      : base.sugerencias,
+    wellness: v1.wellness ? structuredClone(v1.wellness) : null,
+    registroSesion: v1.registroSesion
+      ? structuredClone(v1.registroSesion)
+      : null,
+    finanzas: finanzasInicial(),
+    ui: {
+      ...base.ui,
+      ...(v1.ui || {}),
+      filtroFinanzas: {
+        ...base.ui.filtroFinanzas,
+        ...((v1.ui && v1.ui.filtroFinanzas) || {}),
+      },
     },
   };
 }

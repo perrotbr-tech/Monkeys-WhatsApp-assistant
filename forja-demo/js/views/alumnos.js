@@ -122,6 +122,17 @@ export function renderAlumno(root, navegar) {
         textContent: 'Ver seguimiento',
         onClick: () => navegar('seguimiento'),
       }),
+      el('button', {
+        type: 'button',
+        className: 'btn ghost',
+        textContent: 'Ficha financiera',
+        onClick: () => {
+          mutar((st) => {
+            st.ui.alumnoId = a.id;
+          });
+          navegar('finanza-alumno');
+        },
+      }),
     ]),
   );
 }

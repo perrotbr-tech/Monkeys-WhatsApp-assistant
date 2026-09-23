@@ -1,5 +1,11 @@
-import { clear } from './util.js';
-import { cargarEstado, mutar, restablecerDemo, obtenerEstado } from './state.js';
+import { clear, el } from './util.js';
+import {
+  cargarEstado,
+  mutar,
+  restablecerDemo,
+  obtenerEstado,
+  esEstadoCorrupto,
+} from './state.js';
 import { renderInicio } from './views/inicio.js';
 import { renderPlanificacion, renderSesion } from './views/planificacion.js';
 import { renderAlumnos, renderAlumno } from './views/alumnos.js';
@@ -8,6 +14,7 @@ import { renderWellness } from './views/wellness.js';
 import { renderRegistro } from './views/registro.js';
 import { renderSeguimiento } from './views/seguimiento.js';
 import { renderAsistente } from './views/asistente.js';
+import { renderFinanzas, renderFinanzaAlumno } from './views/finanzas.js';
 
 const VISTAS = {
   inicio: renderInicio,
@@ -20,12 +27,15 @@ const VISTAS = {
   registro: renderRegistro,
   seguimiento: renderSeguimiento,
   asistente: renderAsistente,
+  finanzas: renderFinanzas,
+  'finanza-alumno': renderFinanzaAlumno,
 };
 
 const NAV_PRINCIPAL = [
   { id: 'inicio', label: 'Inicio' },
   { id: 'planificacion', label: 'Planificación' },
   { id: 'alumnos', label: 'Alumnos' },
+  { id: 'finanzas', label: 'Finanzas' },
   { id: 'banco', label: 'Banco de ejercicios' },
   { id: 'seguimiento', label: 'Seguimiento' },
   { id: 'asistente', label: 'Asistente IA' },
@@ -46,16 +56,22 @@ export function navegar(vista) {
 }
 
 function syncNav(vista) {
-  const nav = document.getElementById('nav-principal');
-  if (!nav) return;
-  for (const btn of nav.querySelectorAll('[data-vista]')) {
-    const active =
-      btn.getAttribute('data-vista') === vista ||
-      (vista === 'alumno' && btn.getAttribute('data-vista') === 'alumnos') ||
-      (vista === 'sesion' && btn.getAttribute('data-vista') === 'planificacion') ||
-      ((vista === 'wellness' || vista === 'registro') &&
-        btn.getAttribute('data-vista') === 'planificacion');
-    btn.classList.toggle('is-active', active);
+  const targets = [
+    document.getElementById('nav-principal'),
+    document.getElementById('nav-mobile'),
+  ];
+  for (const nav of targets) {
+    if (!nav) continue;
+    for (const btn of nav.querySelectorAll('[data-vista]')) {
+      const active =
+        btn.getAttribute('data-vista') === vista ||
+        (vista === 'alumno' && btn.getAttribute('data-vista') === 'alumnos') ||
+        (vista === 'finanza-alumno' && btn.getAttribute('data-vista') === 'finanzas') ||
+        (vista === 'sesion' && btn.getAttribute('data-vista') === 'planificacion') ||
+        ((vista === 'wellness' || vista === 'registro') &&
+          btn.getAttribute('data-vista') === 'planificacion');
+      btn.classList.toggle('is-active', active);
+    }
   }
 }
 
@@ -63,6 +79,30 @@ function pintar() {
   const root = document.getElementById('app-root');
   if (!root) return;
   const vista = hashVista();
+  if (esEstadoCorrupto() && vista !== 'finanzas') {
+    clear(root);
+    root.append(
+      el('header', { className: 'view-head' }, [
+        el('h1', { textContent: 'Demo Forja: estado local corrupto' }),
+        el('p', {
+          className: 'lead',
+          textContent:
+            'El documento en localStorage de forja-demo está dañado. Usa Restablecer demo; no se sobrescribe automáticamente.',
+        }),
+      ]),
+      el('button', {
+        type: 'button',
+        className: 'btn primary',
+        textContent: 'Restablecer demo',
+        onClick: () => {
+          restablecerDemo();
+          navegar('inicio');
+        },
+      }),
+    );
+    syncNav(vista);
+    return;
+  }
   mutar((st) => {
     st.ui.vista = vista;
   });
