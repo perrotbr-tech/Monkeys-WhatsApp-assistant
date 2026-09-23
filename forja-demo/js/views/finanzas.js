@@ -45,11 +45,11 @@ function badgeEstado(estado) {
   });
 }
 
-function bannerFicticio() {
-  return el('p', {
-    className: 'fin-disclaimer',
-    textContent: 'Datos financieros ficticios para validación del prototipo',
-  });
+function appendAll(root, ...nodes) {
+  for (const n of nodes) {
+    if (n == null || n === false) continue;
+    root.appendChild(n);
+  }
 }
 
 function aplicarFiltros(filas, filtro, st) {
@@ -458,7 +458,8 @@ function renderFiltros(st, navegar) {
 
 export function renderFinanzas(root, navegar) {
   if (esEstadoCorrupto()) {
-    root.append(
+    appendAll(
+      root,
       el('header', { className: 'view-head' }, [
         el('h1', { textContent: 'Estado corrupto' }),
         el('p', {
@@ -507,7 +508,8 @@ export function renderFinanzas(root, navegar) {
 
   const msg = obtenerEstado().ui.mensajeFinanzas;
 
-  root.append(
+  appendAll(
+    root,
     el('header', { className: 'view-head' }, [
       el('p', { className: 'eyebrow', textContent: 'Finanzas' }),
       el('h1', { textContent: 'Panel financiero' }),
@@ -583,7 +585,8 @@ export function renderFinanzaAlumno(root, navegar) {
     .join(', ');
   const msg = st.ui.mensajeFinanzas;
 
-  root.append(
+  appendAll(
+    root,
     el('header', { className: 'view-head' }, [
       el('p', { className: 'eyebrow', textContent: 'Ficha financiera' }),
       el('h1', { textContent: alu?.nombre || alumnoId }),
