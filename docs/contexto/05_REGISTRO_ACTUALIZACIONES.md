@@ -86,3 +86,10 @@ No eliminar entradas anteriores. Si una conclusión queda obsoleta, agregar una 
 - Prueba nueva: `tests/forja-demo-browser-safe.test.js` (grafo + no cruce con Gestión).
 - Hechos: es demo de validación; no es Forja productivo; no inicia E4/E5; no cambia Snapshot V3; Gestión MONKEYS/SOMA intacta.
 - Docs: `01`, `04`, `05`. Sin merge.
+
+## 2026-09-23 — Corrección escala Test de Bienestar (demo Forja)
+
+- Rama: `cursor/demo-coach-powerlifting` (PR #19). Contrato: **5 = mejor / 1 = peor** en fatiga, sueño, dolor muscular, estrés y ánimo.
+- Alertas: dolor alto; cualquier dimensión = 1; dos o más ≤ 2. Valores 4–5 no alertan solos. Solo informa al coach.
+- Semilla/IA: eliminada escala invertida (`fatiga 5/5`, `estrés 4/5`, `fatiga ≥4`).
+- Pruebas: `tests/forja-demo-wellness-scale.test.js`. Sin E4/E5/Forja productivo/merge.

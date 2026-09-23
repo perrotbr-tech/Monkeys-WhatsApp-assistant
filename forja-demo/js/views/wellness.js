@@ -1,5 +1,12 @@
 import { el } from '../util.js';
 import { obtenerEstado, mutar, alumnoPorId } from '../state.js';
+import {
+  ESCALA_DIR,
+  DIMENSIONES,
+  CLAVES_DIMENSION,
+  descripcionDimension,
+  requiereAlertaWellness,
+} from '../wellness-scale.js';
 
 const ESCALA = [1, 2, 3, 4, 5];
 const DOLOR = [
@@ -19,16 +26,36 @@ const ZONAS = [
   'Otra',
 ];
 
-function escala(nombre, valor, onPick) {
+function escala(clave, valor, onPick) {
+  const dim = DIMENSIONES[clave];
   const row = el('div', { className: 'scale-row' });
-  row.appendChild(el('span', { className: 'scale-label', textContent: nombre }));
-  const opts = el('div', { className: 'scale-opts', role: 'group', 'aria-label': nombre });
+  const labelCol = el('div', { className: 'scale-label-col' }, [
+    el('span', { className: 'scale-label', textContent: dim.nombre }),
+    valor
+      ? el('span', {
+          className: 'scale-desc',
+          textContent: descripcionDimension(clave, valor),
+        })
+      : el('span', {
+          className: 'scale-desc muted',
+          textContent: 'Selecciona un valor',
+        }),
+  ]);
+  row.appendChild(labelCol);
+  const opts = el('div', {
+    className: 'scale-opts',
+    role: 'group',
+    'aria-label': dim.nombre,
+  });
   for (const n of ESCALA) {
+    const desc = descripcionDimension(clave, n);
     opts.appendChild(
       el('button', {
         type: 'button',
         className: `scale-btn${valor === n ? ' is-active' : ''}`,
         textContent: String(n),
+        title: `${n}: ${desc}`,
+        'aria-label': `${dim.nombre}: ${n} — ${desc}`,
         onClick: () => onPick(n),
       }),
     );
@@ -58,18 +85,14 @@ export function renderWellness(root, navegar) {
     navegar('wellness');
   };
 
-  const critico =
-    w.dolorActual === 'alto' ||
-    w.fatiga === 5 ||
-    w.sueno === 1 ||
-    (w.estres === 5 && w.animo === 1);
+  const critico = requiereAlertaWellness(w);
 
   const alerta = critico
-    ? el('aside', { className: 'alert-box danger' }, [
+    ? el('aside', { className: 'alert-box danger', id: 'alerta-wellness' }, [
         el('strong', { textContent: 'Alerta para el coach' }),
         el('p', {
           textContent:
-            'Se detectó dolor alto o bienestar crítico. La plataforma no diagnostica lesiones ni modifica automáticamente el entrenamiento. Revisa con el alumno.',
+            'Se detectó dolor alto o bienestar crítico (1 = peor / 5 = mejor). La plataforma no diagnostica lesiones ni modifica automáticamente el entrenamiento. Revisa con el alumno.',
         }),
       ])
     : null;
@@ -111,23 +134,25 @@ export function renderWellness(root, navegar) {
     w.animo &&
     w.dolorActual;
 
+  const escalas = el('section', { className: 'card' }, [
+    el('p', {
+      className: 'scale-legend',
+      textContent: ESCALA_DIR,
+    }),
+    ...CLAVES_DIMENSION.map((clave) => escala(clave, w[clave], (n) => set(clave, n))),
+  ]);
+
   root.append(
     el('header', { className: 'view-head' }, [
       el('p', { className: 'eyebrow', textContent: 'Test de bienestar' }),
       el('h1', { textContent: 'Antes de iniciar la sesión' }),
       el('p', {
         className: 'lead',
-        textContent: `Alumno: ${alumno.nombre} · evaluación rápida 1–5 (opciones, no texto libre)`,
+        textContent: `Alumno: ${alumno.nombre} · evaluación rápida 1–5 (opciones, no texto libre). ${ESCALA_DIR}.`,
       }),
     ]),
     alerta,
-    el('section', { className: 'card' }, [
-      escala('Fatiga', w.fatiga, (n) => set('fatiga', n)),
-      escala('Calidad del sueño', w.sueno, (n) => set('sueno', n)),
-      escala('Dolor muscular general', w.dolorMuscular, (n) => set('dolorMuscular', n)),
-      escala('Estrés', w.estres, (n) => set('estres', n)),
-      escala('Estado de ánimo', w.animo, (n) => set('animo', n)),
-    ]),
+    escalas,
     el('section', { className: 'card' }, [
       el('h2', { textContent: 'Dolor actual' }),
       dolorOpts,
@@ -156,24 +181,31 @@ export function renderWellness(root, navegar) {
           if (!completo) return;
           if (critico) {
             mutar((st) => {
-              const ya = st.panel.alertasDolor.some(
-                (x) => x.alumnoId === alumno.id && x.nivel === 'alto',
-              );
-              if (w.dolorActual === 'alto' && !ya) {
-                st.panel.alertasDolor.push({
-                  alumnoId: alumno.id,
-                  detalle: 'Dolor alto en wellness previo a sesión',
-                  zona: w.zonaDolor,
-                  nivel: 'alto',
-                });
+              if (w.dolorActual === 'alto') {
+                const ya = st.panel.alertasDolor.some(
+                  (x) => x.alumnoId === alumno.id && x.nivel === 'alto',
+                );
+                if (!ya) {
+                  st.panel.alertasDolor.push({
+                    alumnoId: alumno.id,
+                    detalle: 'Dolor alto en wellness previo a sesión',
+                    zona: w.zonaDolor,
+                    nivel: 'alto',
+                  });
+                }
               }
+              const dimsBajas = CLAVES_DIMENSION.filter(
+                (k) => typeof w[k] === 'number' && w[k] <= 2,
+              );
               if (
-                (w.fatiga === 5 || w.sueno === 1) &&
+                dimsBajas.length &&
                 !st.panel.alertasBienestar.some((x) => x.alumnoId === alumno.id)
               ) {
                 st.panel.alertasBienestar.push({
                   alumnoId: alumno.id,
-                  detalle: 'Bienestar crítico en evaluación previa',
+                  detalle: `Bienestar crítico (escala 1=peor/5=mejor): ${dimsBajas
+                    .map((k) => `${DIMENSIONES[k].nombre} ${w[k]}/5`)
+                    .join(', ')}`,
                 });
               }
             });

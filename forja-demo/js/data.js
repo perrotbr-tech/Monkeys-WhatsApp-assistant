@@ -538,8 +538,14 @@ export const PANEL_SEED = {
     { alumnoId: 'alu-01', hora: '19:30', sesion: 'Base volumen' },
   ],
   alertasBienestar: [
-    { alumnoId: 'alu-05', detalle: 'Fatiga 5/5 y sueño 2/5 en 2 sesiones' },
-    { alumnoId: 'alu-03', detalle: 'Estrés 4/5 en última sesión' },
+    {
+      alumnoId: 'alu-05',
+      detalle: 'Fatiga 1/5 y sueño 2/5 en 2 sesiones (1=peor / 5=mejor)',
+    },
+    {
+      alumnoId: 'alu-03',
+      detalle: 'Estrés 2/5 en última sesión (1=peor / 5=mejor)',
+    },
   ],
   alertasDolor: [
     {
@@ -618,8 +624,8 @@ export const SUGERENCIAS_IA_SEED = [
     id: 'sug-3',
     titulo: 'Bienestar bajo en dos sesiones',
     detalle:
-      'Francisca Negrete acumula fatiga alta y sueño bajo en dos sesiones seguidas.',
-    evidencia: 'Wellness 2026-09-20 y 2026-09-22 · fatiga ≥4',
+      'Francisca Negrete acumula fatiga baja (1–2/5) y sueño bajo en dos sesiones seguidas.',
+    evidencia: 'Wellness 2026-09-20 y 2026-09-22 · fatiga ≤2 (1=peor / 5=mejor)',
     tipo: 'bienestar',
     estado: 'pendiente',
   },
