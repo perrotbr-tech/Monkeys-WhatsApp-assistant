@@ -1,7 +1,7 @@
 import { fechaHoy, fechaDesdeQuery } from './engine/dates.js';
 import { TENANT_DEFAULT, tenantActivo, varsMarca, USUARIOS_DEMO, CLAVE_DEMO, listarTenants, nombreSede, capacidadesDe } from './data/tenants.js';
-import { crearStoreLocal } from './engine/store-local.js';
 import { i18n } from './data/i18n.js';
+
 
 const TENANT_KEY = 'forkza_tenant';
 
@@ -890,6 +890,7 @@ async function pintarFicha(id) {
     }
     box.appendChild(actions);
   }
+}
 
 function abrirBaja(id) {
   const box = document.getElementById('socio-ficha');
@@ -1062,10 +1063,12 @@ async function main() {
       store = new StoreApi();
       standalone = false;
     } else {
+      const { crearStoreLocal } = await import('./engine/store-local.js');
       store = crearStoreLocal(tenant.id, localStorage, { fechaRef: fechaActiva() });
       standalone = true;
     }
   } catch {
+    const { crearStoreLocal } = await import('./engine/store-local.js');
     store = crearStoreLocal(tenant.id, localStorage, { fechaRef: fechaActiva() });
     standalone = true;
   }
