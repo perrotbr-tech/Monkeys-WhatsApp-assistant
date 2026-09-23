@@ -3,15 +3,12 @@ import { crearAutomation } from './automation.js';
 import { fechaHoy } from './dates.js';
 import { relojActivo } from './clock.js';
 import { USUARIOS_DEMO, CLAVE_DEMO, catalogoWorkspaces, featuresTenant, tenantActivo } from '../data/tenants.js';
-import { enriquecerUsuarioSesion, LOCK_MS, MAX_FALLOS } from './auth.js';
+import { enriquecerUsuarioSesion, LOCK_MS, MAX_FALLOS } from './auth-shared.js';
 import { crearContextoAcceso } from '../core/identity/usuario.js';
 import { combinarPersistencia } from './store.js';
-import {
-  crearAdaptadorLocal,
-  claveEstadoV1,
-  CARGA,
-  PersistenciaError,
-} from './persistencia/index.js';
+import { crearAdaptadorLocal } from './persistencia/local.js';
+import { CARGA, PersistenciaError } from './persistencia/estados.js';
+import { claveEstadoV1 } from './persistencia/migraciones.js';
 
 /** @deprecated usar claveEstadoV1; se mantiene como alias público. */
 export function claveEstado(tenantId) {

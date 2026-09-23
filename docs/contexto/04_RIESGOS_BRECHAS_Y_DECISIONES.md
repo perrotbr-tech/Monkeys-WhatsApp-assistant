@@ -2,6 +2,10 @@
 
 ## Prioridad alta
 
+### Demo GitHub Pages (hotfix en curso)
+
+E3 pasó 250/250 en Node, pero la prueba manual en Pages detectó que `store-local.js` arrastraba `auth.js` (`node:crypto`, `bcryptjs`) y el barrel `persistencia/index.js` → `json.js`. El hotfix separa `auth-shared.js` (browser) de `auth.js` (servidor) y evita el barrel en standalone. Validación pública definitiva pendiente de fusionar y desplegar el PR.
+
 ### Webhook de pagos
 
 Sin verificación de firma, replay ni idempotencia. No listo para producción (E5).

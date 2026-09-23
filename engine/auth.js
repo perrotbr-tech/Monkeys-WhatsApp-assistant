@@ -2,10 +2,15 @@ import { createHmac, timingSafeEqual, randomBytes } from 'node:crypto';
 import bcrypt from 'bcryptjs';
 import { USUARIOS_DEMO, CLAVE_DEMO, catalogoWorkspaces } from '../data/tenants.js';
 import { relojActivo } from './clock.js';
-import { crearContextoAcceso, vistaSesion } from '../core/identity/usuario.js';
+import { crearContextoAcceso } from '../core/identity/usuario.js';
+import {
+  LOCK_MS,
+  MAX_FALLOS,
+  enriquecerUsuarioSesion,
+} from './auth-shared.js';
 
-export const LOCK_MS = 10 * 60 * 1000;
-export const MAX_FALLOS = 5;
+export { LOCK_MS, MAX_FALLOS, enriquecerUsuarioSesion } from './auth-shared.js';
+
 export const COOKIE = 'forkza_session';
 
 const locks = new Map();
@@ -109,21 +114,6 @@ export function parseCookies(header) {
     out[part.slice(0, i).trim()] = decodeURIComponent(part.slice(i + 1).trim());
   }
   return out;
-}
-
-/**
- * Enriquecimiento aditivo de identidad (E3A): userId + workspaceId.
- * Conserva tenantId, email, nombre y rol.
- */
-export function enriquecerUsuarioSesion(user) {
-  return vistaSesion(crearContextoAcceso({
-    tenantId: user.tenantId,
-    email: user.email,
-    nombre: user.nombre,
-    rol: user.rol,
-    userId: user.userId,
-    workspaceId: user.workspaceId,
-  }, catalogoWorkspaces()));
 }
 
 export function intentarLogin({ tenantId, email, password, usuarios, now = relojActivo().now() }) {
