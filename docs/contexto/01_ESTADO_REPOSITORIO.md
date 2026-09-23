@@ -1,6 +1,6 @@
 # Estado verificado del repositorio
 
-Fecha de corte: 2026-09-22.
+Fecha de corte: 2026-09-23.
 
 ## Repositorio y base
 
@@ -8,8 +8,8 @@ Fecha de corte: 2026-09-22.
 - `main` @ `4504c9b` (E2 cerrada; PR #12–#15).
 - Rama E3: `cursor/e3-forkza-core-boundaries-ac33` (PR draft #16 → `main`).
 - E3A cerrada en `14d24ba`.
-- E3B aceptada tras revisión B5–B8 (base E3C: `894ad47`).
-- E3C implementada en la misma rama/PR (tip `6f41240c1a21baa33effedaab655425acd6830bc`). Pendiente de revisión independiente.
+- E3B aceptada tras B5–B8 (base E3C: `894ad47`).
+- E3C + revisión B9–B10 en la misma rama/PR (base B9–B10: `07336a5`). Pendiente de aceptación final.
 - E3 no completa hasta revisión. Sin E4/E5/Forja Training. Sin merge.
 
 ## Pull requests
@@ -17,15 +17,15 @@ Fecha de corte: 2026-09-22.
 | PR | Estado | Notas |
 |---|---|---|
 | #12–#15 | Fusionados | E0–E2 en `main` |
-| #16 | Draft abierto | E3A + E3B (aceptada) + E3C pendiente revisión |
+| #16 | Draft abierto | E3A + E3B + E3C + B9–B10 |
 
 ## Resultado de la rama
 
-Línea base pre-E3C: 219/219 @ `894ad47`. Tras E3C: `npm test` → 242/242 (`tests/e3c-rbac-rutas.test.js`).
+Pre-E3C: 219/219. E3C: 242/242. Tras B9–B10: `npm test` → 250/250.
 
 ## Documentos maestros
 
-Vigentes. Persistencia = Snapshot V3. RBAC de rutas Gestión = E3C (deny-by-default).
+Vigentes. Persistencia = Snapshot V3. RBAC deny-by-default. Reset demo por workspace.
 
 ## Restricción operativa
 

@@ -2,7 +2,7 @@ import express from 'express';
 import { mkdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { clonarMundo, clonar } from '../data/demo.js';
+import { clonarMundo, clonar, clonarDemo } from '../data/demo.js';
 import { TENANT_DEFAULT, tenantActivo, varsMarca, USUARIOS_DEMO, idsTenantsActivos, catalogoWorkspaces } from '../data/tenants.js';
 import { crearEngine } from '../engine/conversation.js';
 import { crearAutomation } from '../engine/automation.js';
@@ -14,7 +14,7 @@ import {
   intentarLogin, usuariosConHash, hashClave, resetLocks,
 } from '../engine/auth.js';
 import {
-  crearAdaptadorJson, CARGA, PersistenciaError, mundoRuntimeDesdeSnapshot,
+  crearAdaptadorJson, CARGA, PersistenciaError,
 } from '../engine/persistencia/index.js';
 import { crearAuditSinkMemoria } from '../core/audit/sink.js';
 import { featuresDe } from '../core/features/flags.js';
@@ -67,6 +67,13 @@ export function crearApp({
       engines[id] = crearEngine({ memoria }, id, { clock: reloj });
       autos[id] = crearAutomation(memoria.sliceExport(id), id, { clock: reloj });
     }
+  }
+
+  /** Reinicia solo el motor/automatización del workspace indicado. */
+  function reiniciarMotorTenant(tenantId) {
+    const id = String(tenantId || '');
+    engines[id] = crearEngine({ memoria }, id, { clock: reloj });
+    autos[id] = crearAutomation(memoria.sliceExport(id), id, { clock: reloj });
   }
 
   reiniciarMotores();
@@ -250,17 +257,13 @@ export function crearApp({
   });
 
   app.post('/api/demo/reset', requireTenant, featGestion, requireAuth, requirePermission('gestion:configurar'), (req, res) => {
-    let seed;
-    if (adapter) {
-      const snap = adapter.reset();
-      seed = mundoRuntimeDesdeSnapshot(snap);
-    } else {
-      seed = clonarMundo();
-    }
-    memoria.hidratar(seed);
-    reiniciarMotores();
-    if (persist && !adapter) saveState();
-    auditar(req, { action: 'demo.reset', targetType: 'workspace', targetId: req.tenant.id });
+    const tid = req.tenant.id;
+    const fecha = fechaDeReq(req);
+    const seed = clonarDemo(tid, fecha);
+    memoria.hidratarTenant(tid, seed);
+    reiniciarMotorTenant(tid);
+    saveState();
+    auditar(req, { action: 'demo.reset', targetType: 'workspace', targetId: tid });
     res.json({ ok: true });
   });
 

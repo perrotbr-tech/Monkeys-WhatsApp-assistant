@@ -5,7 +5,7 @@
  */
 
 import { resolverParTenantWorkspace, exigirCatalogo } from '../organizations/workspace.js';
-import { normalizarRol, permisosDeRol } from '../authorization/rbac.js';
+import { normalizarRol, permisosDeRol, esPermisoConocido } from '../authorization/rbac.js';
 
 /**
  * Genera un userId estable a partir del correo (sin workspace).
@@ -54,9 +54,16 @@ export function crearContextoAcceso(usuario, catalogo) {
     : null;
   const userId = explicit || userIdEstable({ email });
   const rolNorm = normalizarRol(rol);
-  const permisos = Array.isArray(src.permisos) && src.permisos.length
-    ? [...src.permisos]
-    : (rolNorm ? permisosDeRol(rolNorm) : []);
+  const explicitosFiltrados = Array.isArray(src.permisos) && src.permisos.length
+    ? src.permisos.filter((p) => esPermisoConocido(p))
+    : null;
+  /** Rol desconocido → sin permisos efectivos (no se legitima con lista explícita). */
+  const rolDesconocido = Boolean(rol && String(rol).trim() && !rolNorm);
+  const permisos = rolDesconocido
+    ? []
+    : (explicitosFiltrados && explicitosFiltrados.length
+      ? explicitosFiltrados
+      : (rolNorm ? permisosDeRol(rolNorm) : []));
   return {
     userId,
     workspaceId,

@@ -26,8 +26,10 @@ Contrato V3 con migración V0–V2→V3 y rechazo de corruptos/cruzados. Sigue s
 - E0–E2 en `main` (PR #12–#15).
 - E3A cerrada en `14d24ba` (PR #16): `core/` + adaptadores; B1–B4.
 - E3B aceptada tras B5–B8: Snapshot V3 + escritura sin sellar/normalizar.
-- E3C (PR #16, pendiente revisión): RBAC deny-by-default en rutas Gestión; pagos demo/webhook sin cruce de tenant; auditoría de mutaciones sensibles; `/api/me` con permisos/features; UI oculta sin reemplazar servidor.
+- E3C (PR #16): RBAC deny-by-default; pagos demo/webhook sin cruce; auditoría; `/api/me` permisos/features; UI oculta.
+- E3C B9–B10: reset solo del workspace solicitado; rol desconocido → 403 aunque traiga permisos explícitos.
 - Brecha pagos cross-tenant demo: cerrada en E3C (sin fallback global).
+- Brecha reset cross-tenant: cerrada en B9.
 
 ## Decisiones confirmadas
 

@@ -129,8 +129,8 @@ export function esPermisoConocido(permiso) {
 
 /**
  * Evalúa si el contexto tiene un permiso.
- * Rol desconocido → denegado. Permiso desconocido → denegado.
- * Permisos explícitos del contexto se evalúan si están en el catálogo.
+ * Deny-by-default: permiso desconocido → false; rol desconocido → false.
+ * Permisos explícitos solo restringen (o autorizan) roles canónicos / sin rol.
  * @param {{ rol?: string, permisos?: string[] }} contexto
  * @param {string} permiso
  * @returns {boolean}
@@ -138,6 +138,12 @@ export function esPermisoConocido(permiso) {
 export function tienePermiso(contexto, permiso) {
   const p = String(permiso || '');
   if (!esPermisoConocido(p)) return false;
+
+  const rolRaw = contexto && contexto.rol;
+  if (rolRaw != null && String(rolRaw).trim() !== '') {
+    const rolCanonico = normalizarRol(rolRaw);
+    if (!rolCanonico) return false;
+  }
 
   const explicitos = Array.isArray(contexto && contexto.permisos)
     ? contexto.permisos

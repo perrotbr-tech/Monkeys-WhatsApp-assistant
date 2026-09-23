@@ -52,7 +52,12 @@ No eliminar entradas anteriores. Si una conclusión queda obsoleta, agregar una 
 
 ## 2026-09-22 — E3C: RBAC de rutas, aislamiento y auditoría (mismo PR #16)
 
-- Rama: `cursor/e3-forkza-core-boundaries-ac33` desde base `894ad47`; tip `6f41240c1a21baa33effedaab655425acd6830bc`.
-- `server/acceso.js` + cableado deny-by-default; catálogo permisos ampliado; `pagarDemo(tenantId, ref, fecha)` sin fallback global; `AuditSink` inyectable; `/api/me` con permisos/features; UI oculta según permisos; reset V3→runtime; store-local dinámico en standalone.
-- Pruebas: `tests/e3c-rbac-rutas.test.js`; suite 242/242.
-- Docs: `00`, `01`, `02`, `04`, `05`. E3C pendiente de revisión independiente. E3 no completa. Sin E4/E5/Forja/merge.
+- Rama: `cursor/e3-forkza-core-boundaries-ac33` desde base `894ad47`; tip previo `07336a5`.
+- `server/acceso.js` + cableado deny-by-default; catálogo permisos ampliado; `pagarDemo(tenantId, ref, fecha)` sin fallback global; `AuditSink` inyectable; `/api/me` con permisos/features; UI oculta según permisos; store-local dinámico en standalone.
+- Pruebas: `tests/e3c-rbac-rutas.test.js`; suite 242/242 en ese tip.
+
+## 2026-09-23 — E3C revisión B9–B10 (mismo PR #16)
+
+- B9: `POST /api/demo/reset` usa `hidratarTenant` + `clonarDemo(tid)`; no `adapter.reset()`/`clonarMundo()`; SOMA intacto al resetear MONKEYS (y viceversa); persistencia JSON OK.
+- B10: `tienePermiso` deniega rol desconocido antes de permisos explícitos; `/api/me` no expone permisos desconocidos ni efectivos de rol inválido.
+- Pruebas: `tests/e3c-brechas-b9-b10.test.js`; suite 250/250. Sin E4/E5/Forja/merge.
