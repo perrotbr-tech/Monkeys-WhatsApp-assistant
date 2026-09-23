@@ -5,10 +5,10 @@ Fecha de corte: 2026-09-23.
 ## Repositorio y base
 
 - Repositorio: `perrotbr-tech/Monkeys-WhatsApp-assistant`.
-- `main` @ `f90ef2c` (E3 cerrada; docs de cierre PR #17).
-- Hotfix en curso: `cursor/hotfix-pages-standalone-auth` (demo GitHub Pages).
-- E3 fusionada: PR #16 → `main` @ `9fb3414`; tip docs `f90ef2c`.
-- E3A/E3B/E3C + B1–B10 aceptadas. Sin E4/E5/Forja Training.
+- `main` @ `2629fdc` (hotfix GitHub Pages PR #18 fusionado; tip sobre cierre E3).
+- E3 fusionada: PR #16 → `main` @ `9fb3414`; docs cierre PR #17 @ `f90ef2c`.
+- E3A/E3B/E3C + B1–B10 aceptadas. **E4 y E5 no iniciados.**
+- **Forja Training productivo no iniciado.** Existe solo demo estática de validación.
 
 ## Pull requests
 
@@ -17,16 +17,21 @@ Fecha de corte: 2026-09-23.
 | #12–#15 | Fusionados | E0–E2 en `main` |
 | #16 | Fusionado | E3A + E3B + E3C + B1–B10 |
 | #17 | Fusionado | Docs cierre E3 |
-| #18 | Draft | Hotfix Pages: auth browser-safe |
+| #18 | Fusionado | Hotfix Pages: auth browser-safe |
+| demo Forja | Draft | `cursor/demo-coach-powerlifting` → `main` |
 
-## Resultado de la rama
+## Demo Forja Training (validación)
 
-Sobre hotfix desde `main` @ `f90ef2c`: tip `b9629db`; suite Node 252/252; smoke estático MONKEYS/SOMA OK. Validación pública Pages pendiente de merge/deploy.
+- Ubicación aislada: `forja-demo/` (entrada `forja-demo/index.html`).
+- Persona: coach Matías Rojas, Powerlifting, workspace FORJA DEMO.
+- No conectada a la navegación de Forkza Gestión.
+- No altera Snapshot V3 ni MONKEYS/SOMA.
+- Suite Node base `main`: 252/252; la rama demo agrega pruebas de grafo browser-safe.
 
 ## Documentos maestros
 
-Vigentes. Persistencia = Snapshot V3. RBAC deny-by-default. Reset demo por workspace.
+Vigentes. Persistencia Gestión = Snapshot V3. RBAC deny-by-default. Feature `forja: false` en producto.
 
 ## Restricción operativa
 
-E3 cerrada. Hotfix Pages no inicia E4/E5/Forja. E4 solo desde `main` actualizado, rama y PR propios.
+E3 cerrada. Demo Forja ≠ E4/E5 ni Forja productivo. E4 solo desde `main` actualizado, rama y PR propios.
