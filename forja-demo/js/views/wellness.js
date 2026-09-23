@@ -151,7 +151,9 @@ export function renderWellness(root, navegar) {
         textContent: `Alumno: ${alumno.nombre} · evaluación rápida 1–5 (opciones, no texto libre). ${ESCALA_DIR}.`,
       }),
     ]),
-    alerta,
+  );
+  if (alerta) root.appendChild(alerta);
+  root.append(
     escalas,
     el('section', { className: 'card' }, [
       el('h2', { textContent: 'Dolor actual' }),
